@@ -25,6 +25,7 @@ enum SettingsTab: String {
     case modes = "Asystenci"
     case dictionary = "Słownik"
     case snippets = "Snippety"
+    case models = "Modele"
     case settings = "Ustawienia"
 }
 
@@ -68,6 +69,8 @@ struct SettingsView: View {
     @ObservedObject private var authManager = AuthManager.shared
     @State private var showLoginSheet = false
     
+    @ObservedObject private var modelManager = ModelManager.shared
+    
     var body: some View {
         NavigationSplitView {
             // Panel boczny (Sidebar)
@@ -90,6 +93,12 @@ struct SettingsView: View {
                 .padding(.horizontal, 10)
                 
                 Spacer() // Pcha dolną sekcję na dół
+                
+                MenuButton(title: t("Models"), icon: "shippingbox.fill", isSelected: selectedTab == .models) {
+                    selectedTab = .models
+                }
+                .padding(.horizontal, 10)
+                .padding(.bottom, 5)
                 
                 // Dolna sekcja (Użytkownik i Ustawienia)
                 VStack(spacing: 15) {
@@ -182,6 +191,8 @@ struct SettingsView: View {
                                 DictionarySettingsView()
                             case .snippets:
                                 SnippetsSettingsView()
+                            case .models:
+                                ModelsSettingsView()
                             case .settings:
                                 HomeSettingsView()
                             }
@@ -542,6 +553,15 @@ struct SettingsView: View {
                     }
                 )
         }
+        .background(
+            Color.clear
+                .sheet(isPresented: $modelManager.showModelsRequiredModal) {
+                    ModelsRequiredExplanationView()
+                }
+                .sheet(isPresented: $modelManager.showDownloadErrorModal) {
+                    ModelDownloadErrorView(error: modelManager.downloadError ?? t("An unknown network error occurred."))
+                }
+        )
         .onAppear {
             loadModes()
         }
@@ -883,271 +903,298 @@ struct HomeSettingsView: View {
             Text(t("Control Panel"))
                 .font(.system(size: 28, weight: .bold))
             
-            // Sekcja: Skrót klawiszowy
-            VStack(alignment: .leading, spacing: 15) {
-                Text(t("Keyboard Shortcut"))
-                    .font(.system(size: 16, weight: .semibold))
-                
-                // Tryb działania (Kafelki)
-                HStack(spacing: 15) {
-                    // Kafelek Kliknięcie
-                    Button(action: { hotkeyMode = .click }) {
-                        VStack(spacing: 10) {
-                            Image(systemName: "hand.point.up.fill")
-                                .font(.system(size: 20))
-                            Text(t("Click"))
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(hotkeyMode == .click ? Color.primary.opacity(0.1) : Color.clear)
-                        .cornerRadius(10)
-                        .contentShape(Rectangle())
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(hotkeyMode == .click ? Color.primary : Color.primary.opacity(0.2), lineWidth: hotkeyMode == .click ? 2 : 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    
-                    // Kafelek Przytrzymanie
-                    Button(action: { hotkeyMode = .hold }) {
-                        VStack(spacing: 10) {
-                            Image(systemName: "hand.tap.fill")
-                                .font(.system(size: 20))
-                            Text(t("Hold"))
-                                .font(.system(size: 12, weight: .medium))
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(hotkeyMode == .hold ? Color.primary.opacity(0.1) : Color.clear)
-                        .cornerRadius(10)
-                        .contentShape(Rectangle())
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(hotkeyMode == .hold ? Color.primary : Color.primary.opacity(0.2), lineWidth: hotkeyMode == .hold ? 2 : 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-                
-                Divider()
-                    .background(Color.white.opacity(0.05))
-                
-                // Klawisz odpowiadający za nasłuchiwanie (Większy napis)
-                VStack(alignment: .leading, spacing: 10) {
-                    Text(t("Listening activation key"))
-                        .font(.system(size: 16, weight: .bold))
-                    
-                    // Większy box na skrót
-                    Button(action: {
-                        isRecordingHotkey.toggle()
-                        if isRecordingHotkey {
-                            HotkeyManager.shared.stopListening()
-                        } else {
-                            HotkeyManager.shared.startListening()
-                        }
-                    }) {
-                        let isDark = appColorScheme == .dark
-                        HStack {
-                            Text(isRecordingHotkey ? t("Press keys...") : hotkeyString)
-                                .font(.system(size: 20, weight: .bold))
-                                .foregroundColor(isRecordingHotkey ? (isDark ? .black : .white) : .primary)
-                            Spacer()
-                            Image(systemName: "keyboard")
-                                .font(.system(size: 20))
-                                .foregroundColor(isRecordingHotkey ? (isDark ? .black : .white) : .secondary)
-                        }
-                        .padding(.vertical, 12)
-                        .padding(.horizontal, 15)
-                        .background(isRecordingHotkey ? (isDark ? .white : .black) : Color.primary.opacity(0.05))
-                        .cornerRadius(10)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 10)
-                                .stroke(isRecordingHotkey ? (isDark ? .white : .black) : Color.primary.opacity(0.1), lineWidth: 1)
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .focusable(false)
-                }
-            }
-            .padding(20)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                }
-            )
-            
-            // Sekcja: Źródło dźwięku (Mikrofon)
-            VStack(alignment: .leading, spacing: 15) {
-                Text(t("Audio source"))
-                    .font(.system(size: 16, weight: .semibold))
-                
-                HStack {
-                    Image(systemName: "mic.fill")
-                        .font(.system(size: 16))
-                    Text(t("Select microphone:"))
-                        .font(.system(size: 13))
-                    Spacer()
-                    
-                    Picker("", selection: $selectedDeviceUID) {
-                        Text(t("Default system")).tag("")
-                        ForEach(audioDevices) { device in
-                            Text(device.name).tag(device.uid)
-                        }
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    .font(.system(size: 13))
-                }
-            }
-            .padding(20)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                }
-            )
-            
-            // Sekcja: Dźwięki aplikacji
-            VStack(alignment: .leading, spacing: 15) {
-                Text(t("App sounds"))
-                    .font(.system(size: 16, weight: .semibold))
-                
-                Toggle(t("Play sounds"), isOn: $playAnySound)
-                    .toggleStyle(CustomToggleStyle())
-                    .font(.system(size: 14, weight: .bold))
-                    .fixedSize()
-                
-                if playAnySound {
-                    Divider()
-                        .background(Color.white.opacity(0.05))
-                    
-                    VStack(alignment: .leading, spacing: 12) {
-                        Toggle(t("Recording start"), isOn: $playSound_Start)
-                            .toggleStyle(CustomToggleStyle())
-                            .font(.system(size: 12))
-                            .fixedSize()
-                        
-                        Toggle(t("Error / Not recognized"), isOn: $playSound_Error)
-                            .toggleStyle(CustomToggleStyle())
-                            .font(.system(size: 12))
-                            .fixedSize()
-                        
-                        Toggle(t("End (Success)"), isOn: $playSound_End)
-                            .toggleStyle(CustomToggleStyle())
-                            .font(.system(size: 12))
-                            .fixedSize()
-                    }
-                    .padding(.leading, 5)
-                }
-            }
-            .padding(20)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                }
-            )
-            
-            // Sekcja: Auto-nauka słownika
-            VStack(alignment: .leading, spacing: 15) {
-                Text(t("Auto-update dictionary"))
-                    .font(.system(size: 16, weight: .semibold))
-                
-                Toggle(isOn: $autoLearnDictionary) {
-                    Text(t("Enable automatic learning of corrections"))
-                        .font(.system(size: 13))
-                }
-                .toggleStyle(.checkbox)
-                .accentColor(appColorScheme == .dark ? .white : .black)
-                .tint(appColorScheme == .dark ? .white : .black)
-                
-                Text(t("If you correct the entered text within 10 seconds, the app will automatically add this correction to the dictionary."))
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(20)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                }
-            )
-            
-            // Sekcja: Motyw
-            VStack(alignment: .leading, spacing: 15) {
-                Text(t("App Theme"))
-                    .font(.system(size: 16, weight: .semibold))
-                
-                HStack(spacing: 15) {
-                    ThemeTile(title: t("System"), theme: "system", currentTheme: $appTheme)
-                    ThemeTile(title: t("Light"), theme: "light", currentTheme: $appTheme)
-                    ThemeTile(title: t("Dark"), theme: "dark", currentTheme: $appTheme)
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .padding(20)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                }
-            )
-            
-            // Sekcja: Język aplikacji
-            VStack(alignment: .leading, spacing: 15) {
-                Text(t("App Language"))
-                    .font(.system(size: 16, weight: .semibold))
-                
-                HStack {
-                    Text(t("App Language"))
-                        .font(.system(size: 13))
-                    Spacer()
-                    
-                    Picker("", selection: $localizer.appLanguage) {
-                        Text("Deutsch").tag("de")
-                        Text("English").tag("en")
-                        Text("Español").tag("es")
-                        Text("Français").tag("fr")
-                        Text("Italiano").tag("it")
-                        Text("日本語").tag("ja")
-                        Text("Polski").tag("pl")
-                        Text("Português").tag("pt")
-                        Text("中文").tag("zh")
-                    }
-                    .pickerStyle(.menu)
-                    .labelsHidden()
-                    .font(.system(size: 13))
-                }
-            }
-            .padding(20)
-            .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
-                }
-            )
+            keyboardShortcutSection
+            audioSourceSection
+            appSoundsSection
+            autoUpdateDictionarySection
+            appThemeSection
+            appLanguageSection
         }
         .onAppear {
             setupEventMonitor()
-            audioDevices = AudioManager().getAudioInputDevices()
+            DispatchQueue.global(qos: .userInitiated).async {
+                let devices = AudioManager().getAudioInputDevices()
+                DispatchQueue.main.async {
+                    self.audioDevices = devices
+                }
+            }
         }
         .onDisappear {
             removeEventMonitor()
         }
+    }
+    
+    @ViewBuilder
+    private var keyboardShortcutSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("Keyboard Shortcut"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            HStack(spacing: 15) {
+                Button(action: { hotkeyMode = .click }) {
+                    VStack(spacing: 10) {
+                        Image(systemName: "hand.point.up.fill")
+                            .font(.system(size: 20))
+                        Text(t("Click"))
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(hotkeyMode == .click ? Color.primary.opacity(0.1) : Color.clear)
+                    .cornerRadius(10)
+                    .contentShape(Rectangle())
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(hotkeyMode == .click ? Color.primary : Color.primary.opacity(0.2), lineWidth: hotkeyMode == .click ? 2 : 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                
+                Button(action: { hotkeyMode = .hold }) {
+                    VStack(spacing: 10) {
+                        Image(systemName: "hand.tap.fill")
+                            .font(.system(size: 20))
+                        Text(t("Hold"))
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(hotkeyMode == .hold ? Color.primary.opacity(0.1) : Color.clear)
+                    .cornerRadius(10)
+                    .contentShape(Rectangle())
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(hotkeyMode == .hold ? Color.primary : Color.primary.opacity(0.2), lineWidth: hotkeyMode == .hold ? 2 : 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Divider()
+                .background(Color.white.opacity(0.05))
+            
+            VStack(alignment: .leading, spacing: 10) {
+                Text(t("Listening activation key"))
+                    .font(.system(size: 16, weight: .bold))
+                
+                Button(action: {
+                    isRecordingHotkey.toggle()
+                    if isRecordingHotkey {
+                        HotkeyManager.shared.stopListening()
+                    } else {
+                        HotkeyManager.shared.startListening()
+                    }
+                }) {
+                    let isDark = appColorScheme == .dark
+                    HStack {
+                        Text(isRecordingHotkey ? t("Press keys...") : hotkeyString)
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(isRecordingHotkey ? (isDark ? .black : .white) : .primary)
+                        Spacer()
+                        Image(systemName: "keyboard")
+                            .font(.system(size: 20))
+                            .foregroundColor(isRecordingHotkey ? (isDark ? .black : .white) : .secondary)
+                    }
+                    .padding(.vertical, 12)
+                    .padding(.horizontal, 15)
+                    .background(isRecordingHotkey ? (isDark ? .white : .black) : Color.primary.opacity(0.05))
+                    .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(isRecordingHotkey ? (isDark ? .white : .black) : Color.primary.opacity(0.1), lineWidth: 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                .focusable(false)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private var audioSourceSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("Audio source"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            HStack {
+                Image(systemName: "mic.fill")
+                    .font(.system(size: 16))
+                Text(t("Select microphone:"))
+                    .font(.system(size: 13))
+                Spacer()
+                
+                Picker("", selection: $selectedDeviceUID) {
+                    Text(t("Default system")).tag("")
+                    ForEach(audioDevices) { device in
+                        Text(device.name).tag(device.uid)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .font(.system(size: 13))
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private var appSoundsSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("App sounds"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            Toggle(t("Play sounds"), isOn: $playAnySound)
+                .toggleStyle(CustomToggleStyle())
+                .font(.system(size: 14, weight: .bold))
+                .fixedSize()
+            
+            if playAnySound {
+                Divider()
+                    .background(Color.white.opacity(0.05))
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Toggle(t("Recording start"), isOn: $playSound_Start)
+                        .toggleStyle(CustomToggleStyle())
+                        .font(.system(size: 12))
+                        .fixedSize()
+                    
+                    Toggle(t("Error / Not recognized"), isOn: $playSound_Error)
+                        .toggleStyle(CustomToggleStyle())
+                        .font(.system(size: 12))
+                        .fixedSize()
+                    
+                    Toggle(t("End (Success)"), isOn: $playSound_End)
+                        .toggleStyle(CustomToggleStyle())
+                        .font(.system(size: 12))
+                        .fixedSize()
+                }
+                .padding(.leading, 5)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private var autoUpdateDictionarySection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("Auto-update dictionary"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            Toggle(isOn: $autoLearnDictionary) {
+                Text(t("Enable automatic learning of corrections"))
+                    .font(.system(size: 13))
+            }
+            .toggleStyle(.checkbox)
+            .accentColor(appColorScheme == .dark ? .white : .black)
+            .tint(appColorScheme == .dark ? .white : .black)
+            
+            Text(t("If you correct the entered text within 10 seconds, the app will automatically add this correction to the dictionary."))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private var appThemeSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("App Theme"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            HStack(spacing: 15) {
+                ThemeTile(title: t("System"), theme: "system", currentTheme: $appTheme)
+                ThemeTile(title: t("Light"), theme: "light", currentTheme: $appTheme)
+                ThemeTile(title: t("Dark"), theme: "dark", currentTheme: $appTheme)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private var appLanguageSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("App Language"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            HStack {
+                Text(t("App Language"))
+                    .font(.system(size: 13))
+                Spacer()
+                
+                Picker("", selection: $localizer.appLanguage) {
+                    Text("Deutsch").tag("de")
+                    Text("English").tag("en")
+                    Text("Español").tag("es")
+                    Text("Français").tag("fr")
+                    Text("Italiano").tag("it")
+                    Text("日本語").tag("ja")
+                    Text("Polski").tag("pl")
+                    Text("Português").tag("pt")
+                    Text("中文").tag("zh")
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .font(.system(size: 13))
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
     }
     
     private func setupEventMonitor() {
@@ -1426,14 +1473,11 @@ struct StatisticsView: View {
         .padding(24)
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 18)
-                        .stroke(
-                            colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15),
-                            lineWidth: 1.5
-                        )
-                )
+                .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
     
@@ -1473,8 +1517,8 @@ struct StatisticsView: View {
     }
 
     @ViewBuilder
-    private var efficiencyChart: some View {
-        EfficiencyChartView(dailyStats: dailyStats, colorScheme: colorScheme)
+    private var paceChart: some View {
+        PaceChartView(dailyStats: dailyStats, colorScheme: colorScheme)
     }
 
     @ViewBuilder
@@ -1483,7 +1527,7 @@ struct StatisticsView: View {
             if dailyStats.count > 0 {
                 HStack(spacing: 20) {
                     activityChart
-                    efficiencyChart
+                    paceChart
                 }
             } else {
                 VStack(alignment: .center, spacing: 15) {
@@ -1672,6 +1716,7 @@ fileprivate struct RamHistoryView: View {
     @State private var hoveredCopyId: UUID? = nil
     @State private var hoveredTrashId: UUID? = nil
     @State private var isHoveringClearHistory = false
+    @State private var isShowingRamExplanation = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -1682,6 +1727,16 @@ fileprivate struct RamHistoryView: View {
                         .foregroundColor(colorScheme == .dark ? .white : .black)
                     Text(t("Text History (RAM only)"))
                         .font(.system(size: 16, weight: .bold))
+                    
+                    Button(action: {
+                        isShowingRamExplanation = true
+                    }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(t("Learn more about RAM history"))
                 }
                 Spacer()
                 if !memoryManager.messages.isEmpty {
@@ -1761,6 +1816,105 @@ fileprivate struct RamHistoryView: View {
                 .frame(maxHeight: 400) // Ograniczenie wysokości listy
             }
         }
+        .sheet(isPresented: $isShowingRamExplanation) {
+            RamHistoryExplanationView()
+        }
+    }
+}
+
+struct RamHistoryExplanationView: View {
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    @ObservedObject private var localizer = LocalizationManager.shared
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Upper padding spacer instead of X close button
+            Spacer()
+                .frame(height: 30)
+            
+            // Icon & Title
+            VStack(spacing: 12) {
+                Image(systemName: "clock.arrow.circlepath")
+                    .font(.system(size: 40))
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                
+                Text(t("Text History Privacy"))
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            .padding(.bottom, 24)
+            
+            // Content
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "memorychip")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(t("Stored only in RAM"))
+                            .font(.system(size: 12, weight: .bold))
+                        Text(t("The text history is saved exclusively in the computer's operational memory (RAM), not on the disk."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineSpacing(2)
+                    }
+                }
+                
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "hourglass")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(t("Completely temporary"))
+                            .font(.system(size: 12, weight: .bold))
+                        Text(t("All saved texts disappear immediately when you close the application. They are not recoverable, ensuring your data remains private."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineSpacing(2)
+                    }
+                }
+                
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "lock.shield.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(t("Local processing"))
+                            .font(.system(size: 12, weight: .bold))
+                        Text(t("We do not store, send, or analyze your processed texts anywhere outside of your device."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineSpacing(2)
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            
+            Spacer()
+            
+            Button(action: {
+                dismiss()
+            }) {
+                Text(t("I understand"))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(10)
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+            .keyboardShortcut(.defaultAction)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+        }
+        .frame(width: 400, height: 420)
+        .background(colorScheme == .dark ? Color.black : Color.white)
     }
 }
 
@@ -1914,7 +2068,7 @@ fileprivate struct MessageCardView: View {
                 .font(.system(size: 13, weight: .regular))
                 .foregroundColor(.primary)
                 .lineSpacing(3)
-                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .textSelection(.enabled)
         }
         .padding(14)
@@ -1944,6 +2098,11 @@ fileprivate struct DailyStat: Identifiable {
         let typingTimeMinutes = Double(wordCount) / 40.0
         let speakingTimeMinutes = speakingTime / 60.0
         return max(0.0, typingTimeMinutes - speakingTimeMinutes)
+    }
+    
+    var averageWPM: Double {
+        guard speakingTime > 0 else { return 0 }
+        return Double(wordCount) / (speakingTime / 60.0)
     }
 }
 
@@ -1976,33 +2135,34 @@ fileprivate struct ActivityChartView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
-                )
+                .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
 }
 
-fileprivate struct EfficiencyChartView: View {
+fileprivate struct PaceChartView: View {
     let dailyStats: [DailyStat]
     let colorScheme: ColorScheme
     @ObservedObject private var localizer = LocalizationManager.shared
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
-            Text(t("Efficiency (Saved Minutes)"))
+            Text(t("Speech Pace (WPM)"))
                 .font(.system(size: 15, weight: .bold))
                 .foregroundColor(.primary)
             
             Chart(dailyStats) { day in
-                BarMark(
+                LineMark(
                     x: .value("Dzień", day.date, unit: .day),
-                    y: .value("Minuty", day.savedTimeMinutes)
+                    y: .value("WPM", day.averageWPM)
                 )
+                .symbol(Circle())
                 .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
-                .cornerRadius(12)
+                .interpolationMethod(.monotone)
             }
             .frame(height: 180)
             .chartXAxis {
@@ -2014,11 +2174,11 @@ fileprivate struct EfficiencyChartView: View {
         .padding(20)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
-                )
+                .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
 }
@@ -2693,6 +2853,7 @@ struct BenchmarkView: View {
             }
             .buttonStyle(.plain)
             .focusable(false)
+            .keyboardShortcut(.defaultAction)
         }
     }
     
@@ -2816,11 +2977,11 @@ struct StatCard: View {
         .padding(16)
         .background(
             RoundedRectangle(cornerRadius: 16)
-                .fill(Color.clear)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
-                )
+                .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
 }
@@ -3808,21 +3969,15 @@ struct IncognitoExplanationView: View {
             
             Spacer()
             
-            // Checkbox (only if not opened from info button)
-            if !isFromInfo {
-                Button(action: {
-                    skipIncognitoExplanation.toggle()
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: skipIncognitoExplanation ? "checkmark.square.fill" : "square")
-                            .font(.system(size: 14))
-                            .foregroundColor(colorScheme == .dark ? .white : .black)
-                        Text(t("Do not show this notification again"))
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                    }
+            // Checkbox (only if not opened from info button, or if opened from info button and is already checked so they can reset it)
+            if !isFromInfo || skipIncognitoExplanation {
+                Toggle(isOn: $skipIncognitoExplanation) {
+                    Text(t("Do not show this notification again"))
+                        .font(.system(size: 13))
                 }
-                .buttonStyle(.plain)
+                .toggleStyle(.checkbox)
+                .accentColor(colorScheme == .dark ? .white : .black)
+                .tint(colorScheme == .dark ? .white : .black)
                 .focusable(false)
                 .padding(.bottom, 16)
             }
@@ -3841,10 +3996,162 @@ struct IncognitoExplanationView: View {
             }
             .buttonStyle(.plain)
             .focusable(false)
+            .keyboardShortcut(.defaultAction)
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
         }
         .frame(width: 440, height: 430)
+        .background(colorScheme == .dark ? Color.black : Color.white)
+    }
+}
+
+// MARK: - Custom Modals for Models
+
+struct ModelsRequiredExplanationView: View {
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 30)
+            
+            VStack(spacing: 12) {
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                
+                Text(t("Models Required"))
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            .padding(.bottom, 24)
+            
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "arrow.down.doc.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(t("Download necessary"))
+                            .font(.system(size: 12, weight: .bold))
+                        Text(t("In order to use Sonor and Whisper transcription, you must download the required AI models first in the Models tab."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineSpacing(2)
+                    }
+                }
+                
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "network.slash")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(t("Offline capability"))
+                            .font(.system(size: 12, weight: .bold))
+                        Text(t("Once downloaded, the models run 100% locally on your computer without internet access."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineSpacing(2)
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            
+            Spacer()
+            
+            Button(action: { dismiss() }) {
+                Text(t("I understand"))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+            .keyboardShortcut(.defaultAction)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 30)
+        }
+        .frame(width: 320, height: 380)
+        .background(colorScheme == .dark ? Color.black : Color.white)
+    }
+}
+
+struct ModelDownloadErrorView: View {
+    let error: String
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 30)
+            
+            VStack(spacing: 12) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(.red)
+                
+                Text(t("Download Interrupted"))
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            .padding(.bottom, 24)
+            
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "wifi.exclamationmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(t("Connection lost or timeout"))
+                            .font(.system(size: 12, weight: .bold))
+                        Text(t("The model download could not be completed. Network connection might be unstable."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineSpacing(2)
+                    }
+                }
+                
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "arrow.clockwise.icloud.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                        .frame(width: 18)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(t("Safe to resume"))
+                            .font(.system(size: 12, weight: .bold))
+                        Text(t("Don't worry about wasted data or storage! Just click Download again to resume exactly where it left off."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .lineSpacing(2)
+                    }
+                }
+            }
+            .padding(.horizontal, 24)
+            
+            Spacer()
+            
+            Button(action: { dismiss() }) {
+                Text(t("I understand"))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+            .keyboardShortcut(.defaultAction)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 30)
+        }
+        .frame(width: 320, height: 380)
         .background(colorScheme == .dark ? Color.black : Color.white)
     }
 }

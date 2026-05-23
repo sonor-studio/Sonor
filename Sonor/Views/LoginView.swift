@@ -58,6 +58,7 @@ struct LoginView: View {
             .padding(.horizontal, 40)
             
             Button(action: {
+                if !validateInputs() { return }
                 Task {
                     await handleAuth()
                 }
@@ -78,7 +79,8 @@ struct LoginView: View {
             }
             .buttonStyle(.plain)
             .padding(.horizontal, 40)
-            .disabled(isLoading || email.isEmpty || password.isEmpty)
+            .disabled(isLoading)
+            .keyboardShortcut(.defaultAction)
             
             Button(action: {
                 isRegistering.toggle()
@@ -110,5 +112,34 @@ struct LoginView: View {
             errorMessage = t(error.localizedDescription)
         }
         isLoading = false
+    }
+    
+    private func validateInputs() -> Bool {
+        errorMessage = nil
+        
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedEmail.isEmpty {
+            errorMessage = t("Please enter your email address.")
+            return false
+        }
+        
+        let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
+        let emailPred = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
+        if !emailPred.evaluate(with: trimmedEmail) {
+            errorMessage = t("Please enter a valid email address.")
+            return false
+        }
+        
+        if password.isEmpty {
+            errorMessage = t("Please enter your password.")
+            return false
+        }
+        
+        if password.count < 6 {
+            errorMessage = t("Password must be at least 6 characters long.")
+            return false
+        }
+        
+        return true
     }
 }

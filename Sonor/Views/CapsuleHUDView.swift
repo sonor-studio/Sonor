@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CapsuleHUDView: View {
     @ObservedObject var controller: AppController
+    @ObservedObject var modelManager = ModelManager.shared
     
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
     
@@ -201,7 +202,7 @@ struct CapsuleHUDView: View {
                     dictionaryNotificationView
                 } else {
                     // Pole wyboru asystenta
-                    if AuthManager.shared.isLoggedIn {
+                    if AuthManager.shared.isLoggedIn && modelManager.gemmaState == .downloaded {
                         assistantSelector
                     }
                     
@@ -296,7 +297,7 @@ struct CapsuleHUDView: View {
                 withAnimation(.easeOut(duration: 0.5)) {
                     opacity = 0.0
                 }
-            } else if status == "Listening..." {
+            } else if status == "Listening..." || status == "Model not downloaded" {
                 withAnimation(.easeIn(duration: 0.2)) {
                     opacity = 1.0
                 }

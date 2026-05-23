@@ -7,6 +7,9 @@ struct SonorApp: App {
     init() {
         // Ukryj aplikację z Docka i spraw, by działała tylko w pasku menu (Menu Bar)
         NSApplication.shared.setActivationPolicy(.accessory)
+        
+        // Zawsze wyłączaj tryb incognito przy uruchomieniu aplikacji
+        UserDefaults.standard.set(false, forKey: "isIncognitoMode")
     }
     
     var body: some Scene {

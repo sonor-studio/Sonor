@@ -7,7 +7,7 @@ import Hub
 import Tokenizers
 
 struct NativeHubDownloader: MLXLMCommon.Downloader {
-    let api = HubApi()
+    let api = HubApi(downloadBase: ModelManager.shared.modelsDirectory, cache: nil)
     func download(id: String, revision: String?, matching patterns: [String], useLatest: Bool, progressHandler: @Sendable @escaping (Progress) -> Void) async throws -> URL {
         return try await api.snapshot(from: id, revision: revision ?? "main", matching: patterns, progressHandler: progressHandler)
     }
@@ -89,6 +89,14 @@ final class LLMManager {
         } catch {
             print("⚠️ Warm failed: \(error.localizedDescription)")
         }
+    }
+
+    func releaseModel() {
+        self.chatSession = nil
+        self.modelContainer = nil
+        self.isReady = false
+        MLX.Memory.clearCache()
+        print("🧹 [LLMManager] Released Gemma model and cleared MLX cache from memory.")
     }
 
     private func getSession() async throws -> ChatSession {

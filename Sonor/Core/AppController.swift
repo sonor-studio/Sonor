@@ -23,6 +23,12 @@ class AppController: NSObject, ObservableObject {
     @Published var isPopoverOpen = false
     private var wasPopoverOpenBeforeRecording = false
     @Published var statusText = "Ready"
+    
+    var isCurrentlyProcessing: Bool {
+        let nonProcessingStatuses: Set<String> = ["Ready", "Cancelled", "No microphone permission", "Microphone error", "No text recognized.", "Error: Missing model", "Done!"]
+        return !isRecording && !nonProcessingStatuses.contains(statusText)
+    }
+    
     @Published var audioLevel: Float = 0.0
     @Published var audioLevels: [Float] = Array(repeating: 0.01, count: 40)
     @Published var availableModes: [VoiceMode] = []
@@ -61,18 +67,24 @@ class AppController: NSObject, ObservableObject {
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
         self.currentMode = modes.first(where: { $0.id.uuidString == activeModeID }) ?? modes.first
         
-        // Zlokalizuj model (używamy ggml-large-v3-turbo-q5_0.bin który jest na dysku)
-        if let path = Bundle.main.path(forResource: "ggml-large-v3-turbo-q5_0", ofType: "bin") {
-            print("📦 Znaleziono model: \(path)")
-            self.sonorContext = SonorContext(modelPath: path)
+        // Do not init SonorContext here anymore, we will lazy load it when recording starts if the model is downloaded.
+        // Also check if model was bundled (fallback) or use downloaded path.
+        if case .downloaded = ModelManager.shared.whisperState {
+            print("📦 Whisper is downloaded.")
         } else {
-            print("❌ BŁĄD: Nie znaleziono pliku modelu ggml-large-v3-turbo-q5_0.bin w Bundle.main!")
+            print("⚠️ Whisper model not downloaded yet.")
         }
         
         setupHotkey()
         
         NotificationCenter.default.addObserver(forName: Notification.Name("VoiceModesUpdated"), object: nil, queue: .main) { [weak self] _ in
             self?.reloadModes()
+        }
+        
+        NotificationCenter.default.addObserver(forName: Notification.Name("ReleaseWhisperContext"), object: nil, queue: .main) { [weak self] _ in
+            guard let self = self else { return }
+            self.sonorContext = nil
+            print("🧹 [AppController] Received ReleaseWhisperContext notification. Released sonorContext and closed file handle.")
         }
     }
     
@@ -98,9 +110,33 @@ class AppController: NSObject, ObservableObject {
     }
     
     func toggleRecording() {
+        if isCurrentlyProcessing {
+            print("⚠️ [AppController] Ignorowanie skrótu - trwa przetwarzanie poprzedniego tekstu (status: \(statusText)).")
+            return
+        }
+        
         if isRecording {
             stopRecordingAndTranscribe()
         } else {
+            guard case .downloaded = ModelManager.shared.whisperState else {
+                print("❌ Whisper model not downloaded.")
+                self.isRecording = false
+                self.openSettings()
+                
+                DispatchQueue.main.async {
+                    ModelManager.shared.showModelsRequiredModal = true
+                }
+                return
+            }
+            
+            // Lazy load SonorContext if it doesn't exist
+            if self.sonorContext == nil {
+                let path = ModelManager.shared.whisperModelURL.path
+                if FileManager.default.fileExists(atPath: path) {
+                    self.sonorContext = SonorContext(modelPath: path)
+                }
+            }
+            
             // Zapisz stan popovera ZANIM zaczniemy nagrywać
             wasPopoverOpenBeforeRecording = isPopoverOpen
             
@@ -144,7 +180,12 @@ class AppController: NSObject, ObservableObject {
             if selectedMode.pauseMusic {
                 print("🎵 Sprawdzanie i pauzowanie multimediów (Native)...")
                 Task {
-                    await SoundPlayer.shared.playSound(named: "Start")
+                    // Odtwórz dźwięk w tle (fire-and-forget)
+                    Task {
+                        await SoundPlayer.shared.playSound(named: "Start")
+                    }
+                    // Krótkie opóźnienie 200ms, aby dźwięk zdążył ruszyć zanim wyciszymy system
+                    try? await Task.sleep(nanoseconds: 200_000_000)
                     await MainActor.run {
                         guard self.isRecording else { return }
                         self.pauseMultimedia {
@@ -155,12 +196,12 @@ class AppController: NSObject, ObservableObject {
             } else {
                 self.didPauseMusic = false
                 Task {
-                    await SoundPlayer.shared.playSound(named: "Start")
-                    await MainActor.run {
-                        guard self.isRecording else { return }
-                        self.startRecording()
+                    // Odtwórz dźwięk w tle (fire-and-forget)
+                    Task {
+                        await SoundPlayer.shared.playSound(named: "Start")
                     }
                 }
+                self.startRecording()
             }
         }
     }
@@ -175,55 +216,64 @@ class AppController: NSObject, ObservableObject {
             print("⚠️ Brak uprawnień Accessibility. Pokazano prompt systemowy.")
         }
         
-        AVCaptureDevice.requestAccess(for: AVMediaType.audio) { granted in
-            Task { @MainActor in
-                guard granted else {
-                    print("⚠️ Brak uprawnień do mikrofonu.")
-                    self.statusText = "No microphone permission"
-                    self.isRecording = false
-                    self.hideHUDAfterDelay()
-                    return
-                }
-                
-                do {
-                    print("🎙️ Próba startu nagrywania...")
-                    try self.audioManager.startRecording()
-                    self.isRecording = true
-                    self.statusText = "Listening..."
-                    
-                    // Monitorowanie poziomu głośności do UI (.common mode chroni przed zatrzymywaniem przy przeciąganiu)
-                    let timer = Timer(timeInterval: 0.05, repeats: true) { timer in
-                        Task { @MainActor [weak self] in
-                            guard let self = self else {
-                                timer.invalidate()
-                                return
-                            }
-                            if self.isRecording {
-                                if !self.isPaused {
-                                    let level = self.audioManager.audioLevel
-                                    self.audioLevel = level
-                                    
-                                    self.audioLevels.append(max(0.01, level))
-                                    if self.audioLevels.count > 40 {
-                                        self.audioLevels.removeFirst()
-                                    }
-                                }
-                            } else {
-                                withAnimation {
-                                    self.audioLevels = Array(repeating: 0.01, count: 40)
-                                }
-                                timer.invalidate()
-                            }
-                        }
+        let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        if authStatus == .authorized {
+            // Uprawnienia są już nadane! Rozpoczynamy nagrywanie synchronicznie i natychmiast bez asynchronicznego skoku.
+            performStartRecording()
+        } else {
+            AVCaptureDevice.requestAccess(for: AVMediaType.audio) { granted in
+                Task { @MainActor in
+                    guard granted else {
+                        print("⚠️ Brak uprawnień do mikrofonu.")
+                        self.statusText = "No microphone permission"
+                        self.isRecording = false
+                        self.hideHUDAfterDelay()
+                        return
                     }
-                    RunLoop.main.add(timer, forMode: .common)
-                } catch {
-                    print("❌ Błąd mikrofonu: \(error.localizedDescription)")
-                    self.statusText = "Microphone error"
-                    self.isRecording = false
-                    self.hideHUDAfterDelay()
+                    self.performStartRecording()
                 }
             }
+        }
+    }
+    
+    private func performStartRecording() {
+        do {
+            print("🎙️ Próba startu nagrywania...")
+            try self.audioManager.startRecording()
+            self.isRecording = true
+            self.statusText = "Listening..."
+            
+            // Monitorowanie poziomu głośności do UI (.common mode chroni przed zatrzymywaniem przy przeciąganiu)
+            let timer = Timer(timeInterval: 0.05, repeats: true) { timer in
+                Task { @MainActor [weak self] in
+                    guard let self = self else {
+                        timer.invalidate()
+                        return
+                    }
+                    if self.isRecording {
+                        if !self.isPaused {
+                            let level = self.audioManager.audioLevel
+                            self.audioLevel = level
+                            
+                            self.audioLevels.append(max(0.01, level))
+                            if self.audioLevels.count > 40 {
+                                self.audioLevels.removeFirst()
+                            }
+                        }
+                    } else {
+                        withAnimation {
+                            self.audioLevels = Array(repeating: 0.01, count: 40)
+                        }
+                        timer.invalidate()
+                    }
+                }
+            }
+            RunLoop.main.add(timer, forMode: .common)
+        } catch {
+            print("❌ Błąd mikrofonu: \(error.localizedDescription)")
+            self.statusText = "Microphone error"
+            self.isRecording = false
+            self.hideHUDAfterDelay()
         }
     }
     
@@ -254,6 +304,8 @@ class AppController: NSObject, ObservableObject {
             
             panel.isFloatingPanel = true
             panel.level = .statusBar
+            panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+            panel.hidesOnDeactivate = false
             panel.appearance = NSAppearance(named: .darkAqua)
             
             if let screen = NSScreen.main {

@@ -61,4 +61,14 @@ Sonor.app/
 # Docs and Resources
 Docs/
 Resources/
+scratch/
 
+# Script and text files
+*.py
+*.txt
+*.rb
+*.sh
+*.js
+*.ts
+*.pl
+*.php
