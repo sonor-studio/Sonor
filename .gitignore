@@ -1,0 +1,64 @@
+# Xcode
+#
+build/
+DerivedData/
+*.hmap
+*.ipa
+*.plist.tmp
+*.xcuserstate
+*.xccheckout
+*.moved-aside
+*.pin
+*.resolved
+*.xcuserstate
+*.xcworkspace/
+!default.xcworkspace/
+
+# Swift Package Manager
+#
+.build/
+.swiftpm/
+Packages/
+Package.resolved
+
+# App Store Connect
+#
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# macOS
+#
+.DS_Store
+*.swp
+*~
+.AppleDouble
+.LSOverride
+
+# Large Model Files
+#
+*.bin
+*.metallib
+*.air
+*.profraw
+
+# Environment
+#
+.env
+.env.*
+
+# Local repos (if they are not submodules)
+mlx-examples-repo/
+mlx-swift-lm-repo/
+mlx-swift-repo/
+
+# App artifacts
+Sonor.app/
+# Resources (Keep source graphics but ignore exports if needed)
+# Resources/Icons/Icon Exports/
+
+# Docs and Resources
+Docs/
+Resources/
+
