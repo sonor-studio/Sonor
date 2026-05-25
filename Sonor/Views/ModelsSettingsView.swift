@@ -14,8 +14,13 @@ struct ModelsSettingsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
-            Text(t("Models"))
-                .font(.system(size: 28, weight: .bold))
+            HStack {
+                Image(systemName: "shippingbox.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.primary)
+                Text(t("Models"))
+                    .font(.system(size: 28, weight: .bold))
+            }
             
             Text(t("Manage the AI models used by Sonor for transcription and text processing."))
                 .font(.system(size: 14))
@@ -110,7 +115,7 @@ struct ModelCard: View {
                     HStack(spacing: 12) {
                         ProgressView(value: progress)
                             .progressViewStyle(.linear)
-                            .tint(.white)
+                            .tint(colorScheme == .dark ? .white : .black)
                             .frame(width: 100)
                         
                         Text("\(Int(progress * 100))%")
@@ -119,6 +124,33 @@ struct ModelCard: View {
                         
                         Button(action: onCancel) {
                             Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    
+                case .paused(let progress):
+                    HStack(spacing: 12) {
+                        ProgressView(value: progress)
+                            .progressViewStyle(.linear)
+                            .tint(.secondary)
+                            .frame(width: 100)
+                            .opacity(0.6)
+                        
+                        Text("\(Int(progress * 100))%")
+                            .font(.system(size: 12, weight: .medium).monospacedDigit())
+                            .foregroundColor(.secondary)
+                        
+                        Button(action: onDownload) {
+                            Image(systemName: "play.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(colorScheme == .dark ? .white : .black)
+                        }
+                        .buttonStyle(.plain)
+                        
+                        Button(action: onCancel) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16))
                                 .foregroundColor(.secondary)
                         }
                         .buttonStyle(.plain)

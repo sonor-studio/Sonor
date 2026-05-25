@@ -68,6 +68,8 @@ struct SettingsView: View {
     
     @ObservedObject private var authManager = AuthManager.shared
     @State private var showLoginSheet = false
+    @State private var isShowingProfileSheet = false
+    @State private var isProfileCardHovered = false
     
     @ObservedObject private var modelManager = ModelManager.shared
     
@@ -110,7 +112,7 @@ struct SettingsView: View {
                         Image(systemName: "person.crop.circle.fill")
                             .resizable()
                             .frame(width: 30, height: 30)
-                            .foregroundStyle(authManager.isLoggedIn ? .blue : .secondary)
+                            .foregroundStyle(authManager.isLoggedIn ? .primary : .secondary)
                         
                         VStack(alignment: .leading, spacing: 2) {
                             Text(authManager.isLoggedIn ? t("Premium") : t("User"))
@@ -122,7 +124,23 @@ struct SettingsView: View {
                         }
                         Spacer()
                     }
-                    .padding(.horizontal, 5)
+                    .padding(8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(authManager.isLoggedIn && isProfileCardHovered ? (colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05)) : Color.clear)
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if authManager.isLoggedIn {
+                            isShowingProfileSheet = true
+                        }
+                    }
+                    .onHover { hovering in
+                        if authManager.isLoggedIn {
+                            isProfileCardHovered = hovering
+                        }
+                    }
+                    .padding(.horizontal, -3) // Adjust layout since padding was increased from 5 to 8
                     
                     if authManager.isLoggedIn {
                         Button(action: {
@@ -358,7 +376,7 @@ struct SettingsView: View {
                                         case "Formal Email", "Formalny e-mail":
                                             return t("Automatically transforms loose thoughts into professional, elegant, and official business correspondence. Ideal for writing emails quickly.")
                                         case "Structured Note", "Ustrukturyzowana notatka":
-                                            return t("Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -) without any Markdown or HTML code.")
+                                            return t("Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).")
                                         default:
                                             return t("Built-in system assistant.")
                                         }
@@ -552,6 +570,9 @@ struct SettingsView: View {
                         Spacer()
                     }
                 )
+        }
+        .sheet(isPresented: $isShowingProfileSheet) {
+            UserProfileView()
         }
         .background(
             Color.clear
@@ -900,15 +921,20 @@ struct HomeSettingsView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
-            Text(t("Control Panel"))
-                .font(.system(size: 28, weight: .bold))
+            HStack {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 24))
+                    .foregroundColor(.primary)
+                Text(t("Settings"))
+                    .font(.system(size: 28, weight: .bold))
+            }
             
+            appThemeSection
+            appLanguageSection
             keyboardShortcutSection
             audioSourceSection
             appSoundsSection
             autoUpdateDictionarySection
-            appThemeSection
-            appLanguageSection
         }
         .onAppear {
             setupEventMonitor()
@@ -1333,10 +1359,27 @@ struct StatisticsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
             headerView
-            heroBannerView
-            summaryCardsView
-            chartsView
-            ramHistoryView
+            
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "chart.bar.fill")
+                        .font(.system(size: 18))
+                        .foregroundColor(.primary)
+                    Text(t("Statistics"))
+                        .font(.system(size: 20, weight: .bold))
+                }
+                heroBannerView
+                summaryCardsView
+                chartsView
+            }
+            .padding(.top, 10)
+            
+            Divider()
+                .padding(.vertical, 10)
+            
+            VStack(alignment: .leading, spacing: 10) {
+                ramHistoryView
+            }
         }
         .sheet(isPresented: $isShowingBenchmarkSheet) {
             BenchmarkView()
@@ -1355,7 +1398,10 @@ struct StatisticsView: View {
     @ViewBuilder
     private var headerView: some View {
         HStack {
-            Text(t("Statistics"))
+            Image(systemName: "house.fill")
+                .font(.system(size: 24))
+                .foregroundColor(.primary)
+            Text(t("Home"))
                 .font(.system(size: 28, weight: .bold))
             Spacer()
             
@@ -1486,7 +1532,7 @@ struct StatisticsView: View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
             StatCard(
                 title: t("AVERAGE SPEECH PACE"),
-                value: String(format: t("%.0f words/min"), averageSpeechSpeed > 0 ? averageSpeechSpeed : 140),
+                value: String(format: t("%.0f words/min"), averageSpeechSpeed > 0 ? averageSpeechSpeed : 140.0),
                 subtitle: t("Standard typing: ~40 words/min"),
                 icon: "speedometer"
             )
@@ -1722,11 +1768,11 @@ fileprivate struct RamHistoryView: View {
         VStack(alignment: .leading, spacing: 15) {
             HStack {
                 HStack(spacing: 8) {
-                    Image(systemName: "clock")
-                        .font(.system(size: 16))
+                    Image(systemName: "clock.fill")
+                        .font(.system(size: 18))
                         .foregroundColor(colorScheme == .dark ? .white : .black)
                     Text(t("Text History (RAM only)"))
-                        .font(.system(size: 16, weight: .bold))
+                        .font(.system(size: 20, weight: .bold))
                     
                     Button(action: {
                         isShowingRamExplanation = true
@@ -1930,6 +1976,7 @@ fileprivate struct MessageCardView: View {
     let onDelete: () -> Void
     
     @State private var isCopied = false
+    @State private var isExpanded = false
     
     private var copyBgColor: Color {
         if isCopyHovered {
@@ -2068,10 +2115,16 @@ fileprivate struct MessageCardView: View {
                 .font(.system(size: 13, weight: .regular))
                 .foregroundColor(.primary)
                 .lineSpacing(3)
+                .lineLimit(isExpanded ? nil : 3)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
         }
         .padding(14)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                isExpanded.toggle()
+            }
+        }
         .background(
             RoundedRectangle(cornerRadius: 12)
                 .fill(cardBgColor)
@@ -2080,6 +2133,7 @@ fileprivate struct MessageCardView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(cardStrokeColor, lineWidth: 1)
         )
+        .animation(.easeInOut(duration: 0.2), value: isExpanded)
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.15)) {
                 onCardHover(hovering)
@@ -2622,7 +2676,7 @@ struct BenchmarkView: View {
                     Text(String(format: "%.1fs", writingElapsed))
                         .font(.system(size: 22, weight: .bold, design: .monospaced))
                     
-                    Text(String(format: t("%.0f words/min"), wpmWriting))
+                    Text(String(format: t("%.0f words/min"), Double(wpmWriting)))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -2650,7 +2704,7 @@ struct BenchmarkView: View {
                     Text(String(format: "%.1fs", speakingElapsed))
                         .font(.system(size: 22, weight: .bold, design: .monospaced))
                     
-                    Text(String(format: t("%.0f words/min"), wpmSpeaking))
+                    Text(String(format: t("%.0f words/min"), Double(wpmSpeaking)))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -3004,7 +3058,7 @@ struct DictionarySettingsView: View {
             HStack(spacing: 10) {
                 Image(systemName: "book.closed.fill")
                     .font(.system(size: 24))
-                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                    .foregroundColor(.primary)
                 Text(t("Dictionary"))
                     .font(.system(size: 28, weight: .bold))
             }
@@ -3288,7 +3342,7 @@ struct SnippetsSettingsView: View {
             HStack(spacing: 10) {
                 Image(systemName: "scissors")
                     .font(.system(size: 24))
-                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                    .foregroundColor(.primary)
                 Text(t("Snippets"))
                     .font(.system(size: 28, weight: .bold))
             }
@@ -3570,8 +3624,13 @@ struct ModesSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                Text(t("Assistants"))
-                    .font(.system(size: 28, weight: .bold))
+                HStack {
+                    Image(systemName: "square.grid.2x2.fill")
+                        .font(.system(size: 24))
+                        .foregroundColor(.primary)
+                    Text(t("Assistants"))
+                        .font(.system(size: 28, weight: .bold))
+                }
                 Spacer()
                 
                 if isPremium {
@@ -3621,15 +3680,9 @@ struct ModesSettingsView: View {
                     if !isPremium {
                         VStack(spacing: 14) {
                             VStack(spacing: 6) {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "sparkles")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.blue)
-                                    
-                                    Text(t("Unlock new assistants after logging in"))
-                                        .font(.system(size: 15, weight: .bold))
-                                }
-                                .foregroundColor(.primary)
+                                Text(t("Unlock new assistants after logging in"))
+                                    .font(.system(size: 15, weight: .bold))
+                                    .foregroundColor(.primary)
                                 
                                 Text(t("Get access to advanced AI assistants (speech smoothing, professional emails, notes). Everything is 100% free, runs fully offline on your computer, and collects no data."))
                                     .font(.system(size: 12))
@@ -3641,17 +3694,13 @@ struct ModesSettingsView: View {
                             Button(action: {
                                 showLoginSheet = true
                             }) {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "lock.open.fill")
-                                        .font(.system(size: 12))
-                                    Text(t("Log In"))
-                                        .font(.system(size: 13, weight: .semibold))
-                                }
-                                .foregroundColor(colorScheme == .dark ? .black : .white)
-                                .padding(.horizontal, 24)
-                                .padding(.vertical, 10)
-                                .background(colorScheme == .dark ? Color.white : Color.black)
-                                .cornerRadius(10)
+                                Text(t("Log In"))
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                                    .padding(.horizontal, 24)
+                                    .padding(.vertical, 10)
+                                    .background(colorScheme == .dark ? Color.white : Color.black)
+                                    .cornerRadius(10)
                             }
                             .buttonStyle(.plain)
                             .focusable(false)
@@ -3744,7 +3793,7 @@ struct ModeCard: View {
             case "Formal Email", "Formalny e-mail":
                 return t("Automatically transforms loose thoughts into professional, elegant, and official business correspondence. Ideal for writing emails quickly.")
             case "Structured Note", "Ustrukturyzowana notatka":
-                return t("Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -) without any Markdown or HTML code.")
+                return t("Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).")
             default:
                 return t("Built-in system assistant.")
             }
@@ -4125,7 +4174,7 @@ struct ModelDownloadErrorView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(t("Safe to resume"))
                             .font(.system(size: 12, weight: .bold))
-                        Text(t("Don't worry about wasted data or storage! Just click Download again to resume exactly where it left off."))
+                        Text(t("You can safely resume the download later without losing progress."))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .lineSpacing(2)
@@ -4155,3 +4204,406 @@ struct ModelDownloadErrorView: View {
         .background(colorScheme == .dark ? Color.black : Color.white)
     }
 }
+
+struct UserProfileView: View {
+    @Environment(\.dismiss) var dismiss
+    @Environment(\.colorScheme) var colorScheme
+    @ObservedObject var authManager = AuthManager.shared
+    @ObservedObject var localizer = LocalizationManager.shared
+    
+    @State private var isCloseHovered = false
+    @State private var showDeleteConfirmation = false
+    @State private var isDeleting = false
+    @State private var deleteError: String? = nil
+    @State private var deletePassword = ""
+    
+    // Change Password States
+    @State private var isChangingPassword = false
+    @State private var oldPassword = ""
+    @State private var newPassword = ""
+    @State private var confirmNewPassword = ""
+    @State private var changePasswordError: String? = nil
+    @State private var isSavingPassword = false
+    @State private var showSuccessMessage = false
+    
+    private var formattedCreationDate: String {
+        guard let date = authManager.currentUserCreatedAt else {
+            return t("Loading...")
+        }
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        formatter.locale = Locale(identifier: localizer.appLanguage)
+        return formatter.string(from: date)
+    }
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header with custom close button
+            HStack {
+                Spacer()
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundColor(isCloseHovered ? .white : .secondary)
+                    .contentShape(Rectangle())
+                    .onHover { hovering in
+                        isCloseHovered = hovering
+                    }
+                    .onTapGesture {
+                        dismiss()
+                    }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            
+            if showSuccessMessage {
+                VStack(spacing: 16) {
+                    Spacer()
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 50))
+                        .foregroundColor(.green)
+                    
+                    Text(t("Password Updated Successfully!"))
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.white)
+                    
+                    Text(t("Your account is now secure with the new password."))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                    Spacer()
+                }
+                .transition(.opacity)
+                .onAppear {
+                    Task {
+                        try? await Task.sleep(nanoseconds: 2_000_000_000)
+                        await MainActor.run {
+                            withAnimation {
+                                showSuccessMessage = false
+                                isChangingPassword = false
+                            }
+                        }
+                    }
+                }
+            } else if isChangingPassword {
+                VStack(spacing: 14) {
+                    Text(t("Change Password"))
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.top, 10)
+                        .padding(.bottom, 6)
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(t("Old password"))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                        SecureField(t("Enter old password..."), text: $oldPassword)
+                            .textFieldStyle(.plain)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color.white.opacity(0.06))
+                            .cornerRadius(8)
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(t("New password"))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                        SecureField(t("Enter new password..."), text: $newPassword)
+                            .textFieldStyle(.plain)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color.white.opacity(0.06))
+                            .cornerRadius(8)
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(t("Repeat new password"))
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.secondary)
+                        SecureField(t("Repeat new password..."), text: $confirmNewPassword)
+                            .textFieldStyle(.plain)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 10)
+                            .background(Color.white.opacity(0.06))
+                            .cornerRadius(8)
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 24)
+                    
+                    if let changePasswordError = changePasswordError {
+                        Text(changePasswordError)
+                            .font(.system(size: 11))
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
+                            .padding(.top, 4)
+                    }
+                    
+                    Spacer()
+                    
+                    if isSavingPassword {
+                        ProgressView()
+                            .controlSize(.small)
+                            .padding(.bottom, 20)
+                    } else {
+                        // Save Button
+                        Button(action: {
+                            performPasswordChange()
+                        }) {
+                            Text(t("Save Password"))
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.black)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.white)
+                                .cornerRadius(10)
+                        }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                        .padding(.horizontal, 24)
+                        
+                        // Cancel Button
+                        Button(action: {
+                            withAnimation {
+                                isChangingPassword = false
+                                oldPassword = ""
+                                newPassword = ""
+                                confirmNewPassword = ""
+                                changePasswordError = nil
+                            }
+                        }) {
+                            Text(t("Cancel"))
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(.white.opacity(0.6))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(Color.white.opacity(0.08))
+                                .cornerRadius(10)
+                        }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 20)
+                    }
+                }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else {
+                VStack(spacing: 0) {
+                    // Avatar
+                    Image(systemName: "person.crop.circle.fill")
+                        .resizable()
+                        .frame(width: 80, height: 80)
+                        .foregroundColor(.white.opacity(0.8))
+                        .padding(.top, 10)
+                        .padding(.bottom, 16)
+                    
+                    // Premium tag if logged in
+                    Text(t("PREMIUM"))
+                        .font(.system(size: 10, weight: .black))
+                        .foregroundColor(.black)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.white)
+                        .cornerRadius(4)
+                        .padding(.bottom, 16)
+                    
+                    // Email and date
+                    VStack(spacing: 6) {
+                        Text(authManager.currentUserEmail ?? "")
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(.white)
+                        
+                        Text("\(t("Member since:")) \(formattedCreationDate)")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.bottom, 30)
+                    
+                    Spacer()
+                    
+                    // Log Out Button
+                    Button(action: {
+                        authManager.logout()
+                        dismiss()
+                    }) {
+                        Text(t("Log Out"))
+                            .font(.system(size: 13, weight: .bold))
+                            .foregroundColor(.black)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.white)
+                            .cornerRadius(10)
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 12)
+                    
+                    // Change Password Button
+                    Button(action: {
+                        withAnimation {
+                            isChangingPassword = true
+                        }
+                    }) {
+                        Text(t("Change Password"))
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.white.opacity(0.08))
+                            .cornerRadius(10)
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
+                    
+                    // Delete Account Button
+                    Button(action: {
+                        showDeleteConfirmation = true
+                    }) {
+                        Text(t("Delete Account"))
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.red)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(10)
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 20)
+                    
+                    if let deleteError = deleteError {
+                        Text(deleteError)
+                            .font(.system(size: 11))
+                            .foregroundColor(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 24)
+                            .padding(.bottom, 10)
+                    }
+                    
+                    if isDeleting {
+                        ProgressView()
+                            .controlSize(.small)
+                            .padding(.bottom, 10)
+                    }
+                }
+                .transition(.move(edge: .leading).combined(with: .opacity))
+            }
+        }
+        .frame(width: 400, height: 550) // Adjust height to support three password fields cleanly
+        .background(Color(red: 0.05, green: 0.05, blue: 0.05))
+        .foregroundColor(.white)
+        .alert(t("Delete Account"), isPresented: $showDeleteConfirmation) {
+            SecureField(t("Password"), text: $deletePassword)
+            Button(t("Delete"), role: .destructive) {
+                performAccountDeletion()
+            }
+            Button(t("Cancel"), role: .cancel) {
+                deletePassword = ""
+            }
+        } message: {
+            Text(t("Please enter your password to confirm. This action cannot be undone."))
+        }
+        .onAppear {
+            Task {
+                await authManager.fetchUserDetails()
+            }
+        }
+    }
+    
+    private func performPasswordChange() {
+        let trimmedOld = oldPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedNew = newPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedConfirm = confirmNewPassword.trimmingCharacters(in: .whitespacesAndNewlines)
+        
+        if trimmedOld.isEmpty {
+            changePasswordError = t("Please enter your old password.")
+            return
+        }
+        
+        if trimmedNew.isEmpty {
+            changePasswordError = t("Password cannot be empty.")
+            return
+        }
+        
+        if trimmedNew.count < 6 {
+            changePasswordError = t("Password must be at least 6 characters long.")
+            return
+        }
+        
+        if trimmedNew != trimmedConfirm {
+            changePasswordError = t("Passwords do not match.")
+            return
+        }
+        
+        isSavingPassword = true
+        changePasswordError = nil
+        
+        Task {
+            do {
+                // Verify old password by logging in again
+                if let email = authManager.currentUserEmail {
+                    try await authManager.login(email: email, password: trimmedOld)
+                }
+                
+                // If login succeeds, update password
+                try await authManager.updatePassword(newPassword: trimmedNew)
+                
+                await MainActor.run {
+                    isSavingPassword = false
+                    oldPassword = ""
+                    newPassword = ""
+                    confirmNewPassword = ""
+                    withAnimation {
+                        showSuccessMessage = true
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    isSavingPassword = false
+                    changePasswordError = tError(error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    private func performAccountDeletion() {
+        guard !deletePassword.isEmpty else {
+            deleteError = t("Password cannot be empty.")
+            return
+        }
+        
+        isDeleting = true
+        deleteError = nil
+        let passwordToVerify = deletePassword
+        
+        Task {
+            do {
+                if let email = authManager.currentUserEmail {
+                    try await authManager.login(email: email, password: passwordToVerify)
+                }
+                
+                try await authManager.deleteAccount()
+                await MainActor.run {
+                    isDeleting = false
+                    dismiss()
+                }
+            } catch {
+                await MainActor.run {
+                    isDeleting = false
+                    deleteError = tError(error.localizedDescription)
+                }
+            }
+        }
+    }
+}
+

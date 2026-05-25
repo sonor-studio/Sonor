@@ -7,6 +7,7 @@ struct LoginView: View {
     @ObservedObject var localizer = LocalizationManager.shared
     @State private var email = ""
     @State private var password = ""
+    @State private var confirmPassword = ""
     @State private var isRegistering = false
     @State private var errorMessage: String? = nil
     @State private var isLoading = false
@@ -54,6 +55,14 @@ struct LoginView: View {
                     .padding(12)
                     .background(Color.primary.opacity(0.05))
                     .cornerRadius(8)
+                    
+                if isRegistering {
+                    SecureField(t("Repeat password"), text: $confirmPassword)
+                        .textFieldStyle(.plain)
+                        .padding(12)
+                        .background(Color.primary.opacity(0.05))
+                        .cornerRadius(8)
+                }
             }
             .padding(.horizontal, 40)
             
@@ -83,8 +92,11 @@ struct LoginView: View {
             .keyboardShortcut(.defaultAction)
             
             Button(action: {
-                isRegistering.toggle()
+                withAnimation {
+                    isRegistering.toggle()
+                }
                 errorMessage = nil
+                confirmPassword = ""
             }) {
                 Text(isRegistering ? t("Already have an account? Log In") : t("Don't have an account? Sign Up"))
                     .font(.system(size: 13))
@@ -109,7 +121,7 @@ struct LoginView: View {
             }
             presentationMode.wrappedValue.dismiss()
         } catch {
-            errorMessage = t(error.localizedDescription)
+            errorMessage = tError(error.localizedDescription)
         }
         isLoading = false
     }
@@ -138,6 +150,18 @@ struct LoginView: View {
         if password.count < 6 {
             errorMessage = t("Password must be at least 6 characters long.")
             return false
+        }
+        
+        if isRegistering {
+            if confirmPassword.isEmpty {
+                errorMessage = t("Please repeat your password.")
+                return false
+            }
+            
+            if password != confirmPassword {
+                errorMessage = t("Passwords do not match.")
+                return false
+            }
         }
         
         return true

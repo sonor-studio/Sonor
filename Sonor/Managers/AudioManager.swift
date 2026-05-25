@@ -32,9 +32,11 @@ class AudioManager: ObservableObject {
         }
     }
     
-    func startRecording() throws {
+    func startRecording(clearSamples: Bool = true) throws {
         print("🎙️ AudioManager: Start nagrywania...")
-        accumulatedSamples.removeAll()
+        if clearSamples {
+            accumulatedSamples.removeAll()
+        }
         
         let engine = AVAudioEngine()
         self.audioEngine = engine
@@ -76,14 +78,35 @@ class AudioManager: ObservableObject {
         engine.prepare()
         try engine.start()
         
+        NotificationCenter.default.addObserver(self, selector: #selector(handleConfigurationChange), name: .AVAudioEngineConfigurationChange, object: engine)
+        
         DispatchQueue.main.async {
             self.isRecording = true
             print("✅ AudioManager: Nagrywanie aktywne")
         }
     }
     
+    @objc private func handleConfigurationChange(notification: Notification) {
+        print("⚠️ AudioManager: Zmiana konfiguracji audio (urządzenie odłączone). Wznawiam nagrywanie...")
+        NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: audioEngine)
+        
+        if isTapInstalled {
+            audioEngine?.inputNode.removeTap(onBus: 0)
+            isTapInstalled = false
+        }
+        audioEngine?.stop()
+        audioEngine = nil
+        
+        do {
+            try startRecording(clearSamples: false)
+        } catch {
+            print("❌ AudioManager: Błąd podczas wznawiania nagrywania: \(error)")
+        }
+    }
+    
     func stopRecording() -> [Float] {
         print("⏹️ AudioManager: Zatrzymywanie...")
+        NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: audioEngine)
         if isTapInstalled {
             audioEngine?.inputNode.removeTap(onBus: 0)
             isTapInstalled = false

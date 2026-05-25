@@ -7,6 +7,7 @@ import HuggingFace
 enum DownloadState: Equatable {
     case notDownloaded
     case downloading(progress: Double)
+    case paused(progress: Double)
     case downloaded
 }
 
@@ -63,7 +64,9 @@ class ModelManager: ObservableObject {
         
         // Check Whisper
         let whisperPath = whisperModelURL.path
+        let whisperIncompletePath = whisperPath + ".incomplete"
         let whisperExists = FileManager.default.fileExists(atPath: whisperPath)
+        let whisperIncompleteExists = FileManager.default.fileExists(atPath: whisperIncompletePath)
         print("ℹ️ [ModelManager] Checking Whisper at \(whisperPath) - Exists: \(whisperExists)")
         if whisperExists {
             if let attributes = try? FileManager.default.attributesOfItem(atPath: whisperPath),
@@ -72,6 +75,15 @@ class ModelManager: ObservableObject {
                 print("ℹ️ [ModelManager] Whisper file size on disk: \(String(format: "%.2f", sizeMB)) MB")
             }
             whisperState = .downloaded
+        } else if whisperIncompleteExists {
+            if let attributes = try? FileManager.default.attributesOfItem(atPath: whisperIncompletePath),
+               let size = attributes[.size] as? Int64 {
+                let expectedSize: Double = 574_823_136.0 // Approximately 548 MB
+                let progress = min(Double(size) / expectedSize, 0.99)
+                whisperState = .paused(progress: progress)
+            } else {
+                whisperState = .paused(progress: 0.0)
+            }
         } else {
             whisperState = .notDownloaded
         }
@@ -83,10 +95,8 @@ class ModelManager: ObservableObject {
         let gemmaExists = FileManager.default.fileExists(atPath: gemmaDir.path)
         print("ℹ️ [ModelManager] Checking Gemma directory at \(gemmaDir.path) - Exists: \(gemmaExists)")
         
-        var isGemmaDownloaded = false
         if gemmaExists {
             if let files = try? FileManager.default.contentsOfDirectory(atPath: gemmaDir.path), !files.isEmpty {
-                isGemmaDownloaded = true
                 print("ℹ️ [ModelManager] Gemma directory contents: \(files)")
                 var totalSize: Int64 = 0
                 for file in files {
@@ -98,18 +108,30 @@ class ModelManager: ObservableObject {
                 }
                 let sizeMB = Double(totalSize) / (1024.0 * 1024.0)
                 print("ℹ️ [ModelManager] Gemma total folder size on disk: \(String(format: "%.2f", sizeMB)) MB")
+                
+                // Check if size is over 2 GB to ensure it is not a partially downloaded model
+                if totalSize > 2_000_000_000 {
+                    gemmaState = .downloaded
+                } else {
+                    print("⚠️ [ModelManager] Gemma folder size (\(sizeMB) MB) is too small. Marking as PAUSED.")
+                    let progress = min(Double(totalSize) / 3_000_000_000.0, 0.99)
+                    gemmaState = .paused(progress: progress)
+                }
             } else {
                 print("ℹ️ [ModelManager] Gemma directory is empty.")
+                gemmaState = .notDownloaded
             }
+        } else {
+            gemmaState = .notDownloaded
         }
-        gemmaState = isGemmaDownloaded ? .downloaded : .notDownloaded
         print("ℹ️ [ModelManager] Initial state check complete. Whisper: \(whisperState), Gemma: \(gemmaState)")
     }
     
     // MARK: - Whisper Download
     
     func downloadWhisper() {
-        guard case .notDownloaded = whisperState else { return }
+        if case .downloading = whisperState { return }
+        if case .downloaded = whisperState { return }
         
         print("📥 [Whisper] Starting custom download process for \(whisperModelId)...")
         whisperState = .downloading(progress: 0.0)
@@ -146,10 +168,26 @@ class ModelManager: ObservableObject {
                     print("✅ [Whisper] Download completed successfully!")
                     self.whisperState = .downloaded
                 case .failure(let error):
-                    print("❌ [Whisper] Failed to download Whisper: \(error.localizedDescription)")
-                    self.whisperState = .notDownloaded
-                    self.downloadError = error.localizedDescription
-                    self.showDownloadErrorModal = true
+                    let nsError = error as NSError
+                    if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                        print("⚠️ [Whisper] Download was explicitly cancelled. State handled by cancellation method.")
+                    } else {
+                        print("❌ [Whisper] Failed to download Whisper: \(error.localizedDescription)")
+                        
+                        // Recalculate progress from disk if lastEmitted is not helpful
+                        var finalProgress = lastEmittedProgress >= 0 ? lastEmittedProgress : 0.0
+                        if finalProgress == 0.0 {
+                            let incompleteURL = self.whisperModelURL.deletingLastPathComponent().appendingPathComponent(self.whisperModelURL.lastPathComponent + ".incomplete")
+                            if let attrs = try? FileManager.default.attributesOfItem(atPath: incompleteURL.path),
+                               let size = attrs[.size] as? Int64 {
+                                finalProgress = min(Double(size) / 574_823_136.0, 0.99)
+                            }
+                        }
+                        
+                        self.downloadError = error.localizedDescription
+                        self.showDownloadErrorModal = true
+                        self.whisperState = .paused(progress: finalProgress)
+                    }
                 }
             }
         }
@@ -212,7 +250,8 @@ class ModelManager: ObservableObject {
     // MARK: - Gemma Download
     
     func downloadGemma() {
-        guard case .notDownloaded = gemmaState else { return }
+        if case .downloading = gemmaState { return }
+        if case .downloaded = gemmaState { return }
         
         print("📥 [Gemma] Starting download process for \(gemmaModelId)...")
         gemmaState = .downloading(progress: 0.0)
@@ -262,10 +301,23 @@ class ModelManager: ObservableObject {
             } catch {
                 print("❌ [Gemma] Failed to download Gemma: \(error)")
                 if !Task.isCancelled {
-                    self.gemmaState = .notDownloaded
                     Task { @MainActor in
+                        let api = HubApi(downloadBase: self.modelsDirectory, cache: nil)
+                        let repoDir = api.localRepoLocation(Hub.Repo(id: self.gemmaModelId))
+                        var totalSize: Int64 = 0
+                        if let files = try? FileManager.default.contentsOfDirectory(atPath: repoDir.path) {
+                            for file in files {
+                                let filePath = repoDir.appendingPathComponent(file).path
+                                if let attrs = try? FileManager.default.attributesOfItem(atPath: filePath),
+                                   let s = attrs[.size] as? Int64 {
+                                    totalSize += s
+                                }
+                            }
+                        }
+                        let progress = min(Double(totalSize) / 3_000_000_000.0, 0.99)
                         self.downloadError = error.localizedDescription
                         self.showDownloadErrorModal = true
+                        self.gemmaState = .paused(progress: progress)
                     }
                 } else {
                     // Task WAS cancelled! File handles are now fully closed and released.

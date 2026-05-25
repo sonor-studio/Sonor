@@ -13,17 +13,29 @@ struct SonorApp: App {
     }
     
     var body: some Scene {
-        MenuBarExtra(
-            "Sonor", 
-            systemImage: controller.isRecording ? "mic.fill" : "mic"
-        ) {
-            Button(t("Settings")) {
-                controller.openSettings()
+        menuBarExtraScene
+    }
+    
+    private var menuBarExtraScene: some Scene {
+        if controller.isRecording {
+            return MenuBarExtra("Sonor", systemImage: "mic.fill") {
+                menuContent
             }
-            Divider()
-            Button(t("Quit")) {
-                controller.quitApp()
+        } else {
+            return MenuBarExtra("Sonor", image: "MenuBarIcon") {
+                menuContent
             }
+        }
+    }
+    
+    @ViewBuilder
+    private var menuContent: some View {
+        Button(t("Settings")) {
+            controller.openSettings()
+        }
+        Divider()
+        Button(t("Quit")) {
+            controller.quitApp()
         }
     }
 }

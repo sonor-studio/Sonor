@@ -129,14 +129,6 @@ class AppController: NSObject, ObservableObject {
                 return
             }
             
-            // Lazy load SonorContext if it doesn't exist
-            if self.sonorContext == nil {
-                let path = ModelManager.shared.whisperModelURL.path
-                if FileManager.default.fileExists(atPath: path) {
-                    self.sonorContext = SonorContext(modelPath: path)
-                }
-            }
-            
             // Zapisz stan popovera ZANIM zaczniemy nagrywać
             wasPopoverOpenBeforeRecording = isPopoverOpen
             
@@ -172,37 +164,59 @@ class AppController: NSObject, ObservableObject {
             
             // Pokaż HUD OD RAZU, zanim zacznie grać dźwięk
             self.isRecording = true
-            self.statusText = "Listening..."
+            self.statusText = self.sonorContext == nil ? "Inicjalizacja" : "Listening..."
             self.showHUD()
             self.forceFloatingWindow()
             
-            // Pauzowanie muzyki jeśli wymagane
-            if selectedMode.pauseMusic {
-                print("🎵 Sprawdzanie i pauzowanie multimediów (Native)...")
-                Task {
-                    // Odtwórz dźwięk w tle (fire-and-forget)
-                    Task {
-                        await SoundPlayer.shared.playSound(named: "Start")
-                    }
-                    // Krótkie opóźnienie 200ms, aby dźwięk zdążył ruszyć zanim wyciszymy system
-                    try? await Task.sleep(nanoseconds: 200_000_000)
-                    await MainActor.run {
-                        guard self.isRecording else { return }
-                        self.pauseMultimedia {
-                            self.startRecording()
+            Task {
+                if self.sonorContext == nil {
+                    let path = ModelManager.shared.whisperModelURL.path
+                    if FileManager.default.fileExists(atPath: path) {
+                        let context = await Task.detached(priority: .userInitiated) {
+                            return SonorContext(modelPath: path)
+                        }.value
+                        
+                        await MainActor.run {
+                            self.sonorContext = context
+                            self.statusText = "Listening..."
                         }
                     }
                 }
-            } else {
-                self.didPauseMusic = false
+                
+                await MainActor.run {
+                    self.startRecordingProcess(selectedMode: selectedMode)
+                }
+            }
+        }
+    }
+    
+    private func startRecordingProcess(selectedMode: VoiceMode) {
+        // Pauzowanie muzyki jeśli wymagane
+        if selectedMode.pauseMusic {
+            print("🎵 Sprawdzanie i pauzowanie multimediów (Native)...")
+            Task {
+                // Odtwórz dźwięk w tle (fire-and-forget)
                 Task {
-                    // Odtwórz dźwięk w tle (fire-and-forget)
-                    Task {
-                        await SoundPlayer.shared.playSound(named: "Start")
+                    await SoundPlayer.shared.playSound(named: "Start")
+                }
+                // Krótkie opóźnienie 200ms, aby dźwięk zdążył ruszyć zanim wyciszymy system
+                try? await Task.sleep(nanoseconds: 200_000_000)
+                await MainActor.run {
+                    guard self.isRecording else { return }
+                    self.pauseMultimedia {
+                        self.startRecording()
                     }
                 }
-                self.startRecording()
             }
+        } else {
+            self.didPauseMusic = false
+            Task {
+                // Odtwórz dźwięk w tle (fire-and-forget)
+                Task {
+                    await SoundPlayer.shared.playSound(named: "Start")
+                }
+            }
+            self.startRecording()
         }
     }
     

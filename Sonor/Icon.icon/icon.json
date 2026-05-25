@@ -17,24 +17,11 @@
               "value" : {
                 "automatic-gradient" : "srgb:1.00000,1.00000,1.00000,1.00000"
               }
-            },
-            {
-              "appearance" : "tinted",
-              "value" : {
-                "automatic-gradient" : "srgb:1.00000,1.00000,1.00000,1.00000"
-              }
             }
           ],
-          "glass" : true,
-          "image-name" : "Logo.svg",
-          "name" : "Logo",
-          "position" : {
-            "scale" : 1.3,
-            "translation-in-points" : [
-              0,
-              0
-            ]
-          }
+          "hidden" : false,
+          "image-name" : "Icon 3.svg",
+          "name" : "Icon"
         }
       ],
       "shadow" : {

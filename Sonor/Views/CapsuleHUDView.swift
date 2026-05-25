@@ -5,6 +5,18 @@ struct CapsuleHUDView: View {
     @ObservedObject var modelManager = ModelManager.shared
     
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
+    @AppStorage("appTheme") private var appTheme = "system"
+    
+    var effectiveColorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
     
     private var targetWidth: CGFloat {
         if !controller.isRecording {
@@ -26,28 +38,30 @@ struct CapsuleHUDView: View {
     @State private var hoveredModeID: UUID? = nil
     
     // Stan przeciągania
-    @State private var dragStartMouseLocation: NSPoint? = nil
-    @State private var dragStartWindowOrigin: NSPoint? = nil
+    @State private var dragTracker = WindowDragTracker()
     
     // Podwidoki do odciążenia kompilatora i zapobieżenia timeoutom type-checkingu
     private var assistantSelector: some View {
-        Button(action: { withAnimation { showList.toggle() } }) {
+        Button(action: {
+            if !dragTracker.isDragging { withAnimation { showList.toggle() } }
+        }) {
             HStack {
                 Text(t(controller.currentMode?.name ?? "Wybierz tryb"))
                     .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Spacer()
                 Image(systemName: showList ? "chevron.up" : "chevron.down")
                     .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.white.opacity(0.7))
+                    .foregroundColor(.primary.opacity(0.7))
             }
             .padding(.horizontal, 12)
             .frame(width: 284, height: 40)
             .contentShape(Rectangle())
-            .darkGlass(cornerRadius: 20)
+            .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
         }
         .buttonStyle(.plain)
         .focusable(false)
+        .simultaneousGesture(dragGesture)
     }
     
     private var audioWavesView: some View {
@@ -58,7 +72,7 @@ struct CapsuleHUDView: View {
                 let barHeight = CGFloat(2 + (level * 350))
                 
                 RoundedRectangle(cornerRadius: 1.5)
-                    .fill(controller.isPaused ? Color.white.opacity(0.4) : Color.white)
+                    .fill(controller.isPaused ? Color.primary.opacity(0.4) : Color.primary)
                     .frame(width: 3, height: min(barHeight, 40))
                     .animation(.spring(response: 0.1, dampingFraction: 0.5), value: level)
             }
@@ -71,7 +85,7 @@ struct CapsuleHUDView: View {
         HStack(spacing: 8) {
             Text(t(controller.statusText))
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .id(controller.statusText)
@@ -88,7 +102,7 @@ struct CapsuleHUDView: View {
                 Circle()
                     .trim(from: 0, to: 0.6)
                     .stroke(
-                        Color.white,
+                        Color.primary,
                         style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
                     )
                     .frame(width: 16, height: 16)
@@ -110,19 +124,19 @@ struct CapsuleHUDView: View {
                         HStack {
                             Text(t(mode.name))
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                             Spacer()
                             if controller.currentMode?.id == mode.id {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                             }
                         }
                         .padding(.vertical, 6)
                         .padding(.horizontal, 10)
                         .background(
-                            controller.currentMode?.id == mode.id ? Color.white.opacity(0.2) :
-                            (hoveredModeID == mode.id ? Color.white.opacity(0.1) : Color.clear)
+                            controller.currentMode?.id == mode.id ? Color.primary.opacity(0.2) :
+                            (hoveredModeID == mode.id ? Color.primary.opacity(0.1) : Color.clear)
                         )
                         .cornerRadius(6)
                         .contentShape(Rectangle())
@@ -142,8 +156,7 @@ struct CapsuleHUDView: View {
         }
         .frame(width: 284)
         .frame(height: min(CGFloat(controller.availableModes.count) * 30 + 8, 200))
-        .darkGlass(cornerRadius: 12, opacity: 0.7)
-        .padding(.bottom, 96)
+        .glass(cornerRadius: 12, opacity: 0.7, colorScheme: effectiveColorScheme)
         .transition(.asymmetric(
             insertion: .offset(y: 10).combined(with: .opacity),
             removal: .opacity
@@ -157,12 +170,12 @@ struct CapsuleHUDView: View {
             HStack(spacing: 8) {
                 Image(systemName: "book.closed.fill")
                     .font(.system(size: 13))
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(.primary.opacity(0.8))
                     .padding(.leading, 12)
                 
                 Text("\"\(notification.wrong)\" ➔ \"\(notification.correct)\"")
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 
@@ -175,10 +188,10 @@ struct CapsuleHUDView: View {
                 }) {
                     Text("Undo")
                         .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.black)
+                        .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.white)
+                        .background(Color.primary)
                         .cornerRadius(12)
                 }
                 .buttonStyle(.plain)
@@ -186,7 +199,7 @@ struct CapsuleHUDView: View {
                 .padding(.trailing, 8)
             }
             .frame(width: 284, height: 40)
-            .darkGlass(cornerRadius: 20)
+            .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
             .transition(.asymmetric(
                 insertion: .move(edge: .bottom).combined(with: .opacity),
                 removal: .move(edge: .top).combined(with: .opacity)
@@ -195,7 +208,12 @@ struct CapsuleHUDView: View {
     }
     
     var body: some View {
-        ZStack(alignment: .bottom) {
+        VStack(spacing: 8) {
+            // Lista asystentów
+            if showList {
+                dropdownListView
+            }
+            
             // Główna zawartość (Dół)
             VStack(spacing: 8) {
                 if let _ = controller.activeDictionaryNotification {
@@ -208,59 +226,68 @@ struct CapsuleHUDView: View {
                     
                     // Dolny pasek: Fale/Loader + Przycisk Pauza + Przycisk X
                     HStack(spacing: 12) {
-                        ZStack {
-                            if !isProcessing {
-                                audioWavesView
-                                    .transition(.asymmetric(insertion: .opacity, removal: .scale(scale: 0.5).combined(with: .opacity)))
-                            } else {
-                                loaderView
-                                    .transition(.asymmetric(insertion: .opacity, removal: .scale(scale: 0.5).combined(with: .opacity)))
+                        Button(action: {
+                            // Puste, żeby przechwycić zdarzenia i nie przerywać dragGesture przez animację
+                        }) {
+                            ZStack {
+                                if !isProcessing {
+                                    audioWavesView
+                                        .transition(.asymmetric(insertion: .opacity, removal: .scale(scale: 0.5).combined(with: .opacity)))
+                                } else {
+                                    loaderView
+                                        .transition(.asymmetric(insertion: .opacity, removal: .scale(scale: 0.5).combined(with: .opacity)))
+                                }
                             }
-                        }
-                        .frame(width: width, height: height)
-                        .darkGlass(cornerRadius: 20)
-                        
-                        // Przycisk Pauza / Wznów
-                        if showPauseButton {
-                            Button(action: { controller.togglePause() }) {
-                                Image(systemName: controller.isPaused ? "play.fill" : "pause.fill")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.white)
-                                    .frame(width: 40, height: 40)
-                                    .contentShape(Rectangle())
-                                    .darkGlass(cornerRadius: 20)
-                            }
-                            .buttonStyle(.plain)
-                            .focusable(false)
-                            .transition(.asymmetric(
-                                insertion: .scale.combined(with: .opacity),
-                                removal: .scale.combined(with: .opacity)
-                            ))
-                        }
-                        
-                        // Przycisk X (Anuluj)
-                        Button(action: { controller.cancelRecording() }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.white)
-                                .frame(width: 40, height: 40)
-                                .contentShape(Rectangle())
-                                .darkGlass(cornerRadius: 20)
+                            .frame(width: width, height: height)
+                            .contentShape(Capsule())
+                            .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
                         }
                         .buttonStyle(.plain)
                         .focusable(false)
+                        .simultaneousGesture(dragGesture)
+                        
+                        // Przycisk Pauza / Wznów
+                        if showPauseButton {
+                            Button(action: {
+                                if !dragTracker.isDragging { controller.togglePause() }
+                            }) {
+                                Image(systemName: controller.isPaused ? "play.fill" : "pause.fill")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundColor(.primary)
+                                    .frame(width: 40, height: 40)
+                                    .contentShape(Rectangle())
+                                    .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+                            }
+                            .buttonStyle(.plain)
+                            .focusable(false)
+                            .simultaneousGesture(dragGesture)
+                            .transition(.asymmetric(
+                                    insertion: .scale.combined(with: .opacity),
+                                    removal: .scale.combined(with: .opacity)
+                                ))
+                        }
+                        
+                        // Przycisk X (Anuluj)
+                        Button(action: {
+                            if !dragTracker.isDragging { controller.cancelRecording() }
+                        }) {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundColor(.primary)
+                                .frame(width: 40, height: 40)
+                                .contentShape(Rectangle())
+                                .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+                        }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                        .simultaneousGesture(dragGesture)
                     }
                 }
-            }
-            
-            // Lista asystentów
-            if showList {
-                dropdownListView
             }
         }
         .frame(width: 350, height: 600, alignment: .bottom)
         .opacity(opacity)
-        .colorScheme(.dark)
+        .colorScheme(effectiveColorScheme)
         .onAppear {
             controller.reloadModes()
             showPauseButton = hotkeyMode == .click && controller.isRecording
@@ -297,10 +324,12 @@ struct CapsuleHUDView: View {
                 withAnimation(.easeOut(duration: 0.5)) {
                     opacity = 0.0
                 }
+                showList = false
             } else if status == "Listening..." || status == "Model not downloaded" {
                 withAnimation(.easeIn(duration: 0.2)) {
                     opacity = 1.0
                 }
+                showList = false
             }
         }
         .onChange(of: controller.activeDictionaryNotification) { notification in
@@ -308,13 +337,13 @@ struct CapsuleHUDView: View {
                 withAnimation(.easeOut(duration: 0.5)) {
                     opacity = 0.0
                 }
+                showList = false
             } else {
                 withAnimation(.easeIn(duration: 0.2)) {
                     opacity = 1.0
                 }
             }
         }
-        .highPriorityGesture(dragGesture)
     }
     
     // Gest przeciągania
@@ -324,13 +353,14 @@ struct CapsuleHUDView: View {
                 let currentMouse = NSEvent.mouseLocation
                 guard let window = controller.hudWindow else { return }
                 
-                if dragStartMouseLocation == nil {
-                    dragStartMouseLocation = currentMouse
-                    dragStartWindowOrigin = window.frame.origin
+                if dragTracker.startMouseLocation == nil {
+                    dragTracker.startMouseLocation = currentMouse
+                    dragTracker.startWindowOrigin = window.frame.origin
+                    dragTracker.isDragging = true
                 }
                 
-                guard let startMouse = dragStartMouseLocation,
-                      let startOrigin = dragStartWindowOrigin else { return }
+                guard let startMouse = dragTracker.startMouseLocation,
+                      let startOrigin = dragTracker.startWindowOrigin else { return }
                 
                 let deltaX = currentMouse.x - startMouse.x
                 let deltaY = currentMouse.y - startMouse.y
@@ -368,26 +398,37 @@ struct CapsuleHUDView: View {
                     UserDefaults.standard.set(origin.x, forKey: "hudWindowX")
                     UserDefaults.standard.set(origin.y, forKey: "hudWindowY")
                 }
-                dragStartMouseLocation = nil
-                dragStartWindowOrigin = nil
+                dragTracker.startMouseLocation = nil
+                dragTracker.startWindowOrigin = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    dragTracker.isDragging = false
+                }
             }
     }
 }
 
-struct DarkGlassModifier: ViewModifier {
+struct GlassModifier: ViewModifier {
     var cornerRadius: CGFloat
     var opacity: Double = 0.5
+    var colorScheme: ColorScheme
     
     func body(content: Content) -> some View {
+        let isDark = colorScheme == .dark
         content
             .background(RoundedRectangle(cornerRadius: cornerRadius).fill(.ultraThinMaterial))
-            .background(RoundedRectangle(cornerRadius: cornerRadius).fill(Color.black.opacity(opacity)))
-            .overlay(RoundedRectangle(cornerRadius: cornerRadius).stroke(Color.white.opacity(0.15), lineWidth: 0.5))
+            .background(RoundedRectangle(cornerRadius: cornerRadius).fill((isDark ? Color.black : Color.white).opacity(opacity)))
+            .overlay(RoundedRectangle(cornerRadius: cornerRadius).stroke((isDark ? Color.white : Color.black).opacity(0.15), lineWidth: 0.5))
     }
 }
 
 extension View {
-    func darkGlass(cornerRadius: CGFloat = 20, opacity: Double = 0.5) -> some View {
-        self.modifier(DarkGlassModifier(cornerRadius: cornerRadius, opacity: opacity))
+    func glass(cornerRadius: CGFloat = 20, opacity: Double = 0.5, colorScheme: ColorScheme) -> some View {
+        self.modifier(GlassModifier(cornerRadius: cornerRadius, opacity: opacity, colorScheme: colorScheme))
     }
+}
+
+class WindowDragTracker {
+    var startMouseLocation: NSPoint? = nil
+    var startWindowOrigin: NSPoint? = nil
+    var isDragging: Bool = false
 }

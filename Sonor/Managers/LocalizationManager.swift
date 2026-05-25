@@ -174,6 +174,7 @@ public class LocalizationManager: ObservableObject {
             "Pass copied text": "Kopierten Text übergeben",
             "Password must be at least 6 characters long.": "Das Passwort muss mindestens 6 Zeichen lang sein.",
             "Password": "Passwort",
+            "Passwords do not match.": "Passwörter stimmen nicht überein.",
             "Pause music": "Musik pausieren",
             "Performs pure 1:1 transcription of your speech, without any corrections or AI editing.": "Führt eine reine 1:1-Transkription Ihrer Sprache durch, ohne Korrekturen oder KI-Bearbeitung.",
             "Phonetic Correction Dictionary": "Phonetisches Korrekturwörterbuch",
@@ -183,6 +184,7 @@ public class LocalizationManager: ObservableObject {
             "Please enter a valid email address.": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
             "Please enter your email address.": "Bitte geben Sie Ihre E-Mail-Adresse ein.",
             "Please enter your password.": "Bitte geben Sie Ihr Passwort ein.",
+            "Please repeat your password.": "Bitte wiederholen Sie Ihr Passwort.",
             "Premium Feature": "Premium-Funktion",
             "Premium": "Premium",
             "Press keys...": "Tasten drücken...",
@@ -193,12 +195,13 @@ public class LocalizationManager: ObservableObject {
             "RAM TEXT HISTORY": "RAM-TEXTVERLAUF",
             "RAM memory only": "Nur im RAM-Speicher",
             "Raw Output": "Einfache Ausgabe",
+            "Repeat password": "Passwort wiederholen",
             "Read the same text aloud:": "Lesen Sie den Text laut vor:",
             "Ready": "Bereit",
             "Record / Stop": "Aufnehmen / Stoppen",
             "Recording start": "Aufnahme gestartet",
             "Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.": "Entfernt Stottern, Wiederholungen und Grammatikfehler und fügt die passende Interpunktion ein. Bewahrt den ursprünglichen Stil, Ton und Wortschatz.",
-            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -) without any Markdown or HTML code.": "Reorganisiert diktierte Gedanken in eine übersichtliche Textnotiz. Verwendet Abstände, Einrückungen und Aufzählungen ohne Markdown oder HTML.",
+            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).": "Reorganisiert diktierte Gedanken in eine übersichtliche Textnotiz. Verwendet Abstände, Einrückungen und Aufzählungen ",
             "Repeat with another text": "Mit anderem Text wiederholen",
             "Replace with (list)": "Ersetzen durch",
             "Replace with": "Ersetzen durch",
@@ -287,7 +290,25 @@ public class LocalizationManager: ObservableObject {
             "of goal": "des Ziels",
             "sessions": "Sitzungen",
             "words": "Wörter",
-            "words/min": "Wörter/Min."
+            "words/min": "Wörter/Min.",
+            "PREMIUM": "PREMIUM",
+            "Member since:": "Mitglied seit:",
+            "Loading...": "Laden...",
+            "Delete Account": "Konto löschen",
+            "Please enter your password to confirm. This action cannot be undone.": "Bitte geben Sie Ihr Passwort ein, um zu bestätigen. Diese Aktion kann nicht rückgängig gemacht werden.",
+            "Password cannot be empty.": "Das Passwort darf nicht leer sein.",
+            "Change Password": "Passwort ändern",
+            "Old password": "Altes Passwort",
+            "Enter old password...": "Altes Passwort eingeben...",
+            "New password": "Neues Passwort",
+            "Enter new password...": "Neues Passwort eingeben...",
+            "Repeat new password": "Neues Passwort wiederholen",
+            "Repeat new password...": "Neues Passwort wiederholen...",
+            "Password Updated Successfully!": "Passwort erfolgreich aktualisiert!",
+            "Your account is now secure with the new password.": "Ihr Konto ist jetzt mit dem neuen Passwort gesichert.",
+            "Save Password": "Passwort speichern",
+            "Please enter your old password.": "Bitte geben Sie Ihr altes Passwort ein.",
+            "Please enter your password to confirm.": "Bitte geben Sie Ihr Passwort zur Bestätigung ein."
     ],
         "es": [
                 "Text History Privacy": "Privacidad del historial",
@@ -452,6 +473,7 @@ public class LocalizationManager: ObservableObject {
             "Pass copied text": "Pasar texto copiado",
             "Password must be at least 6 characters long.": "La contraseña debe tener al menos 6 caracteres.",
             "Password": "Contraseña",
+            "Passwords do not match.": "Las contraseñas no coinciden.",
             "Pause music": "Pausar música",
             "Performs pure 1:1 transcription of your speech, without any corrections or AI editing.": "Realiza una transcripción limpia de tu voz 1:1, sin correcciones ni ediciones de IA.",
             "Phonetic Correction Dictionary": "Diccionario de Correcciones Fonéticas",
@@ -461,6 +483,7 @@ public class LocalizationManager: ObservableObject {
             "Please enter a valid email address.": "Por favor, introduzca una dirección de correo electrónico válida.",
             "Please enter your email address.": "Por favor, introduzca su dirección de correo electrónico.",
             "Please enter your password.": "Por favor, introduzca su contraseña.",
+            "Please repeat your password.": "Por favor, repita su contraseña.",
             "Premium Feature": "Función Premium",
             "Premium": "Premium",
             "Press keys...": "Presiona las teclas...",
@@ -471,12 +494,13 @@ public class LocalizationManager: ObservableObject {
             "RAM TEXT HISTORY": "HISTORIAL EN RAM",
             "RAM memory only": "Solo en memoria RAM",
             "Raw Output": "Salida simple",
+            "Repeat password": "Repetir contraseña",
             "Read the same text aloud:": "Lee el texto en voz alta:",
             "Ready": "Listo",
             "Record / Stop": "Grabar / Parar",
             "Recording start": "Grabación iniciada",
             "Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.": "Elimina tartamudeos, repeticiones y errores gramaticales, añadiendo puntuación. Mantiene tu estilo, tono y vocabulario.",
-            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -) without any Markdown or HTML code.": "Reorganiza las ideas en una nota de texto estructurada y limpia. Usa espaciados y listas sin Markdown ni HTML.",
+            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).": "Reorganiza las ideas en una nota de texto estructurada y limpia. Usa espaciados y listas ",
             "Repeat with another text": "Repetir con otro texto",
             "Replace with (list)": "Reemplazar con",
             "Replace with": "Reemplazar con",
@@ -565,7 +589,25 @@ public class LocalizationManager: ObservableObject {
             "of goal": "del objetivo",
             "sessions": "sesiones",
             "words": "palabras",
-            "words/min": "palabras/min"
+            "words/min": "palabras/min",
+            "PREMIUM": "PREMIUM",
+            "Member since:": "Miembro desde:",
+            "Loading...": "Cargando...",
+            "Delete Account": "Eliminar cuenta",
+            "Please enter your password to confirm. This action cannot be undone.": "Por favor, introduzca su contraseña para confirmar. Esta acción no se puede deshacer.",
+            "Password cannot be empty.": "La contraseña no puede estar vacía.",
+            "Change Password": "Cambiar contraseña",
+            "Old password": "Contraseña anterior",
+            "Enter old password...": "Introduzca la contraseña anterior...",
+            "New password": "Contraseña nueva",
+            "Enter new password...": "Introduzca la contraseña nueva...",
+            "Repeat new password": "Repetir contraseña nueva",
+            "Repeat new password...": "Repetir contraseña nueva...",
+            "Password Updated Successfully!": "¡Contraseña actualizada con éxito!",
+            "Your account is now secure with the new password.": "Su cuenta está ahora protegida con la nueva contraseña.",
+            "Save Password": "Guardar contraseña",
+            "Please enter your old password.": "Por favor, introduzca su contraseña anterior.",
+            "Please enter your password to confirm.": "Por favor, introduzca su contraseña para confirmar."
     ],
         "fr": [
                 "Text History Privacy": "Confidentialité de l'historique",
@@ -730,6 +772,7 @@ public class LocalizationManager: ObservableObject {
             "Pass copied text": "Passer le texte copié",
             "Password must be at least 6 characters long.": "Le mot de passe doit comporter au moins 6 caractères.",
             "Password": "Mot de passe",
+            "Passwords do not match.": "Les mots de passe ne correspondent pas.",
             "Pause music": "Mettre la musique en pause",
             "Performs pure 1:1 transcription of your speech, without any corrections or AI editing.": "Effectue une transcription propre de votre voix 1:1, sans corrections ni édition d'IA.",
             "Phonetic Correction Dictionary": "Dictionnaire de Corrections Phonétiques",
@@ -739,6 +782,7 @@ public class LocalizationManager: ObservableObject {
             "Please enter a valid email address.": "Veuillez saisir une adresse e-mail valide.",
             "Please enter your email address.": "Veuillez saisir votre adresse e-mail.",
             "Please enter your password.": "Veuillez saisir votre mot de passe.",
+            "Please repeat your password.": "Veuillez répéter votre mot de passe.",
             "Premium Feature": "Fonction Premium",
             "Premium": "Premium",
             "Press keys...": "Appuyez sur les touches...",
@@ -749,12 +793,13 @@ public class LocalizationManager: ObservableObject {
             "RAM TEXT HISTORY": "HISTORIQUE EN RAM",
             "RAM memory only": "Uniquement en mémoire RAM",
             "Raw Output": "Sortie brute",
+            "Repeat password": "Répéter le mot de passe",
             "Read the same text aloud:": "Lisez le texte à voix haute :",
             "Ready": "Prêt",
             "Record / Stop": "Enregistrer / Stop",
             "Recording start": "Enregistrement démarré",
             "Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.": "Élimine les bégaiements, répétitions et fautes, puis ajoute la ponctuation. Conserve votre style et votre vocabulaire.",
-            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -) without any Markdown or HTML code.": "Réorganise vos pensées en une note textuelle structurée. Utilise des espacements et listes sans code Markdown ni HTML.",
+            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).": "Réorganise vos pensées en une note textuelle structurée. Utilise des espacements et listes ",
             "Repeat with another text": "Recommencer avec un autre texte",
             "Replace with (list)": "Remplacer par",
             "Replace with": "Remplacer par",
@@ -844,7 +889,25 @@ public class LocalizationManager: ObservableObject {
             "of goal": "de l'objectif",
             "sessions": "sessions",
             "words": "mots",
-            "words/min": "mots/min"
+            "words/min": "mots/min",
+            "PREMIUM": "PREMIUM",
+            "Member since:": "Membre depuis :",
+            "Loading...": "Chargement...",
+            "Delete Account": "Supprimer le compte",
+            "Please enter your password to confirm. This action cannot be undone.": "Veuillez saisir votre mot de passe pour confirmer. Cette action est irréversible.",
+            "Password cannot be empty.": "Le mot de passe ne peut pas être vide.",
+            "Change Password": "Changer le mot de passe",
+            "Old password": "Ancien mot de passe",
+            "Enter old password...": "Saisir l'ancien mot de passe...",
+            "New password": "Nouveau mot de passe",
+            "Enter new password...": "Saisir le nouveau mot de passe...",
+            "Repeat new password": "Répéter le nouveau mot de passe",
+            "Repeat new password...": "Répéter le nouveau mot de passe...",
+            "Password Updated Successfully!": "Mot de passe mis à jour avec succès !",
+            "Your account is now secure with the new password.": "Votre compte est désormais sécurisé avec le nouveau mot de passe.",
+            "Save Password": "Enregistrer le mot de passe",
+            "Please enter your old password.": "Veuillez saisir votre ancien mot de passe.",
+            "Please enter your password to confirm.": "Veuillez saisir votre mot de passe pour confirmer."
     ],
         "it": [
                 "Text History Privacy": "Privacy della cronologia",
@@ -1008,6 +1071,7 @@ public class LocalizationManager: ObservableObject {
             "Pass copied text": "Passa il testo copiato",
             "Password must be at least 6 characters long.": "La password deve contenere almeno 6 caratteri.",
             "Password": "Password",
+            "Passwords do not match.": "Le password non corrispondono.",
             "Pause music": "Metti in pausa la musica",
             "Performs pure 1:1 transcription of your speech, without any corrections or AI editing.": "Esegue una trascrizione pulita della tua voce 1:1, senza correzioni né modifiche IA.",
             "Phonetic Correction Dictionary": "Dizionario delle Correzioni Fonetiche",
@@ -1017,6 +1081,7 @@ public class LocalizationManager: ObservableObject {
             "Please enter a valid email address.": "Inserisci un indirizzo e-mail valido.",
             "Please enter your email address.": "Inserisci il tuo indirizzo e-mail.",
             "Please enter your password.": "Inserisci la tua password.",
+            "Please repeat your password.": "Per favore, ripeti la password.",
             "Premium Feature": "Funzione Premium",
             "Premium": "Premium",
             "Press keys...": "Premi i tasti...",
@@ -1027,12 +1092,13 @@ public class LocalizationManager: ObservableObject {
             "RAM TEXT HISTORY": "CRONOLOGIA IN RAM",
             "RAM memory only": "Solo nella memoria RAM",
             "Raw Output": "Output semplice",
+            "Repeat password": "Ripeti la password",
             "Read the same text aloud:": "Leggi il testo ad alta voce:",
             "Ready": "Pronto",
             "Record / Stop": "Registra / Stop",
             "Recording start": "Registrazione avviata",
             "Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.": "Elimina balbettii, ripetizioni ed errori grammaticali, inserendo la punteggiatura. Mantiene stile, tono e vocabolario.",
-            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -) without any Markdown or HTML code.": "Riorganizza le idee in una nota strutturata molto pulita. Usa spazi e liste senza codice Markdown o HTML.",
+            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).": "Riorganizza le idee in una nota strutturata molto pulita. Usa spazi e liste ",
             "Repeat with another text": "Ripeti con un altro testo",
             "Replace with (list)": "Sostituisci con",
             "Replace with": "Sostituisci con",
@@ -1120,7 +1186,25 @@ public class LocalizationManager: ObservableObject {
             "of goal": "dell'obiettivo",
             "sessions": "sessioni",
             "words": "parole",
-            "words/min": "parole/min"
+            "words/min": "parole/min",
+            "PREMIUM": "PREMIUM",
+            "Member since:": "Iscritto dal:",
+            "Loading...": "Caricamento...",
+            "Delete Account": "Elimina account",
+            "Please enter your password to confirm. This action cannot be undone.": "Inserisci la tua password per confermare. Questa azione non può essere annullata.",
+            "Password cannot be empty.": "La password non può essere vuota.",
+            "Change Password": "Cambia password",
+            "Old password": "Vecchia password",
+            "Enter old password...": "Inserisci la vecchia password...",
+            "New password": "Nuova password",
+            "Enter new password...": "Inserisci la nuova password...",
+            "Repeat new password": "Ripeti la nuova password",
+            "Repeat new password...": "Ripeti la nuova password...",
+            "Password Updated Successfully!": "Password aggiornata con successo!",
+            "Your account is now secure with the new password.": "Il tuo account è ora protetto con la nuova password.",
+            "Save Password": "Salva password",
+            "Please enter your old password.": "Inserisci la tua vecchia password.",
+            "Please enter your password to confirm.": "Inserisci la tua password per confermare."
     ],
         "ja": [
                 "Text History Privacy": "テキスト履歴のプライバシー",
@@ -1284,6 +1368,7 @@ public class LocalizationManager: ObservableObject {
             "Pass copied text": "コピーされたテキストを送信",
             "Password must be at least 6 characters long.": "パスワードは6文字以上である必要があります。",
             "Password": "パスワード",
+            "Passwords do not match.": "パスワードが一致しません。",
             "Pause music": "音楽を一時停止",
             "Performs pure 1:1 transcription of your speech, without any corrections or AI editing.": "音声の修正やAIによる編集を行わず、音声をそのまま1:1で正確に書き起こします。",
             "Phonetic Correction Dictionary": "発音補正辞書",
@@ -1293,6 +1378,7 @@ public class LocalizationManager: ObservableObject {
             "Please enter a valid email address.": "有効なメールアドレスを入力してください。",
             "Please enter your email address.": "メールアドレスを入力してください。",
             "Please enter your password.": "パスワードを入力してください。",
+            "Please repeat your password.": "パスワードをもう一度入力してください。",
             "Premium Feature": "プレミアム機能",
             "Premium": "プレミアム",
             "Press keys...": "キーを押してください...",
@@ -1303,12 +1389,13 @@ public class LocalizationManager: ObservableObject {
             "RAM TEXT HISTORY": "RAM内テキスト履歴",
             "RAM memory only": "RAMメモリ内のみ",
             "Raw Output": "通常出力",
+            "Repeat password": "パスワードの再入力",
             "Read the same text aloud:": "同じテキストを声に出して読んでください：",
             "Ready": "準備完了",
             "Record / Stop": "録音 / 停止",
             "Recording start": "録音開始",
             "Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.": "言い淀みや重複、文法エラーを取り除き、適切な句読点を挿入します。話し手の本来のスタイル、語彙、トーンを維持します。",
-            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -) without any Markdown or HTML code.": "吹き込まれたアイデアを非常に整理されたテキストメモに再構成します。MarkdownやHTMLのコードを使用せず、スペースやインデント、箇条書きを使用します。",
+            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).": "吹き込まれたアイデアを非常に整理されたテキストメモに再構成します。スペースやインデント、箇条書きを使用します。",
             "Repeat with another text": "別のテキストで再テスト",
             "Replace with (list)": "置き換える表記",
             "Replace with": "置き換える表記",
@@ -1396,7 +1483,25 @@ public class LocalizationManager: ObservableObject {
             "of goal": "目標値",
             "sessions": "回",
             "words": "単語",
-            "words/min": "単語/分"
+            "words/min": "単語/分",
+            "PREMIUM": "プレミアム",
+            "Member since:": "登録日:",
+            "Loading...": "読み込み中...",
+            "Delete Account": "アカウント削除",
+            "Please enter your password to confirm. This action cannot be undone.": "確認のためパスワードを入力してください。この操作は取り消せません。",
+            "Password cannot be empty.": "パスワードを入力してください。",
+            "Change Password": "パスワード変更",
+            "Old password": "現在のパスワード",
+            "Enter old password...": "現在のパスワードを入力...",
+            "New password": "新しいパスワード",
+            "Enter new password...": "新しいパスワードを入力...",
+            "Repeat new password": "新しいパスワードの再入力",
+            "Repeat new password...": "新しいパスワードをもう一度入力...",
+            "Password Updated Successfully!": "パスワードが正常に更新されました！",
+            "Your account is now secure with the new password.": "アカウントは新しいパスワードで保護されています。",
+            "Save Password": "パスワードを保存",
+            "Please enter your old password.": "現在のパスワードを入力してください。",
+            "Please enter your password to confirm.": "確認のためパスワードを入力してください。"
     ],
         "pl": [
                 "Text History Privacy": "Prywatność historii tekstów",
@@ -1561,6 +1666,7 @@ public class LocalizationManager: ObservableObject {
             "Pass copied text": "Przekazuj skopiowany tekst",
             "Password must be at least 6 characters long.": "Hasło musi mieć co najmniej 6 znaków.",
             "Password": "Hasło",
+            "Passwords do not match.": "Hasła nie są identyczne.",
             "Pause music": "Wyciszaj muzykę",
             "Performs pure 1:1 transcription of your speech, without any corrections or AI editing.": "Wykonuje czystą transkrypcję Twojej mowy 1:1, bez wprowadzania jakichkolwiek poprawek ani edycji AI.",
             "Phonetic Correction Dictionary": "Słownik Korekt Fonetycznych",
@@ -1570,6 +1676,7 @@ public class LocalizationManager: ObservableObject {
             "Please enter a valid email address.": "Proszę wpisać poprawny adres e-mail.",
             "Please enter your email address.": "Proszę wpisać swój adres e-mail.",
             "Please enter your password.": "Proszę wpisać swoje hasło.",
+            "Please repeat your password.": "Proszę powtórzyć hasło.",
             "Premium Feature": "Funkcja Premium",
             "Premium": "Premium",
             "Press keys...": "Naciśnij klawisze...",
@@ -1580,12 +1687,13 @@ public class LocalizationManager: ObservableObject {
             "RAM TEXT HISTORY": "HISTORIA TEKSTÓW W RAM",
             "RAM memory only": "Tylko w pamięci RAM",
             "Raw Output": "Zwykły output",
+            "Repeat password": "Powtórz hasło",
             "Read the same text aloud:": "Przeczytaj ten sam tekst na głos:",
             "Ready": "Gotowy",
             "Record / Stop": "Nagrywaj / Zatrzymaj",
             "Recording start": "Start nagrywania",
             "Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.": "Usuwa zająknięcia, powtórzenia oraz błędy gramatyczne i wstawia odpowiednią interpunkcję. Zachowuje oryginalny styl, ton i słownictwo Twojej wypowiedzi.",
-            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -) without any Markdown or HTML code.": "Reorganizuje podyktowane myśli w niezwykle schludną notatkę tekstową. Używa odstępów, wcięć oraz tradycyjnych list (np. 1., 2. lub -) bez żadnego kodu Markdown ani HTML.",
+            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).": "Reorganizuje podyktowane myśli w niezwykle schludną notatkę tekstową. Używa odstępów, wcięć oraz tradycyjnych list (np. 1., 2. lub -) ",
             "Repeat with another text": "Powtórz z innym tekstem",
             "Replace with (list)": "Zastąp przez",
             "Replace with": "Zamień na",
@@ -1674,7 +1782,25 @@ public class LocalizationManager: ObservableObject {
             "of goal": "celu",
             "sessions": "sesji",
             "words": "słów",
-            "words/min": "słów/min"
+            "words/min": "słów/min",
+            "PREMIUM": "PREMIUM",
+            "Member since:": "Konto od:",
+            "Loading...": "Ładowanie...",
+            "Delete Account": "Usuń konto",
+            "Please enter your password to confirm. This action cannot be undone.": "Wprowadź hasło, aby potwierdzić. Tej operacji nie można cofnąć.",
+            "Password cannot be empty.": "Hasło nie może być puste.",
+            "Change Password": "Zmień hasło",
+            "Old password": "Stare hasło",
+            "Enter old password...": "Wpisz stare hasło...",
+            "New password": "Nowe hasło",
+            "Enter new password...": "Wpisz nowe hasło...",
+            "Repeat new password": "Powtórz nowe hasło",
+            "Repeat new password...": "Powtórz nowe hasło...",
+            "Password Updated Successfully!": "Hasło zostało pomyślnie zmienione!",
+            "Your account is now secure with the new password.": "Twoje konto jest teraz zabezpieczone nowym hasłem.",
+            "Save Password": "Zapisz hasło",
+            "Please enter your old password.": "Proszę wpisać swoje stare hasło.",
+            "Please enter your password to confirm.": "Proszę wpisać hasło, aby potwierdzić."
     ],
         "pt": [
                 "Text History Privacy": "Privacidade do histórico",
@@ -1839,6 +1965,7 @@ public class LocalizationManager: ObservableObject {
             "Pass copied text": "Passar texto copiado",
             "Password must be at least 6 characters long.": "A senha deve ter pelo menos 6 caracteres.",
             "Password": "Senha",
+            "Passwords do not match.": "As senhas não coincidem.",
             "Pause music": "Pausar música",
             "Performs pure 1:1 transcription of your speech, without any corrections or AI editing.": "Realiza transcrição limpa de voz 1:1, sem quaisquer correções ou edições por IA.",
             "Phonetic Correction Dictionary": "Dicionário de Correções Fonéticas",
@@ -1848,6 +1975,7 @@ public class LocalizationManager: ObservableObject {
             "Please enter a valid email address.": "Por favor, insira um endereço de e-mail válido.",
             "Please enter your email address.": "Por favor, insira seu endereço de e-mail.",
             "Please enter your password.": "Por favor, insira sua senha.",
+            "Please repeat your password.": "Por favor, repita sua senha.",
             "Premium Feature": "Recurso Premium",
             "Premium": "Premium",
             "Press keys...": "Pressione as teclas...",
@@ -1858,12 +1986,13 @@ public class LocalizationManager: ObservableObject {
             "RAM TEXT HISTORY": "HISTÓRICO NA RAM",
             "RAM memory only": "Apenas na memória RAM",
             "Raw Output": "Saída simples",
+            "Repeat password": "Repetir senha",
             "Read the same text aloud:": "Leia o texto em voz alta:",
             "Ready": "Pronto",
             "Record / Stop": "Gravar / Parar",
             "Recording start": "Gravação iniciada",
             "Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.": "Remove hesitações, repetições e erros, adicionando pontuação. Mantém o estilo, tom e vocabulário originais.",
-            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -) without any Markdown or HTML code.": "Reorganiza ideias ditadas em uma nota estruturada e limpa. Usa espaçamentos e listas sem Markdown ou HTML.",
+            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).": "Reorganiza ideias ditadas em uma nota estruturada e limpa. Usa espaçamentos e listas ",
             "Repeat with another text": "Repetir com outro texto",
             "Replace with (list)": "Substituir por",
             "Replace with": "Substituir por",
@@ -1952,7 +2081,25 @@ public class LocalizationManager: ObservableObject {
             "of goal": "da meta",
             "sessions": "sessões",
             "words": "palavras",
-            "words/min": "palavras/min"
+            "words/min": "palavras/min",
+            "PREMIUM": "PREMIUM",
+            "Member since:": "Membro desde:",
+            "Loading...": "Carregando...",
+            "Delete Account": "Excluir conta",
+            "Please enter your password to confirm. This action cannot be undone.": "Por favor, insira sua senha para confirmar. Esta ação não pode ser desfeita.",
+            "Password cannot be empty.": "A senha não pode estar vazia.",
+            "Change Password": "Alterar senha",
+            "Old password": "Senha antiga",
+            "Enter old password...": "Digite a senha antiga...",
+            "New password": "Nova senha",
+            "Enter new password...": "Digite a nova senha...",
+            "Repeat new password": "Repetir a nova senha",
+            "Repeat new password...": "Repetir a nova senha...",
+            "Password Updated Successfully!": "Senha atualizada com sucesso!",
+            "Your account is now secure with the new password.": "Sua conta agora está protegida com a nova senha.",
+            "Save Password": "Salvar senha",
+            "Please enter your old password.": "Por favor, insira sua senha antiga.",
+            "Please enter your password to confirm.": "Por favor, insira sua senha para confirmar."
     ],
         "zh": [
                 "Text History Privacy": "文本历史隐私",
@@ -2116,6 +2263,7 @@ public class LocalizationManager: ObservableObject {
             "Pass copied text": "传递复制的文本",
             "Password must be at least 6 characters long.": "密码长度必须至少为 6 个字符。",
             "Password": "密码",
+            "Passwords do not match.": "密码不匹配。",
             "Pause music": "暂停音乐",
             "Performs pure 1:1 transcription of your speech, without any corrections or AI editing.": "执行纯粹的 1:1 语音转录，没有任何修正或 AI 编辑。",
             "Phonetic Correction Dictionary": "语音纠错词典",
@@ -2125,6 +2273,7 @@ public class LocalizationManager: ObservableObject {
             "Please enter a valid email address.": "请输入有效的电子邮件地址。",
             "Please enter your email address.": "请输入您的电子邮件地址。",
             "Please enter your password.": "请输入您的密码。",
+            "Please repeat your password.": "请再次输入密码。",
             "Premium Feature": "高级功能",
             "Premium": "高级版",
             "Press keys...": "按下按键...",
@@ -2135,12 +2284,13 @@ public class LocalizationManager: ObservableObject {
             "RAM TEXT HISTORY": "运行内存文本历史",
             "RAM memory only": "仅限运行内存",
             "Raw Output": "原始输出",
+            "Repeat password": "重复密码",
             "Read the same text aloud:": "大声朗读同一文本：",
             "Ready": "准备就绪",
             "Record / Stop": "录音 / 停止",
             "Recording start": "录音开始",
             "Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.": "消除结巴、重复和语法错误，并插入适当的标点符号。保留您原有的陈述风格、语气和词汇。",
-            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -) without any Markdown or HTML code.": "将听写的想法重新组织成极其整洁的文本笔记。使用空格、缩进和传统列表（例如 1.、2. 或 -），没有任何 Markdown 或 HTML 代码。",
+            "Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).": "将听写的想法重新组织成极其整洁的文本笔记。使用空格、缩进和传统列表（例如 1.、2. 或 -）。",
             "Repeat with another text": "使用另一个文本重复",
             "Replace with (list)": "替换为 (列表)",
             "Replace with": "替换为",
@@ -2228,7 +2378,25 @@ public class LocalizationManager: ObservableObject {
             "of goal": "目标比例",
             "sessions": "次会话",
             "words": "词",
-            "words/min": "词/分"
+            "words/min": "词/分",
+            "PREMIUM": "高级会员",
+            "Member since:": "注册时间:",
+            "Loading...": "加载中...",
+            "Delete Account": "注销账号",
+            "Please enter your password to confirm. This action cannot be undone.": "请输入密码以确认。此操作无法撤销。",
+            "Password cannot be empty.": "密码不能为空。",
+            "Change Password": "修改密码",
+            "Old password": "旧密码",
+            "Enter old password...": "输入旧密码...",
+            "New password": "新密码",
+            "Enter new password...": "输入新密码...",
+            "Repeat new password": "重复新密码",
+            "Repeat new password...": "再次输入新密码...",
+            "Password Updated Successfully!": "密码修改成功！",
+            "Your account is now secure with the new password.": "您的账号现在已使用新密码保护。",
+            "Save Password": "保存密码",
+            "Please enter your old password.": "请输入旧密码。",
+            "Please enter your password to confirm.": "请输入密码以确认。"
     ]
     ]
     
@@ -2238,8 +2406,74 @@ public class LocalizationManager: ObservableObject {
         }
         return translations[appLanguage]?[key] ?? key
     }
+    
+    public func translateError(_ msg: String) -> String {
+        let lower = msg.lowercased()
+        
+        if lower.contains("already registered") || lower.contains("already exists") {
+            switch appLanguage {
+            case "pl": return "Użytkownik już istnieje."
+            case "de": return "Benutzer existiert bereits."
+            case "es": return "El usuario ya existe."
+            case "fr": return "L'utilisateur existe déjà."
+            case "it": return "L'utente esiste già."
+            case "ja": return "ユーザーは既に存在します。"
+            case "pt": return "O usuário já existe."
+            case "zh": return "用户已存在。"
+            default: return "User already exists."
+            }
+        }
+        
+        if lower.contains("invalid login credentials") || lower.contains("invalid credentials") {
+            switch appLanguage {
+            case "pl": return "Nieprawidłowy e-mail lub hasło."
+            case "de": return "Ungültige E-Mail-Adresse oder Passwort."
+            case "es": return "Correo electrónico o contraseña incorrectos."
+            case "fr": return "E-mail ou mot de passe incorrect."
+            case "it": return "E-mail o password non valide."
+            case "ja": return "メールアドレスまたはパスワードが正しくありません。"
+            case "pt": return "E-mail ou senha incorretos."
+            case "zh": return "电子邮件或密码错误。"
+            default: return "Invalid email or password."
+            }
+        }
+        
+        if lower.contains("email not confirmed") {
+            switch appLanguage {
+            case "pl": return "Email nie został potwierdzony."
+            case "de": return "E-Mail nicht bestätigt."
+            case "es": return "Correo electrónico no confirmado."
+            case "fr": return "E-mail non confirmé."
+            case "it": return "Email non confermata."
+            case "ja": return "メールアドレスが確認されていません。"
+            case "pt": return "E-mail não confirmado."
+            case "zh": return "电子邮件未确认。"
+            default: return "Email not confirmed."
+            }
+        }
+        
+        if lower.contains("self-deletion is disabled") || lower.contains("self-deletion not enabled") {
+            switch appLanguage {
+            case "pl": return "Usuwanie konta przez użytkowników jest wyłączone na serwerze."
+            case "de": return "Selbstlöschung von Benutzern ist auf dem Server deaktiviert."
+            case "es": return "La autoeliminación de usuarios está desactivada en el servidor."
+            case "fr": return "La suppression automatique des utilisateurs est désactivée sur le serveur."
+            case "it": return "L'autoeliminazione degli utenti è disabilitata sul server."
+            case "ja": return "サーバーでユーザーの自己削除gはオフになっています。"
+            case "pt": return "A exclusão de conta própria está desativada no servidor."
+            case "zh": return "服务器上已禁用用户自我删除。"
+            default: return "User self-deletion is disabled on the server."
+            }
+        }
+        
+        return translate(msg)
+    }
 }
 
 public func t(_ key: String) -> String {
     return LocalizationManager.shared.translate(key)
+}
+
+public func tError(_ msg: String) -> String {
+    return LocalizationManager.shared.translateError(msg)
 }
