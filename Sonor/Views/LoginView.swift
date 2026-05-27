@@ -1,7 +1,17 @@
 import SwiftUI
 
 struct LoginView: View {
-    @Environment(\.colorScheme) var colorScheme
+    @AppStorage("appTheme") private var appTheme = "system"
+    var colorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
     @Environment(\.presentationMode) var presentationMode
     @ObservedObject var authManager = AuthManager.shared
     @ObservedObject var localizer = LocalizationManager.shared
@@ -11,26 +21,26 @@ struct LoginView: View {
     @State private var isRegistering = false
     @State private var errorMessage: String? = nil
     @State private var isLoading = false
+    @State private var acceptedPrivacyPolicy = false
     
     var body: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 14) {
             Image(systemName: "lock.shield.fill")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 60, height: 60)
+                .frame(width: 48, height: 48)
                 .foregroundColor(.primary)
-                .padding(.bottom, 10)
             
             Text(isRegistering ? t("Join Sonor") : t("Welcome Back"))
-                .font(.system(size: 24, weight: .bold))
+                .font(.system(size: 20, weight: .bold))
             
             Text(t("Unlock advanced AI assistants, intelligent dictionaries, and custom snippets to turn every recording into polished text. Everything is 100% free and runs fully offline on your computer — your data is completely private, and we do not collect any information."))
-                .font(.system(size: 13))
+                .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 40)
-                .padding(.bottom, 10)
+                .padding(.bottom, 4)
             
             if let error = errorMessage {
                 Text(error)
@@ -43,25 +53,85 @@ struct LoginView: View {
                     .padding(.horizontal, 40)
             }
             
-            VStack(spacing: 15) {
+            VStack(spacing: 10) {
                 TextField(t("Email address"), text: $email)
                     .textFieldStyle(.plain)
-                    .padding(12)
+                    .padding(10)
                     .background(Color.primary.opacity(0.05))
                     .cornerRadius(8)
                 
                 SecureField(t("Password"), text: $password)
                     .textFieldStyle(.plain)
-                    .padding(12)
+                    .padding(10)
                     .background(Color.primary.opacity(0.05))
                     .cornerRadius(8)
                     
                 if isRegistering {
                     SecureField(t("Repeat password"), text: $confirmPassword)
                         .textFieldStyle(.plain)
-                        .padding(12)
+                        .padding(10)
                         .background(Color.primary.opacity(0.05))
                         .cornerRadius(8)
+                        
+                    HStack(spacing: 8) {
+                        Toggle("", isOn: $acceptedPrivacyPolicy)
+                            .labelsHidden()
+                            .toggleStyle(.checkbox)
+                            .accentColor(colorScheme == .dark ? .white : .black)
+                            .tint(colorScheme == .dark ? .white : .black)
+                        
+                        HStack(spacing: 4) {
+                            let prefix = t("I accept the")
+                            if !prefix.isEmpty {
+                                Text(prefix)
+                                    .font(.system(size: 13))
+                            }
+                            
+                            Button(action: {
+                                openPrivacyPolicy()
+                            }) {
+                                Text(t("Privacy Policy"))
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.blue)
+                                    .underline()
+                            }
+                            .buttonStyle(.plain)
+                            .onHover { isHovering in
+                                if isHovering {
+                                    NSCursor.pointingHand.push()
+                                } else {
+                                    NSCursor.pop()
+                                }
+                            }
+                            
+                            Text(t("and"))
+                                .font(.system(size: 13))
+                            
+                            Button(action: {
+                                openTermsOfService()
+                            }) {
+                                Text(t("Terms of Service"))
+                                    .font(.system(size: 13))
+                                    .foregroundColor(.blue)
+                                    .underline()
+                            }
+                            .buttonStyle(.plain)
+                            .onHover { isHovering in
+                                if isHovering {
+                                    NSCursor.pointingHand.push()
+                                } else {
+                                    NSCursor.pop()
+                                }
+                            }
+                            
+                            if localizer.appLanguage == "ja" {
+                                Text(t("to agree"))
+                                    .font(.system(size: 13))
+                            }
+                        }
+                        Spacer()
+                    }
+                    .padding(.top, 4)
                 }
             }
             .padding(.horizontal, 40)
@@ -82,7 +152,7 @@ struct LoginView: View {
                 }
                 .foregroundColor(colorScheme == .dark ? .black : .white)
                 .frame(maxWidth: .infinity)
-                .padding()
+                .padding(12)
                 .background(colorScheme == .dark ? Color.white : Color.black)
                 .cornerRadius(10)
             }
@@ -103,10 +173,10 @@ struct LoginView: View {
                     .foregroundColor(.blue)
             }
             .buttonStyle(.plain)
-            .padding(.top, 10)
+            .padding(.top, 4)
             
         }
-        .padding(.vertical, 40)
+        .padding(.vertical, 30)
         .frame(maxWidth: .infinity)
     }
     
@@ -162,8 +232,50 @@ struct LoginView: View {
                 errorMessage = t("Passwords do not match.")
                 return false
             }
+            
+            if !acceptedPrivacyPolicy {
+                errorMessage = t("Please accept the Privacy Policy and Terms of Service to create an account.")
+                return false
+            }
         }
         
         return true
+    }
+    
+    private func openPrivacyPolicy() {
+        let lang = localizer.appLanguage.uppercased()
+        let suffix = "(\(lang)).pdf"
+        
+        let bundleUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: nil) ?? []
+        let politicsUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: "Politics") ?? []
+        let allUrls = bundleUrls + politicsUrls
+        
+        if let matched = allUrls.first(where: { $0.lastPathComponent.contains(suffix) }) {
+            NSWorkspace.shared.open(matched)
+        } else if let fallback = allUrls.first(where: { $0.lastPathComponent.contains("(EN).pdf") }) {
+            NSWorkspace.shared.open(fallback)
+        }
+    }
+    
+    private func openTermsOfService() {
+        let lang = localizer.appLanguage.uppercased()
+        let suffix = "(\(lang)).pdf"
+        
+        let bundleUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: nil) ?? []
+        let termsUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: "Terms") ?? []
+        let allUrls = bundleUrls + termsUrls
+        
+        if lang == "EN" {
+            if let matched = allUrls.first(where: { $0.lastPathComponent.contains("(Updated).pdf") }) {
+                NSWorkspace.shared.open(matched)
+                return
+            }
+        }
+        
+        if let matched = allUrls.first(where: { $0.lastPathComponent.contains(suffix) }) {
+            NSWorkspace.shared.open(matched)
+        } else if let fallback = allUrls.first(where: { $0.lastPathComponent.contains("(Updated).pdf") }) {
+            NSWorkspace.shared.open(fallback)
+        }
     }
 }

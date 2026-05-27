@@ -292,6 +292,7 @@ class AppController: NSObject, ObservableObject {
     }
     
     private var settingsWindow: NSWindow?
+    private var supportWindow: NSWindow?
 
     func forceFloatingWindow() {
         // Opóźnienie na uruchomienie UI okna MenuBar
@@ -373,6 +374,9 @@ class AppController: NSObject, ObservableObject {
             
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
+            
+            // Pokaż okno ze wsparciem dla twórcy
+            self.openSupportWindow()
             return
         }
         
@@ -382,7 +386,7 @@ class AppController: NSObject, ObservableObject {
             backing: .buffered,
             defer: false
         )
-        window.title = "Sonor"
+        window.title = ""
         window.minSize = NSSize(width: 1000, height: 600)
         window.center()
         window.contentView = NSHostingView(rootView: SettingsView())
@@ -402,14 +406,73 @@ class AppController: NSObject, ObservableObject {
         
         self.settingsWindow = window
         
-        // Obserwujemy zamknięcie okna, aby przywrócić tryb akcesoriów (brak w Docku)
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { _ in
-            NSApp.setActivationPolicy(.accessory)
+        // Obserwujemy zamknięcie okna, aby przywrócić tryb akcesoriów (brak w Docku) jeśli to konieczne
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.updateActivationPolicy()
+            }
         }
         
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
+        
+        // Pokaż okno ze wsparciem dla twórcy
+        self.openSupportWindow()
+    }
+    
+    func openSupportWindow() {
+        if let window = supportWindow {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            return
+        }
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 360, height: 440),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Sonor - Wesprzyj Twórcę"
+        window.center()
+        
+        // Hide standard window controls we don't need
+        window.standardWindowButton(.closeButton)?.isHidden = false
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+        
+        window.contentView = NSHostingView(rootView: SupportView(onClose: { [weak self] in
+            self?.supportWindow?.close()
+        }))
+        window.isReleasedWhenClosed = false
+        window.backgroundColor = .windowBackgroundColor
+        window.isOpaque = true
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        
+        self.supportWindow = window
+        
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.supportWindow = nil
+                self?.updateActivationPolicy()
+            }
+        }
+        
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
+    }
+    
+    private func updateActivationPolicy() {
+        let isSettingsVisible = settingsWindow?.isVisible == true
+        let isSupportVisible = supportWindow?.isVisible == true
+        
+        if !isSettingsVisible && !isSupportVisible {
+            NSApp.setActivationPolicy(.accessory)
+        }
     }
     
     func selectMode(_ mode: VoiceMode) {

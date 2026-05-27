@@ -3,14 +3,36 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var controller: AppController
     @ObservedObject var localizer = LocalizationManager.shared
+    @AppStorage("appTheme") private var appTheme = "system"
+    
+    var effectiveColorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
     
     var body: some View {
         VStack(spacing: 20) {
             // Nagłówek
             HStack {
-                Text("Sonor")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(.secondary)
+                HStack(spacing: 6) {
+                    Text("Sonor")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    Text("Beta")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(effectiveColorScheme == .dark ? Color.white : Color.black)
+                        .cornerRadius(4)
+                }
                 Spacer()
                 Text(t(controller.statusText))
                     .font(.system(size: 12, weight: .medium))

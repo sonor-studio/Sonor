@@ -439,14 +439,18 @@ class AuthManager: ObservableObject {
     private func saveToKeychain(key: String, value: String) {
         guard let data = value.data(using: .utf8) else { return }
         
-        let query: [String: Any] = [
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrAccount as String: key
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        
+        let addQuery: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key,
             kSecValueData as String: data
         ]
-        
-        SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
+        SecItemAdd(addQuery as CFDictionary, nil)
     }
     
     private func getFromKeychain(key: String) -> String? {

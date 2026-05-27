@@ -3,9 +3,11 @@ import SwiftUI
 struct ModelsSettingsView: View {
     @ObservedObject var manager = ModelManager.shared
     @Environment(\.colorScheme) var colorScheme
+    @ObservedObject private var authManager = AuthManager.shared
     
     @State private var showUninstallConfirmation = false
     @State private var modelToUninstall: ModelType? = nil
+    @State private var showLoginSheet = false
     
     enum ModelType {
         case whisper
@@ -44,6 +46,8 @@ struct ModelsSettingsView: View {
                     title: "Gemma (Text Correction)",
                     description: t("Required for advanced text rewriting and smart corrections. Approx. 3 GB."),
                     state: manager.gemmaState,
+                    requiresLogin: !authManager.isLoggedIn,
+                    onLogin: { self.showLoginSheet = true },
                     onDownload: { manager.downloadGemma() },
                     onCancel: { manager.cancelGemmaDownload() },
                     onUninstall: {
@@ -54,6 +58,28 @@ struct ModelsSettingsView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+        .sheet(isPresented: $showLoginSheet) {
+            LoginView()
+                .preferredColorScheme(colorScheme)
+                .frame(width: 520)
+                .fixedSize(horizontal: false, vertical: true)
+                .overlay(
+                    VStack {
+                        HStack {
+                            Spacer()
+                            Button(action: { showLoginSheet = false }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 20))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .focusable(false)
+                            .padding(15)
+                        }
+                        Spacer()
+                    }
+                )
+        }
         .alert(isPresented: $showUninstallConfirmation) {
             Alert(
                 title: Text(t("Uninstall Model")),
@@ -78,6 +104,8 @@ struct ModelCard: View {
     let title: String
     let description: String
     let state: DownloadState
+    var requiresLogin: Bool = false
+    var onLogin: (() -> Void)? = nil
     let onDownload: () -> Void
     let onCancel: () -> Void
     let onUninstall: () -> Void
@@ -100,16 +128,29 @@ struct ModelCard: View {
                 
                 switch state {
                 case .notDownloaded:
-                    Button(action: onDownload) {
-                        Text(t("Download"))
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(colorScheme == .dark ? .black : .white)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(colorScheme == .dark ? Color.white : Color.black)
-                            .cornerRadius(8)
+                    if requiresLogin {
+                        Button(action: { onLogin?() }) {
+                            Text(t("Log In"))
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(colorScheme == .dark ? .black : .white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(colorScheme == .dark ? Color.white : Color.black)
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        Button(action: onDownload) {
+                            Text(t("Download"))
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(colorScheme == .dark ? .black : .white)
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 8)
+                                .background(colorScheme == .dark ? Color.white : Color.black)
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                     
                 case .downloading(let progress):
                     HStack(spacing: 12) {
@@ -158,7 +199,6 @@ struct ModelCard: View {
                     
                 case .downloaded:
                     HStack(spacing: 12) {
-                        // Removed "Downloaded" text per user request
                         Button(action: onUninstall) {
                             Text(t("Uninstall"))
                                 .font(.system(size: 13, weight: .medium))

@@ -77,6 +77,24 @@ struct SettingsView: View {
         NavigationSplitView {
             // Panel boczny (Sidebar)
             VStack(alignment: .leading, spacing: 0) {
+                // Logo aplikacji i tag Beta
+                HStack(spacing: 8) {
+                    Text("Sonor")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.primary)
+                    
+                    Text("Beta")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(effectiveColorScheme == .dark ? Color.white : Color.black)
+                        .cornerRadius(4)
+                }
+                .padding(.leading, 10)
+                .padding(.trailing, 24)
+                .padding(.bottom, 2)
+                
                 // Górne opcje
                 VStack(spacing: 5) {
                     MenuButton(title: t("Home"), icon: "house.fill", isSelected: selectedTab == .home) {
@@ -95,6 +113,41 @@ struct SettingsView: View {
                 .padding(.horizontal, 10)
                 
                 Spacer() // Pcha dolną sekcję na dół
+                
+                // Discord Button
+                Button(action: {
+                    if let url = URL(string: "https://discord.gg/aHAJvAPKf4") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }) {
+                    HStack {
+                        Image("discord")
+                            .resizable()
+                            .scaledToFit()
+                            .foregroundColor(.white)
+                            .frame(width: 22, height: 22)
+                            .padding(.leading, 4)
+                        
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(t("Join Discord"))
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundColor(.white)
+                            Text(t("Community & Support"))
+                                .font(.system(size: 10))
+                                .foregroundColor(.white.opacity(0.8))
+                                .lineLimit(1)
+                        }
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color(red: 88/255, green: 101/255, blue: 242/255))
+                    )
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 10)
+                .padding(.bottom, 8)
                 
                 MenuButton(title: t("Models"), icon: "shippingbox.fill", isSelected: selectedTab == .models) {
                     selectedTab = .models
@@ -195,30 +248,26 @@ struct SettingsView: View {
                     .focused($isDummyFocused)
                     .offset(x: -1000, y: -1000)
                 
-                if !authManager.isLoggedIn && (selectedTab == .dictionary || selectedTab == .snippets) {
-                    PremiumLockView(showLoginSheet: $showLoginSheet)
-                } else {
-                    ScrollView {
-                        VStack(alignment: .leading, spacing: 20) {
-                            switch selectedTab {
-                            case .home:
-                                StatisticsView()
-                            case .modes:
-                                ModesSettingsView(modes: $modes, selectedModeID: $selectedModeID, isShowingSidePanel: $isShowingSidePanel, isPremium: authManager.isLoggedIn, showLoginSheet: $showLoginSheet)
-                            case .dictionary:
-                                DictionarySettingsView()
-                            case .snippets:
-                                SnippetsSettingsView()
-                            case .models:
-                                ModelsSettingsView()
-                            case .settings:
-                                HomeSettingsView()
-                            }
-                            Spacer()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        switch selectedTab {
+                        case .home:
+                            StatisticsView()
+                        case .modes:
+                            ModesSettingsView(modes: $modes, selectedModeID: $selectedModeID, isShowingSidePanel: $isShowingSidePanel, isPremium: authManager.isLoggedIn, showLoginSheet: $showLoginSheet)
+                        case .dictionary:
+                            DictionarySettingsView(showLoginSheet: $showLoginSheet)
+                        case .snippets:
+                            SnippetsSettingsView(showLoginSheet: $showLoginSheet)
+                        case .models:
+                            ModelsSettingsView()
+                        case .settings:
+                            HomeSettingsView()
                         }
-                        .padding(30)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        Spacer()
                     }
+                    .padding(30)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
                 
                 // Panel boczny (Opcje) widoczny cały czas dla wybranego asystenta
@@ -552,7 +601,8 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $showLoginSheet) {
             LoginView()
-                .frame(width: 400)
+                .preferredColorScheme(effectiveColorScheme)
+                .frame(width: 520)
                 .fixedSize(horizontal: false, vertical: true)
                 .overlay(
                     VStack {
@@ -573,14 +623,17 @@ struct SettingsView: View {
         }
         .sheet(isPresented: $isShowingProfileSheet) {
             UserProfileView()
+                .preferredColorScheme(effectiveColorScheme)
         }
         .background(
             Color.clear
                 .sheet(isPresented: $modelManager.showModelsRequiredModal) {
                     ModelsRequiredExplanationView()
+                        .preferredColorScheme(effectiveColorScheme)
                 }
                 .sheet(isPresented: $modelManager.showDownloadErrorModal) {
                     ModelDownloadErrorView(error: modelManager.downloadError ?? t("An unknown network error occurred."))
+                        .preferredColorScheme(effectiveColorScheme)
                 }
         )
         .onAppear {
@@ -1383,9 +1436,11 @@ struct StatisticsView: View {
         }
         .sheet(isPresented: $isShowingBenchmarkSheet) {
             BenchmarkView()
+                .preferredColorScheme(colorScheme)
         }
         .sheet(isPresented: $isShowingIncognitoExplanation) {
             IncognitoExplanationView(isFromInfo: isShowingExplanationFromInfoButton)
+                .preferredColorScheme(colorScheme)
         }
         .onAppear {
             loadStats()
@@ -1864,13 +1919,24 @@ fileprivate struct RamHistoryView: View {
         }
         .sheet(isPresented: $isShowingRamExplanation) {
             RamHistoryExplanationView()
+                .preferredColorScheme(colorScheme)
         }
     }
 }
 
 struct RamHistoryExplanationView: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.colorScheme) var colorScheme
+    @AppStorage("appTheme") private var appTheme = "system"
+    var colorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
     @ObservedObject private var localizer = LocalizationManager.shared
     
     var body: some View {
@@ -2239,7 +2305,17 @@ fileprivate struct PaceChartView: View {
 
 struct BenchmarkView: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.colorScheme) var colorScheme
+    @AppStorage("appTheme") private var appTheme = "system"
+    var colorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
     @StateObject private var audioManager = AudioManager()
     @ObservedObject private var localizer = LocalizationManager.shared
     
@@ -3041,6 +3117,7 @@ struct StatCard: View {
 }
 
 struct DictionarySettingsView: View {
+    @Binding var showLoginSheet: Bool
     @ObservedObject var localizer = LocalizationManager.shared
     @State private var entries: [String: String] = [:]
     @State private var newWrong: String = ""
@@ -3048,6 +3125,7 @@ struct DictionarySettingsView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var isHoveringAdd = false
     @State private var hoveredKey: String? = nil
+    @State private var isShowingInfo = false
     
     private var sortedKeys: [String] {
         entries.keys.sorted()
@@ -3061,16 +3139,17 @@ struct DictionarySettingsView: View {
                     .foregroundColor(.primary)
                 Text(t("Dictionary"))
                     .font(.system(size: 28, weight: .bold))
+                
+                Button(action: {
+                    isShowingInfo = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(t("Learn more about Dictionary"))
             }
-            
-            Text(t("Phonetic correction and automatic word replacement"))
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.secondary)
-            
-            Text(t("Allows defining rules for replacing misheard words with correct formulations (e.g. proper names, industry abbreviations, or specific vocabulary). Works 100% locally."))
-                .font(.system(size: 12))
-                .foregroundColor(.secondary.opacity(0.8))
-                .lineSpacing(4)
         }
         .padding(.bottom, 8)
     }
@@ -3255,49 +3334,56 @@ struct DictionarySettingsView: View {
         VStack(alignment: .leading, spacing: 24) {
             headerView
             
-            addFormView
-            
-            // List Header
-            HStack {
-                Text(String(format: t("SAVED CORRECTIONS (%d)"), entries.count))
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .tracking(1)
-                Spacer()
-            }
-            .padding(.top, 8)
-            
-            // Entries List
-            if entries.isEmpty {
-                // Empty state
-                VStack(spacing: 16) {
-                    Image(systemName: "book.closed")
-                        .font(.system(size: 40))
-                        .foregroundColor(.secondary.opacity(0.5))
-                    Text(t("No dictionary entries"))
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.secondary)
-                    Text(t("Add the first correction above to automatically fix the most common Sonor errors."))
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary.opacity(0.7))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, miterLimit: 10, dash: [5, 5], dashPhase: 0))
-                )
+            if !AuthManager.shared.isLoggedIn {
+                PremiumLockView(showLoginSheet: $showLoginSheet)
             } else {
-                VStack(spacing: 12) {
-                    ForEach(sortedKeys, id: \.self) { key in
-                        if let value = entries[key] {
-                            rowView(key: key, value: value)
+                addFormView
+                
+                // List Header
+                HStack {
+                    Text(String(format: t("SAVED CORRECTIONS (%d)"), entries.count))
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .tracking(1)
+                    Spacer()
+                }
+                .padding(.top, 8)
+                
+                // Entries List
+                if entries.isEmpty {
+                    // Empty state
+                    VStack(spacing: 16) {
+                        Image(systemName: "book.closed")
+                            .font(.system(size: 40))
+                            .foregroundColor(.secondary.opacity(0.5))
+                        Text(t("No dictionary entries"))
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        Text(t("Add the first correction above to automatically fix the most common Sonor errors."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, miterLimit: 10, dash: [5, 5], dashPhase: 0))
+                    )
+                } else {
+                    VStack(spacing: 12) {
+                        ForEach(sortedKeys, id: \.self) { key in
+                            if let value = entries[key] {
+                                rowView(key: key, value: value)
+                            }
                         }
                     }
                 }
             }
+        }
+        .sheet(isPresented: $isShowingInfo) {
+            DictionaryExplanationView()
         }
         .onAppear(perform: loadEntries)
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("VoiceModesUpdated"))) { _ in
@@ -3325,6 +3411,7 @@ struct DictionarySettingsView: View {
 }
 
 struct SnippetsSettingsView: View {
+    @Binding var showLoginSheet: Bool
     @State private var entries: [String: String] = [:]
     @State private var newShortcut: String = ""
     @State private var newExpansion: String = ""
@@ -3332,6 +3419,7 @@ struct SnippetsSettingsView: View {
     @ObservedObject private var localizer = LocalizationManager.shared
     @State private var isHoveringAdd = false
     @State private var hoveredKey: String? = nil
+    @State private var isShowingInfo = false
     
     private var sortedKeys: [String] {
         entries.keys.sorted()
@@ -3345,16 +3433,17 @@ struct SnippetsSettingsView: View {
                     .foregroundColor(.primary)
                 Text(t("Snippets"))
                     .font(.system(size: 28, weight: .bold))
+                
+                Button(action: {
+                    isShowingInfo = true
+                }) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 16))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(t("Learn more about Snippets"))
             }
-            
-            Text(t("Text shortcuts and message templates"))
-                .font(.system(size: 14, weight: .medium))
-                .foregroundColor(.secondary)
-            
-            Text(t("They act like smart macros. The spoken keyword will be automatically replaced with long text, a URL, or a ready-made template."))
-                .font(.system(size: 12))
-                .foregroundColor(.secondary.opacity(0.8))
-                .lineSpacing(4)
         }
         .padding(.bottom, 8)
     }
@@ -3541,49 +3630,56 @@ struct SnippetsSettingsView: View {
         VStack(alignment: .leading, spacing: 24) {
             headerView
             
-            addFormView
-            
-            // List Header
-            HStack {
-                Text(String(format: t("SAVED SNIPPETS (%d)"), entries.count))
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundColor(.secondary)
-                    .tracking(1)
-                Spacer()
-            }
-            .padding(.top, 8)
-            
-            // Entries List
-            if entries.isEmpty {
-                // Empty state
-                VStack(spacing: 16) {
-                    Image(systemName: "scissors")
-                        .font(.system(size: 40))
-                        .foregroundColor(.secondary.opacity(0.5))
-                    Text(t("No snippets"))
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(.secondary)
-                    Text(t("Add the first shortcut above to be able to use templates and automatically expand short forms."))
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary.opacity(0.7))
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 40)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 40)
-                .background(
-                    RoundedRectangle(cornerRadius: 16)
-                        .stroke(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, miterLimit: 10, dash: [5, 5], dashPhase: 0))
-                )
+            if !AuthManager.shared.isLoggedIn {
+                PremiumLockView(showLoginSheet: $showLoginSheet)
             } else {
-                VStack(spacing: 12) {
-                    ForEach(sortedKeys, id: \.self) { key in
-                        if let value = entries[key] {
-                            rowView(key: key, value: value)
+                addFormView
+                
+                // List Header
+                HStack {
+                    Text(String(format: t("SAVED SNIPPETS (%d)"), entries.count))
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.secondary)
+                        .tracking(1)
+                    Spacer()
+                }
+                .padding(.top, 8)
+                
+                // Entries List
+                if entries.isEmpty {
+                    // Empty state
+                    VStack(spacing: 16) {
+                        Image(systemName: "scissors")
+                            .font(.system(size: 40))
+                            .foregroundColor(.secondary.opacity(0.5))
+                        Text(t("No snippets"))
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(.secondary)
+                        Text(t("Add the first shortcut above to be able to use templates and automatically expand short forms."))
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary.opacity(0.7))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 40)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16)
+                            .stroke(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, miterLimit: 10, dash: [5, 5], dashPhase: 0))
+                    )
+                } else {
+                    VStack(spacing: 12) {
+                        ForEach(sortedKeys, id: \.self) { key in
+                            if let value = entries[key] {
+                                rowView(key: key, value: value)
+                            }
                         }
                     }
                 }
             }
+        }
+        .sheet(isPresented: $isShowingInfo) {
+            SnippetsExplanationView()
         }
         .onAppear(perform: loadEntries)
     }
@@ -3613,6 +3709,7 @@ struct ModesSettingsView: View {
     var isPremium: Bool
     @Binding var showLoginSheet: Bool
     @ObservedObject private var localizer = LocalizationManager.shared
+    @State private var isShowingInfo = false
     
     // Grid layout
     let columns = [
@@ -3624,12 +3721,22 @@ struct ModesSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
-                HStack {
+                HStack(spacing: 10) {
                     Image(systemName: "square.grid.2x2.fill")
                         .font(.system(size: 24))
                         .foregroundColor(.primary)
                     Text(t("Assistants"))
                         .font(.system(size: 28, weight: .bold))
+                    
+                    Button(action: {
+                        isShowingInfo = true
+                    }) {
+                        Image(systemName: "info.circle")
+                            .font(.system(size: 16))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(t("Learn more about Assistants"))
                 }
                 Spacer()
                 
@@ -3741,6 +3848,9 @@ struct ModesSettingsView: View {
                 .padding(.horizontal, 20)
                 .padding(.bottom, 40)
             }
+        }
+        .sheet(isPresented: $isShowingInfo) {
+            AssistantsExplanationView()
         }
     }
     
@@ -3943,7 +4053,17 @@ struct CustomToggleStyle: ToggleStyle {
 
 struct IncognitoExplanationView: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.colorScheme) var colorScheme
+    @AppStorage("appTheme") private var appTheme = "system"
+    var colorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
     
     let isFromInfo: Bool
     @AppStorage("skipIncognitoExplanation") private var skipIncognitoExplanation = false
@@ -4058,7 +4178,17 @@ struct IncognitoExplanationView: View {
 
 struct ModelsRequiredExplanationView: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.colorScheme) var colorScheme
+    @AppStorage("appTheme") private var appTheme = "system"
+    var colorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -4133,7 +4263,17 @@ struct ModelsRequiredExplanationView: View {
 struct ModelDownloadErrorView: View {
     let error: String
     @Environment(\.dismiss) var dismiss
-    @Environment(\.colorScheme) var colorScheme
+    @AppStorage("appTheme") private var appTheme = "system"
+    var colorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
     
     var body: some View {
         VStack(spacing: 0) {
@@ -4207,7 +4347,17 @@ struct ModelDownloadErrorView: View {
 
 struct UserProfileView: View {
     @Environment(\.dismiss) var dismiss
-    @Environment(\.colorScheme) var colorScheme
+    @AppStorage("appTheme") private var appTheme = "system"
+    var colorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
     @ObservedObject var authManager = AuthManager.shared
     @ObservedObject var localizer = LocalizationManager.shared
     
@@ -4244,7 +4394,7 @@ struct UserProfileView: View {
                 Spacer()
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 20))
-                    .foregroundColor(isCloseHovered ? .white : .secondary)
+                    .foregroundColor(isCloseHovered ? (colorScheme == .dark ? .white : .black) : .secondary)
                     .contentShape(Rectangle())
                     .onHover { hovering in
                         isCloseHovered = hovering
@@ -4265,7 +4415,7 @@ struct UserProfileView: View {
                     
                     Text(t("Password Updated Successfully!"))
                         .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     
                     Text(t("Your account is now secure with the new password."))
                         .font(.system(size: 12))
@@ -4290,7 +4440,7 @@ struct UserProfileView: View {
                 VStack(spacing: 14) {
                     Text(t("Change Password"))
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                         .padding(.top, 10)
                         .padding(.bottom, 6)
                     
@@ -4302,9 +4452,9 @@ struct UserProfileView: View {
                             .textFieldStyle(.plain)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.06))
+                            .background(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
                             .cornerRadius(8)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                     }
                     .padding(.horizontal, 24)
                     
@@ -4316,9 +4466,9 @@ struct UserProfileView: View {
                             .textFieldStyle(.plain)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.06))
+                            .background(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
                             .cornerRadius(8)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                     }
                     .padding(.horizontal, 24)
                     
@@ -4330,9 +4480,9 @@ struct UserProfileView: View {
                             .textFieldStyle(.plain)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.06))
+                            .background(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
                             .cornerRadius(8)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                     }
                     .padding(.horizontal, 24)
                     
@@ -4358,10 +4508,10 @@ struct UserProfileView: View {
                         }) {
                             Text(t("Save Password"))
                                 .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.black)
+                                .foregroundColor(colorScheme == .dark ? .black : .white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(Color.white)
+                                .background(colorScheme == .dark ? Color.white : Color.black)
                                 .cornerRadius(10)
                         }
                         .buttonStyle(.plain)
@@ -4380,10 +4530,10 @@ struct UserProfileView: View {
                         }) {
                             Text(t("Cancel"))
                                 .font(.system(size: 13, weight: .medium))
-                                .foregroundColor(.white.opacity(0.6))
+                                .foregroundColor(colorScheme == .dark ? Color.white.opacity(0.6) : Color.black.opacity(0.6))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
-                                .background(Color.white.opacity(0.08))
+                                .background(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05))
                                 .cornerRadius(10)
                         }
                         .buttonStyle(.plain)
@@ -4399,17 +4549,17 @@ struct UserProfileView: View {
                     Image(systemName: "person.crop.circle.fill")
                         .resizable()
                         .frame(width: 80, height: 80)
-                        .foregroundColor(.white.opacity(0.8))
+                        .foregroundColor(colorScheme == .dark ? .white.opacity(0.8) : .black.opacity(0.7))
                         .padding(.top, 10)
                         .padding(.bottom, 16)
                     
                     // Premium tag if logged in
                     Text(t("PREMIUM"))
                         .font(.system(size: 10, weight: .black))
-                        .foregroundColor(.black)
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Color.white)
+                        .background(colorScheme == .dark ? Color.white : Color.black)
                         .cornerRadius(4)
                         .padding(.bottom, 16)
                     
@@ -4417,7 +4567,7 @@ struct UserProfileView: View {
                     VStack(spacing: 6) {
                         Text(authManager.currentUserEmail ?? "")
                             .font(.system(size: 16, weight: .bold))
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                         
                         Text("\(t("Member since:")) \(formattedCreationDate)")
                             .font(.system(size: 12))
@@ -4434,10 +4584,10 @@ struct UserProfileView: View {
                     }) {
                         Text(t("Log Out"))
                             .font(.system(size: 13, weight: .bold))
-                            .foregroundColor(.black)
+                            .foregroundColor(colorScheme == .dark ? .black : .white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
-                            .background(Color.white)
+                            .background(colorScheme == .dark ? Color.white : Color.black)
                             .cornerRadius(10)
                     }
                     .buttonStyle(.plain)
@@ -4453,10 +4603,10 @@ struct UserProfileView: View {
                     }) {
                         Text(t("Change Password"))
                             .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
-                            .background(Color.white.opacity(0.08))
+                            .background(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05))
                             .cornerRadius(10)
                     }
                     .buttonStyle(.plain)
@@ -4500,8 +4650,8 @@ struct UserProfileView: View {
             }
         }
         .frame(width: 400, height: 550) // Adjust height to support three password fields cleanly
-        .background(Color(red: 0.05, green: 0.05, blue: 0.05))
-        .foregroundColor(.white)
+        .background(colorScheme == .dark ? Color(red: 0.05, green: 0.05, blue: 0.05) : Color.white)
+        .foregroundColor(.primary)
         .alert(t("Delete Account"), isPresented: $showDeleteConfirmation) {
             SecureField(t("Password"), text: $deletePassword)
             Button(t("Delete"), role: .destructive) {
@@ -4540,6 +4690,11 @@ struct UserProfileView: View {
             return
         }
         
+        if trimmedNew == trimmedOld {
+            changePasswordError = t("New password cannot be the same as the old password.")
+            return
+        }
+        
         if trimmedNew != trimmedConfirm {
             changePasswordError = t("Passwords do not match.")
             return
@@ -4552,7 +4707,16 @@ struct UserProfileView: View {
             do {
                 // Verify old password by logging in again
                 if let email = authManager.currentUserEmail {
-                    try await authManager.login(email: email, password: trimmedOld)
+                    do {
+                        try await authManager.login(email: email, password: trimmedOld)
+                    } catch {
+                        let errStr = error.localizedDescription
+                        if errStr.lowercased().contains("invalid login credentials") || errStr.lowercased().contains("invalid credentials") {
+                            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "Incorrect old password."])
+                        } else {
+                            throw error
+                        }
+                    }
                 }
                 
                 // If login succeeds, update password
@@ -4604,6 +4768,273 @@ struct UserProfileView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Premium Feature Explanation Modals
+
+struct InfoBulletRow: View {
+    let icon: String
+    let title: String
+    let description: String
+    let colorScheme: ColorScheme
+    
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundColor(colorScheme == .dark ? .white : .black)
+                .frame(width: 18)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 12, weight: .bold))
+                Text(description)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineSpacing(2)
+            }
+        }
+    }
+}
+
+
+struct AssistantsExplanationView: View {
+    @Environment(\.dismiss) var dismiss
+    @AppStorage("appTheme") private var appTheme = "system"
+    var colorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
+    
+    @ObservedObject private var localizer = LocalizationManager.shared
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+                .frame(height: 30)
+            
+            VStack(spacing: 12) {
+                Image(systemName: "square.grid.2x2.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                
+                Text(t("AI Assistants"))
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            .padding(.bottom, 24)
+            
+            VStack(alignment: .leading, spacing: 16) {
+                InfoBulletRow(
+                    icon: "sparkles",
+                    title: t("Tailored Output"),
+                    description: t("Assistants process your transcription using customizable prompts. You can format transcripts into emails, notes, lists, or clean prose automatically."),
+                    colorScheme: colorScheme
+                )
+                
+                InfoBulletRow(
+                    icon: "slider.horizontal.3",
+                    title: t("Infinite Customization"),
+                    description: t("Create as many specialized assistants as you need, defining specific instructions, tone of voice, and formatting styles."),
+                    colorScheme: colorScheme
+                )
+                
+                InfoBulletRow(
+                    icon: "wand.and.stars",
+                    title: t("Smart Presets"),
+                    description: t("Get started instantly with built-in templates for professional emails, summaries, or structured lists."),
+                    colorScheme: colorScheme
+                )
+            }
+            .padding(.horizontal, 24)
+            
+            Spacer()
+            
+            Button(action: {
+                dismiss()
+            }) {
+                Text(t("I understand"))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+            .keyboardShortcut(.defaultAction)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+        }
+        .frame(width: 440, height: 430)
+        .background(colorScheme == .dark ? Color.black : Color.white)
+    }
+}
+
+struct DictionaryExplanationView: View {
+    @Environment(\.dismiss) var dismiss
+    @AppStorage("appTheme") private var appTheme = "system"
+    var colorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
+    
+    @ObservedObject private var localizer = LocalizationManager.shared
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+                .frame(height: 30)
+            
+            VStack(spacing: 12) {
+                Image(systemName: "book.closed.fill")
+                    .font(.system(size: 40))
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                
+                Text(t("Intelligent Dictionary"))
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            .padding(.bottom, 24)
+            
+            VStack(alignment: .leading, spacing: 16) {
+                InfoBulletRow(
+                    icon: "pencil.and.outline",
+                    title: t("Phonetic Corrections"),
+                    description: t("Teach Sonor how to correctly write words it often mishears, such as specific names, technical jargon, or uncommon terms."),
+                    colorScheme: colorScheme
+                )
+                
+                InfoBulletRow(
+                    icon: "arrow.right.arrow.left",
+                    title: t("Automatic Replacement"),
+                    description: t("Define rules to automatically replace specific phrases. For example, change 'superbase' to 'Supabase' instantly upon transcription."),
+                    colorScheme: colorScheme
+                )
+                
+                InfoBulletRow(
+                    icon: "checkmark.circle.fill",
+                    title: t("Enhanced Accuracy"),
+                    description: t("Significantly improve recognition of specialized vocabulary, brand names, and complex technical terminology."),
+                    colorScheme: colorScheme
+                )
+            }
+            .padding(.horizontal, 24)
+            
+            Spacer()
+            
+            Button(action: {
+                dismiss()
+            }) {
+                Text(t("I understand"))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+            .keyboardShortcut(.defaultAction)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+        }
+        .frame(width: 440, height: 430)
+        .background(colorScheme == .dark ? Color.black : Color.white)
+    }
+}
+
+struct SnippetsExplanationView: View {
+    @Environment(\.dismiss) var dismiss
+    @AppStorage("appTheme") private var appTheme = "system"
+    var colorScheme: ColorScheme {
+        if appTheme == "dark" {
+            return .dark
+        } else if appTheme == "light" {
+            return .light
+        } else {
+            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
+            return appleInterfaceStyle == "Dark" ? .dark : .light
+        }
+    }
+    
+    @ObservedObject private var localizer = LocalizationManager.shared
+    
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer()
+                .frame(height: 30)
+            
+            VStack(spacing: 12) {
+                Image(systemName: "scissors")
+                    .font(.system(size: 40))
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                
+                Text(t("Custom Snippets"))
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            .padding(.bottom, 24)
+            
+            VStack(alignment: .leading, spacing: 16) {
+                InfoBulletRow(
+                    icon: "scissors",
+                    title: t("Voice Shortcuts"),
+                    description: t("Create voice-activated macros. Speak a short keyword, and Sonor will expand it into a pre-defined text block."),
+                    colorScheme: colorScheme
+                )
+                
+                InfoBulletRow(
+                    icon: "doc.text.fill",
+                    title: t("Message Templates"),
+                    description: t("Perfect for long email templates, standard responses, links, or code blocks that you speak frequently."),
+                    colorScheme: colorScheme
+                )
+                
+                InfoBulletRow(
+                    icon: "keyboard",
+                    title: t("Instant Injection"),
+                    description: t("The expanded text is immediately injected into your active cursor position, making voice typing faster than ever."),
+                    colorScheme: colorScheme
+                )
+            }
+            .padding(.horizontal, 24)
+            
+            Spacer()
+            
+            Button(action: {
+                dismiss()
+            }) {
+                Text(t("I understand"))
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+            .keyboardShortcut(.defaultAction)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+        }
+        .frame(width: 440, height: 430)
+        .background(colorScheme == .dark ? Color.black : Color.white)
     }
 }
 
