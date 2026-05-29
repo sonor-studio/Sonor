@@ -110,11 +110,84 @@ class AuthManager: ObservableObject {
         }
         
         if httpResponse.statusCode == 200 {
-            // Czasem signup zwraca sesję, czasem nie. Możemy wymagać potwierdzenia email,
-            // ale założymy że logujemy automatycznie lub pytamy usera o logowanie.
-            // Dla prostoty spróbujmy zalogować od razu.
-            try await login(email: email, password: password)
+            // Rejestracja powiodła się. Wymagane potwierdzenie OTP.
+            // Zwracamy bez błędu, a widok wyświetli okno potwierdzenia.
+            return
         } else {
+            let errorMsg = extractErrorMessage(from: data)
+            throw NSError(domain: "AuthError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+        }
+    }
+    
+    func verifyOTP(email: String, token: String) async throws {
+        guard !supabaseUrl.isEmpty, !supabaseAnonKey.isEmpty else {
+            throw NSError(domain: "AuthError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Missing Supabase keys in .env file"])
+        }
+        
+        guard let url = URL(string: "\(supabaseUrl)/auth/v1/verify") else {
+            throw NSError(domain: "AuthError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid Supabase URL"])
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = ["type": "signup", "email": email, "token": token]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AuthError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No valid response from server"])
+        }
+        
+        if httpResponse.statusCode == 200 {
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let accessToken = json["access_token"] as? String {
+                
+                // Zapisz do Keychain
+                saveToKeychain(key: tokenKey, value: accessToken)
+                saveToKeychain(key: emailKey, value: email)
+                
+                self.isLoggedIn = true
+                self.currentUserEmail = email
+                Task {
+                    await fetchUserDetails()
+                }
+            } else {
+                throw NSError(domain: "AuthError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Error parsing token response"])
+            }
+        } else {
+            let errorMsg = extractErrorMessage(from: data)
+            throw NSError(domain: "AuthError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+        }
+    }
+    
+    func resendOTP(email: String) async throws {
+        guard !supabaseUrl.isEmpty, !supabaseAnonKey.isEmpty else {
+            throw NSError(domain: "AuthError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Missing Supabase keys in .env file"])
+        }
+        
+        guard let url = URL(string: "\(supabaseUrl)/auth/v1/resend") else {
+            throw NSError(domain: "AuthError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid Supabase URL"])
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = ["type": "signup", "email": email]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AuthError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No valid response from server"])
+        }
+        
+        if httpResponse.statusCode != 200 {
             let errorMsg = extractErrorMessage(from: data)
             throw NSError(domain: "AuthError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
         }
@@ -191,7 +264,7 @@ class AuthManager: ObservableObject {
         }
     }
     
-    func updatePassword(newPassword: String) async throws {
+    func updatePassword(oldPassword: String, newPassword: String) async throws {
         print("[AuthManager] Rozpoczęcie zmiany hasła...")
         
         let token = getFromKeychain(key: tokenKey)
@@ -209,7 +282,7 @@ class AuthManager: ObservableObject {
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let body: [String: Any] = ["password": newPassword]
+        let body: [String: Any] = ["password": newPassword, "current_password": oldPassword]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -266,12 +339,10 @@ class AuthManager: ObservableObject {
                 let rawBody = String(data: userData, encoding: .utf8) ?? ""
                 print("[AuthManager] Przerwano: Błąd HTTP dla auth/v1/user: \(userHttpResponse.statusCode), odpowiedź: \(rawBody)")
                 
-                // Jeśli sesja wygasła (401 / 403), wyloguj użytkownika, aby nie wisiał w martwym stanie
+                // Jeśli sesja wygasła (401 / 403), NIE wylogowujemy automatycznie.
+                // Aplikacja jest offline-first, a brak obsługi refresh tokena powodował wylogowywanie co godzinę.
                 if userHttpResponse.statusCode == 401 || userHttpResponse.statusCode == 403 {
-                    print("[AuthManager] Sesja wygasła! Wykonuję automatyczne wylogowanie...")
-                    await MainActor.run {
-                        self.logout()
-                    }
+                    print("[AuthManager] Sesja na serwerze wygasła (401/403). Zachowuję lokalną sesję zgodnie z prośbą użytkownika.")
                 }
                 return 
             }
@@ -476,5 +547,22 @@ class AuthManager: ObservableObject {
             kSecAttrAccount as String: key
         ]
         SecItemDelete(query as CFDictionary)
+    }
+}
+
+import Network
+class NetworkMonitor: ObservableObject {
+    static let shared = NetworkMonitor()
+    private let monitor = NWPathMonitor()
+    private let queue = DispatchQueue(label: "NetworkMonitor")
+    @Published var isConnected = true
+
+    init() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async {
+                self?.isConnected = path.status == .satisfied
+            }
+        }
+        monitor.start(queue: queue)
     }
 }

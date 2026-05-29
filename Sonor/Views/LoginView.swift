@@ -22,7 +22,69 @@ struct LoginView: View {
     @State private var errorMessage: String? = nil
     @State private var isLoading = false
     @State private var acceptedPrivacyPolicy = false
+    @State private var showOTPVerification = false
+    @State private var otpDigits: [String] = Array(repeating: "", count: 6)
+    @FocusState private var focusedField: Int?
+    @State private var resendCooldown: Int = 60
+    @State private var resendTimerTask: Task<Void, Never>? = nil
     
+    private func startResendTimer() {
+        resendCooldown = 60
+        resendTimerTask?.cancel()
+        resendTimerTask = Task {
+            while resendCooldown > 0 {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                if Task.isCancelled { break }
+                await MainActor.run {
+                    resendCooldown -= 1
+                }
+            }
+        }
+    }
+    
+    private func binding(for index: Int) -> Binding<String> {
+        Binding<String>(
+            get: {
+                let val = self.otpDigits[index]
+                return val.isEmpty ? "\u{200B}" : val
+            },
+            set: { newValue in
+                let oldVal = self.otpDigits[index]
+                let filtered = newValue.filter { $0.isNumber }
+                
+                if filtered.count > 1 {
+                    let chars = Array(filtered.prefix(6))
+                    for i in 0..<chars.count {
+                        self.otpDigits[i] = String(chars[i])
+                    }
+                    self.focusedField = min(chars.count, 5)
+                } else if filtered.count == 1 {
+                    self.otpDigits[index] = filtered
+                    if index < 5 { self.focusedField = index + 1 }
+                } else {
+                    if newValue == "" {
+                        if oldVal.isEmpty {
+                            if index > 0 {
+                                self.focusedField = index - 1
+                                self.otpDigits[index - 1] = ""
+                            }
+                        } else {
+                            self.otpDigits[index] = ""
+                            if index > 0 {
+                                self.focusedField = index - 1
+                            }
+                        }
+                    } else {
+                        self.otpDigits[index] = ""
+                    }
+                }
+            }
+        )
+    }
+    
+    private var otpToken: String {
+        otpDigits.joined()
+    }
     var body: some View {
         VStack(spacing: 14) {
             Image(systemName: "lock.shield.fill")
@@ -31,8 +93,116 @@ struct LoginView: View {
                 .frame(width: 48, height: 48)
                 .foregroundColor(.primary)
             
-            Text(isRegistering ? t("Join Sonor") : t("Welcome Back"))
-                .font(.system(size: 20, weight: .bold))
+            if showOTPVerification {
+                Text(t("Confirm Email"))
+                    .font(.system(size: 20, weight: .bold))
+                
+                Text(t("Please enter the 6-character confirmation code sent to your email."))
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 4)
+                
+                if let error = errorMessage {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.system(size: 13, weight: .medium))
+                        .padding(10)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                        .padding(.horizontal, 40)
+                }
+                
+                HStack(spacing: 8) {
+                    ForEach(0..<6, id: \.self) { index in
+                        TextField("", text: binding(for: index))
+                            .textFieldStyle(.plain)
+                            .font(.system(size: 24, weight: .bold))
+                            .multilineTextAlignment(.center)
+                            .frame(width: 40, height: 50)
+                            .background(Color.primary.opacity(0.05))
+                            .cornerRadius(8)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .stroke(focusedField == index ? Color.blue : Color.clear, lineWidth: 2)
+                            )
+                            .focused($focusedField, equals: index)
+                    }
+                }
+                .padding(.vertical, 8)
+                .onChange(of: focusedField) { newValue in
+                    if let newIndex = newValue {
+                        let firstEmpty = otpDigits.firstIndex(where: { $0.isEmpty }) ?? 5
+                        if newIndex > firstEmpty {
+                            focusedField = firstEmpty
+                        }
+                    }
+                }
+                .onAppear {
+                    focusedField = 0
+                }
+                
+                Button(action: {
+                    Task {
+                        await handleOTPVerification()
+                    }
+                }) {
+                    HStack {
+                        if isLoading {
+                            ProgressView().controlSize(.small)
+                                .padding(.trailing, 5)
+                        }
+                        Text(t("Verify"))
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(12)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(10)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 40)
+                .disabled(isLoading || otpToken.isEmpty)
+                
+                Button(action: {
+                    Task {
+                        isLoading = true
+                        do {
+                            try await authManager.resendOTP(email: email)
+                            startResendTimer()
+                            errorMessage = nil
+                        } catch {
+                            errorMessage = tError(error.localizedDescription)
+                        }
+                        isLoading = false
+                    }
+                }) {
+                    Text(resendCooldown > 0 ? t("Resend Email") + " (\(resendCooldown)s)" : t("Resend Email"))
+                        .font(.system(size: 13))
+                        .foregroundColor(resendCooldown > 0 ? .secondary : .blue)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
+                .disabled(resendCooldown > 0 || isLoading)
+                
+                Button(action: {
+                    withAnimation {
+                        showOTPVerification = false
+                        errorMessage = nil
+                    }
+                }) {
+                    Text(t("Back"))
+                        .font(.system(size: 13))
+                        .foregroundColor(.blue)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+            } else {
+                Text(isRegistering ? t("Join Sonor") : t("Welcome Back"))
+                    .font(.system(size: 20, weight: .bold))
             
             Text(t("Unlock advanced AI assistants, intelligent dictionaries, and custom snippets to turn every recording into polished text. Everything is 100% free and runs fully offline on your computer — your data is completely private, and we do not collect any information."))
                 .font(.system(size: 12))
@@ -175,6 +345,8 @@ struct LoginView: View {
             .buttonStyle(.plain)
             .padding(.top, 4)
             
+            }
+            
         }
         .padding(.vertical, 30)
         .frame(maxWidth: .infinity)
@@ -186,12 +358,42 @@ struct LoginView: View {
         do {
             if isRegistering {
                 try await authManager.register(email: email, password: password)
+                // Registration succeeded, show OTP Verification
+                withAnimation {
+                    showOTPVerification = true
+                }
+                startResendTimer()
             } else {
                 try await authManager.login(email: email, password: password)
+                presentationMode.wrappedValue.dismiss()
             }
+        } catch {
+            let errorMsg = error.localizedDescription
+            if errorMsg.lowercased().contains("potwierdzon") || errorMsg.lowercased().contains("confirm") {
+                withAnimation {
+                    showOTPVerification = true
+                }
+                startResendTimer()
+            } else {
+                errorMessage = tError(errorMsg)
+            }
+        }
+        isLoading = false
+    }
+    
+    private func handleOTPVerification() async {
+        isLoading = true
+        errorMessage = nil
+        do {
+            try await authManager.verifyOTP(email: email, token: otpToken)
             presentationMode.wrappedValue.dismiss()
         } catch {
-            errorMessage = tError(error.localizedDescription)
+            let errorMsg = error.localizedDescription
+            if errorMsg.lowercased().contains("token has expired or is invalid") || errorMsg.lowercased().contains("invalid") {
+                errorMessage = t("Token has expired or is invalid.")
+            } else {
+                errorMessage = tError(errorMsg)
+            }
         }
         isLoading = false
     }
@@ -217,12 +419,27 @@ struct LoginView: View {
             return false
         }
         
-        if password.count < 6 {
-            errorMessage = t("Password must be at least 6 characters long.")
-            return false
-        }
-        
         if isRegistering {
+            if password.count < 6 {
+                errorMessage = t("Password must be at least 6 characters long.")
+                return false
+            }
+            
+            if password.rangeOfCharacter(from: .uppercaseLetters) == nil {
+                errorMessage = t("Password must contain at least one uppercase letter.")
+                return false
+            }
+            
+            if password.rangeOfCharacter(from: .lowercaseLetters) == nil {
+                errorMessage = t("Password must contain at least one lowercase letter.")
+                return false
+            }
+            
+            if password.rangeOfCharacter(from: .decimalDigits) == nil {
+                errorMessage = t("Password must contain at least one number.")
+                return false
+            }
+            
             if confirmPassword.isEmpty {
                 errorMessage = t("Please repeat your password.")
                 return false

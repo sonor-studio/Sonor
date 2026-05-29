@@ -298,6 +298,11 @@ class AppController: NSObject, ObservableObject {
         // Opóźnienie na uruchomienie UI okna MenuBar
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             for window in NSApplication.shared.windows {
+                // Skip settings, support, and HUD windows so they maintain their standard behavior
+                if window == self.settingsWindow || window == self.supportWindow || window == self.hudWindow {
+                    continue
+                }
+                
                 if window.className.contains("SwiftUI.StatusBarWindow") || window.title.isEmpty || window.isOpaque == false {
                     window.level = .floating
                     window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -481,6 +486,7 @@ class AppController: NSObject, ObservableObject {
     }
     
     func cancelRecording() {
+        guard isRecording else { return }
         isRecording = false
         statusText = "Cancelled"
         
@@ -529,6 +535,11 @@ class AppController: NSObject, ObservableObject {
     }
     
     private func stopRecordingAndTranscribe() {
+        guard isRecording else {
+            print("⚠️ [AppController] Ignorowanie stopRecordingAndTranscribe - aplikacja nie jest w trakcie nagrywania (prawdopodobnie podwójne wywołanie).")
+            return
+        }
+        
         let wasPaused = self.isPaused
         self.isPaused = false
         isRecording = false

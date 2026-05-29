@@ -31,6 +31,7 @@ class ModelManager: ObservableObject {
     
     private var gemmaDownloadTask: Task<Void, Never>?
     private var activeWhisperDownloader: WhisperDownloader?
+    private var activeGemmaDownloader: GemmaDownloader?
     private var gemmaProgressObservation: NSKeyValueObservation?
     
     var whisperModelURL: URL {
@@ -96,30 +97,35 @@ class ModelManager: ObservableObject {
         print("ℹ️ [ModelManager] Checking Gemma directory at \(gemmaDir.path) - Exists: \(gemmaExists)")
         
         if gemmaExists {
-            if let files = try? FileManager.default.contentsOfDirectory(atPath: gemmaDir.path), !files.isEmpty {
-                print("ℹ️ [ModelManager] Gemma directory contents: \(files)")
-                var totalSize: Int64 = 0
-                for file in files {
-                    let filePath = gemmaDir.appendingPathComponent(file).path
-                    if let attrs = try? FileManager.default.attributesOfItem(atPath: filePath),
-                       let s = attrs[.size] as? Int64 {
-                        totalSize += s
-                    }
-                }
-                let sizeMB = Double(totalSize) / (1024.0 * 1024.0)
-                print("ℹ️ [ModelManager] Gemma total folder size on disk: \(String(format: "%.2f", sizeMB)) MB")
-                
-                // Check if size is over 2 GB to ensure it is not a partially downloaded model
-                if totalSize > 2_000_000_000 {
+            let savedTotal = UserDefaults.standard.object(forKey: "GemmaTotalExpectedBytes") as? Int64
+            let savedDownloaded = UserDefaults.standard.object(forKey: "GemmaTotalDownloadedBytes") as? Int64
+            
+            if let total = savedTotal, let downloaded = savedDownloaded, total > 0 {
+                if downloaded >= total {
                     gemmaState = .downloaded
                 } else {
-                    print("⚠️ [ModelManager] Gemma folder size (\(sizeMB) MB) is too small. Marking as PAUSED.")
-                    let progress = min(Double(totalSize) / 3_000_000_000.0, 0.99)
+                    let progress = min(Double(downloaded) / Double(total), 0.99)
                     gemmaState = .paused(progress: progress)
                 }
             } else {
-                print("ℹ️ [ModelManager] Gemma directory is empty.")
-                gemmaState = .notDownloaded
+                if let files = try? FileManager.default.contentsOfDirectory(atPath: gemmaDir.path), !files.isEmpty {
+                    var totalSize: Int64 = 0
+                    for file in files {
+                        let filePath = gemmaDir.appendingPathComponent(file).path
+                        if let attrs = try? FileManager.default.attributesOfItem(atPath: filePath),
+                           let s = attrs[.size] as? Int64 {
+                            totalSize += s
+                        }
+                    }
+                    if totalSize > 2_000_000_000 {
+                        gemmaState = .downloaded
+                    } else {
+                        let progress = min(Double(totalSize) / 3_000_000_000.0, 0.99)
+                        gemmaState = .paused(progress: progress)
+                    }
+                } else {
+                    gemmaState = .notDownloaded
+                }
             }
         } else {
             gemmaState = .notDownloaded
@@ -134,7 +140,15 @@ class ModelManager: ObservableObject {
         if case .downloaded = whisperState { return }
         
         print("📥 [Whisper] Starting custom download process for \(whisperModelId)...")
-        whisperState = .downloading(progress: 0.0)
+        var initialWhisperProgress: Double = 0.0
+        let whisperIncompletePath = whisperModelURL.path + ".incomplete"
+        if FileManager.default.fileExists(atPath: whisperIncompletePath),
+           let attributes = try? FileManager.default.attributesOfItem(atPath: whisperIncompletePath),
+           let size = attributes[.size] as? Int64 {
+            let expectedSize: Double = 574_823_136.0 // Approximately 548 MB
+            initialWhisperProgress = min(Double(size) / expectedSize, 0.99)
+        }
+        whisperState = .downloading(progress: initialWhisperProgress)
         
         activeWhisperDownloader?.cancel()
         
@@ -143,25 +157,28 @@ class ModelManager: ObservableObject {
         
         let whisperDownloadURL = URL(string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin")!
         
-        var lastEmittedProgress: Double = -1.0
+        var lastEmittedProgress: Double = initialWhisperProgress
         var lastEmissionTime = Date()
         
-        downloader.start(from: whisperDownloadURL) { [weak self] progress in
-            guard let self = self else { return }
+        downloader.start(from: whisperDownloadURL) { [weak self, weak downloader] progress in
+            guard let self = self, let downloader = downloader else { return }
+            let clampedProgress = max(progress, initialWhisperProgress)
             let now = Date()
-            let diff = progress - lastEmittedProgress
+            let diff = clampedProgress - lastEmittedProgress
             let timeDiff = now.timeIntervalSince(lastEmissionTime)
             
-            if diff >= 0.01 || timeDiff >= 0.1 || progress >= 1.0 {
-                lastEmittedProgress = progress
+            if diff >= 0.01 || (diff > 0 && timeDiff >= 0.1) || clampedProgress >= 1.0 {
+                lastEmittedProgress = clampedProgress
                 lastEmissionTime = now
                 DispatchQueue.main.async {
-                    self.whisperState = .downloading(progress: progress)
+                    guard self.activeWhisperDownloader === downloader else { return }
+                    self.whisperState = .downloading(progress: clampedProgress)
                 }
             }
-        } completion: { [weak self] result in
-            guard let self = self else { return }
+        } completion: { [weak self, weak downloader] result in
+            guard let self = self, let downloader = downloader else { return }
             DispatchQueue.main.async {
+                guard self.activeWhisperDownloader === downloader else { return }
                 self.activeWhisperDownloader = nil
                 switch result {
                 case .success:
@@ -253,102 +270,107 @@ class ModelManager: ObservableObject {
         if case .downloading = gemmaState { return }
         if case .downloaded = gemmaState { return }
         
-        print("📥 [Gemma] Starting download process for \(gemmaModelId)...")
-        gemmaState = .downloading(progress: 0.0)
+        print("📥 [Gemma] Starting custom download process for \(gemmaModelId)...")
         
-        // Clean any existing observation
-        gemmaProgressObservation?.invalidate()
-        gemmaProgressObservation = nil
+        var initialProgress: Double = 0.0
+        if let savedTotal = UserDefaults.standard.object(forKey: "GemmaTotalExpectedBytes") as? Int64,
+           let savedDownloaded = UserDefaults.standard.object(forKey: "GemmaTotalDownloadedBytes") as? Int64, savedTotal > 0 {
+            initialProgress = min(Double(savedDownloaded) / Double(savedTotal), 0.99)
+        }
+        gemmaState = .downloading(progress: initialProgress)
         
-        gemmaDownloadTask = Task {
-            do {
-                let api = HubApi(downloadBase: modelsDirectory, cache: nil)
-                print("📥 [Gemma] Checking Hugging Face API for snapshot of \(gemmaModelId)...")
-                
-                // Download the model weights and config files using proper glob patterns
-                // Note: ".*" is a glob that only matches hidden dot-files!
-                // We need "*.safetensors" etc. to get the actual model weights
-                let _ = try await api.snapshot(from: gemmaModelId, matching: ["*.safetensors", "*.json", "*.jinja"]) { progress in
-                    // Print raw callback info to console
-                    let completed = progress.completedUnitCount
-                    let total = progress.totalUnitCount
-                    let fraction = progress.fractionCompleted
-                    print("📥 [Gemma Progress Callback] completedUnitCount: \(completed), totalUnitCount: \(total), fraction: \(fraction * 100)%")
-                    
-                    if self.gemmaProgressObservation == nil {
-                        print("ℹ️ [Gemma] Registering KVO observer for progress propagation...")
-                        self.gemmaProgressObservation = progress.observe(\.fractionCompleted, options: [.new]) { observedProgress, change in
-                            let observedFraction = observedProgress.fractionCompleted
-                            let obsCompleted = observedProgress.completedUnitCount
-                            let obsTotal = observedProgress.totalUnitCount
-                            print("📈 [Gemma KVO Update] fraction: \(observedFraction * 100)% (completed: \(obsCompleted)/\(obsTotal))")
-                            
-                            Task { @MainActor in
-                                self.gemmaState = .downloading(progress: observedFraction)
-                            }
-                        }
-                    }
-                    
-                    Task { @MainActor in
-                        self.gemmaState = .downloading(progress: fraction)
-                    }
-                }
-                
-                if !Task.isCancelled {
-                    print("✅ [Gemma] Download completed successfully!")
-                    self.gemmaState = .downloaded
-                }
-            } catch {
-                print("❌ [Gemma] Failed to download Gemma: \(error)")
-                if !Task.isCancelled {
-                    Task { @MainActor in
-                        let api = HubApi(downloadBase: self.modelsDirectory, cache: nil)
-                        let repoDir = api.localRepoLocation(Hub.Repo(id: self.gemmaModelId))
-                        var totalSize: Int64 = 0
-                        if let files = try? FileManager.default.contentsOfDirectory(atPath: repoDir.path) {
-                            for file in files {
-                                let filePath = repoDir.appendingPathComponent(file).path
-                                if let attrs = try? FileManager.default.attributesOfItem(atPath: filePath),
-                                   let s = attrs[.size] as? Int64 {
-                                    totalSize += s
-                                }
-                            }
-                        }
-                        let progress = min(Double(totalSize) / 3_000_000_000.0, 0.99)
-                        self.downloadError = error.localizedDescription
-                        self.showDownloadErrorModal = true
-                        self.gemmaState = .paused(progress: progress)
-                    }
-                } else {
-                    // Task WAS cancelled! File handles are now fully closed and released.
-                    print("🧹 [Gemma] Task cancelled, delegating to cancelGemmaDownload...")
-                    self.cancelGemmaDownload()
+        activeGemmaDownloader?.cancel()
+        
+        let downloader = GemmaDownloader(modelsDirectory: modelsDirectory, repoId: gemmaModelId)
+        self.activeGemmaDownloader = downloader
+        
+        var lastEmittedProgress: Double = initialProgress
+        var lastEmissionTime = Date()
+        
+        downloader.start { [weak self, weak downloader] progress in
+            guard let self = self, let downloader = downloader else { return }
+            let clampedProgress = max(progress, initialProgress)
+            let now = Date()
+            let diff = clampedProgress - lastEmittedProgress
+            let timeDiff = now.timeIntervalSince(lastEmissionTime)
+            
+            if diff >= 0.01 || (diff > 0 && timeDiff >= 0.1) || clampedProgress >= 1.0 {
+                lastEmittedProgress = clampedProgress
+                lastEmissionTime = now
+                DispatchQueue.main.async {
+                    guard self.activeGemmaDownloader === downloader else { return }
+                    self.gemmaState = .downloading(progress: clampedProgress)
                 }
             }
-            
-            // Clean up observation at the end of task
-            self.gemmaProgressObservation?.invalidate()
-            self.gemmaProgressObservation = nil
+        } completion: { [weak self, weak downloader] result in
+            guard let self = self, let downloader = downloader else { return }
+            DispatchQueue.main.async {
+                guard self.activeGemmaDownloader === downloader else { return }
+                self.activeGemmaDownloader = nil
+                switch result {
+                case .success:
+                    print("✅ [Gemma] Download completed successfully!")
+                    self.gemmaState = .downloaded
+                case .failure(let error):
+                    let nsError = error as NSError
+                    if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                        print("⚠️ [Gemma] Download was explicitly paused or cancelled.")
+                    } else {
+                        print("❌ [Gemma] Failed to download Gemma: \(error.localizedDescription)")
+                        
+                        var finalProgress = lastEmittedProgress >= 0 ? lastEmittedProgress : 0.0
+                        if finalProgress == 0.0 {
+                            if let savedTotal = UserDefaults.standard.object(forKey: "GemmaTotalExpectedBytes") as? Int64,
+                               let savedDownloaded = UserDefaults.standard.object(forKey: "GemmaTotalDownloadedBytes") as? Int64,
+                               savedTotal > 0 {
+                                finalProgress = min(Double(savedDownloaded) / Double(savedTotal), 0.99)
+                            }
+                        }
+                        
+                        self.downloadError = error.localizedDescription
+                        self.showDownloadErrorModal = true
+                        self.gemmaState = .paused(progress: finalProgress)
+                    }
+                }
+            }
         }
     }
     
+    func pauseGemmaDownload() {
+        print("⚠️ [Gemma] Pausing Gemma download...")
+        activeGemmaDownloader?.cancel()
+        activeGemmaDownloader = nil
+        
+        let savedTotal = UserDefaults.standard.object(forKey: "GemmaTotalExpectedBytes") as? Int64
+        let savedDownloaded = UserDefaults.standard.object(forKey: "GemmaTotalDownloadedBytes") as? Int64
+        var finalProgress: Double = 0.0
+        if let total = savedTotal, let downloaded = savedDownloaded, total > 0 {
+            finalProgress = min(Double(downloaded) / Double(total), 0.99)
+        }
+        gemmaState = .paused(progress: finalProgress)
+    }
+    
     func cancelGemmaDownload() {
-        print("⚠️ [Gemma] Cancelling Gemma download...")
-        gemmaDownloadTask?.cancel()
-        gemmaDownloadTask = nil
-        gemmaProgressObservation?.invalidate()
-        gemmaProgressObservation = nil
+        print("⚠️ [Gemma] Cancelling Gemma download and erasing files...")
+        activeGemmaDownloader?.cancel()
+        activeGemmaDownloader = nil
         gemmaState = .notDownloaded
         
-        // Identical procedure to uninstallGemma to ensure all caches are cleared
+        UserDefaults.standard.removeObject(forKey: "GemmaTotalExpectedBytes")
+        UserDefaults.standard.removeObject(forKey: "GemmaTotalDownloadedBytes")
+        cleanupGemmaFiles()
+    }
+    
+    private func cleanupGemmaFiles() {
+        print("🧹 [Gemma] Cleaning up Gemma files...")
         
-        // Release model and clear RAM memory first (identical to uninstallGemma)
+        // Release model and clear RAM memory first
         LLMManager.shared.releaseModel()
         
         // Clear global network cache responses
         URLCache.shared.removeAllCachedResponses()
         
-        let api = HubApi(downloadBase: modelsDirectory, cache: nil)
+        let api = HubApi(downloadBase: modelsDirectory, cache: nil, useBackgroundSession: false)
         let repoDir = api.localRepoLocation(Hub.Repo(id: gemmaModelId))
         
         do {
@@ -386,46 +408,18 @@ class ModelManager: ObservableObject {
                 }
             }
         }
-        
-        // Cancel all background Hugging Face LFS download tasks to release file locks
-        cancelBackgroundHuggingFaceDownloads {}
     }
     
     func uninstallGemma() {
-        print("🧹 [Gemma] Uninstalling Gemma model...")
+        print("⚠️ [Gemma] Requesting Gemma uninstallation...")
         
-        // Cancel any active download first
-        cancelGemmaDownload()
+        cleanupGemmaFiles()
         
-        // No need to repeat the operations, they are now safely executed inside cancelGemmaDownload.
-        // We just keep the state updates here to be sure.
         gemmaState = .notDownloaded
         print("✅ [Gemma] Uninstallation finished. State set to notDownloaded.")
     }
     
-    // MARK: - Background Task Canceller & Aggressive File Eraser
-    
-    private func cancelBackgroundHuggingFaceDownloads(completion: @escaping () -> Void) {
-        let bundleId = Bundle.main.bundleIdentifier ?? "swift-transformers"
-        let identifier = "\(bundleId).hub.hubclient.background"
-        let config = URLSessionConfiguration.background(withIdentifier: identifier)
-        
-        print("📥 [Gemma Cancel] Connecting to background HuggingFace URLSession to cancel active tasks...")
-        let session = URLSession(configuration: config, delegate: nil, delegateQueue: nil)
-        session.getAllTasks { tasks in
-            print("📥 [Gemma Cancel] Found \(tasks.count) active background download tasks to cancel.")
-            for task in tasks {
-                print("📥 [Gemma Cancel] Cancelling task: \(task.taskDescription ?? task.originalRequest?.url?.lastPathComponent ?? "unknown")")
-                task.cancel()
-            }
-            session.invalidateAndCancel()
-            
-            // Trigger completion on main actor
-            DispatchQueue.main.async {
-                completion()
-            }
-        }
-    }
+    // MARK: - Aggressive File Eraser
     
     private func aggressivelyDeleteDirectory(at url: URL, retries: Int = 10, delay: TimeInterval = 0.1) {
         let fm = FileManager.default
@@ -550,6 +544,7 @@ class WhisperDownloader: NSObject, URLSessionDataDelegate {
     
     private var expectedLength: Int64 = 0
     private var downloadedBytes: Int64 = 0
+    private var isCancelled = false
     
     init(destinationURL: URL) {
         self.destinationURL = destinationURL
@@ -560,6 +555,8 @@ class WhisperDownloader: NSObject, URLSessionDataDelegate {
     func start(from url: URL, progress: @escaping (Double) -> Void, completion: @escaping (Result<URL, Error>) -> Void) {
         self.progressCallback = progress
         self.completionCallback = completion
+        
+        if isCancelled { return }
         
         let fileManager = FileManager.default
         
@@ -611,6 +608,7 @@ class WhisperDownloader: NSObject, URLSessionDataDelegate {
     }
     
     func cancel() {
+        isCancelled = true
         task?.cancel()
         cleanup()
     }
@@ -669,6 +667,7 @@ class WhisperDownloader: NSObject, URLSessionDataDelegate {
     }
     
     func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        if isCancelled { return }
         fileHandle?.write(data)
         downloadedBytes += Int64(data.count)
         
@@ -698,6 +697,290 @@ class WhisperDownloader: NSObject, URLSessionDataDelegate {
                 try fileManager.moveItem(at: incompleteURL, to: destinationURL)
                 print("✅ [Whisper Downloader] File downloaded and moved to destination successfully.")
                 completionCallback?(.success(destinationURL))
+            } catch {
+                completionCallback?(.failure(error))
+            }
+        }
+    }
+}
+// MARK: - Custom Gemma Downloader
+class GemmaDownloader: NSObject, URLSessionDataDelegate {
+    private var session: URLSession?
+    private var activeTask: URLSessionDataTask?
+    private var fileHandle: FileHandle?
+    private var currentDestinationURL: URL?
+    private var currentIncompleteURL: URL?
+    
+    private var progressCallback: ((Double) -> Void)?
+    private var completionCallback: ((Result<Void, Error>) -> Void)?
+    
+    private let modelsDirectory: URL
+    private let repoId: String
+    private let api: HubApi
+    
+    private var fileList: [String] = []
+    private var currentFileIndex: Int = 0
+    
+    private var totalExpectedBytes: Int64 = 0
+    private var totalDownloadedBytes: Int64 = 0
+    private var currentFileDownloadedBytes: Int64 = 0
+    private var currentFileExpectedBytes: Int64 = 0
+    
+    private let defaultsKeyTotalBytes = "GemmaTotalExpectedBytes"
+    private let defaultsKeyDownloadedBytes = "GemmaTotalDownloadedBytes"
+    
+    private var lastUserDefaultsSaveTime: Date = Date()
+    private var isCancelled = false
+    
+    init(modelsDirectory: URL, repoId: String) {
+        self.modelsDirectory = modelsDirectory
+        self.repoId = repoId
+        self.api = HubApi(downloadBase: modelsDirectory, cache: nil, useBackgroundSession: false)
+        super.init()
+    }
+    
+    func start(progress: @escaping (Double) -> Void, completion: @escaping (Result<Void, Error>) -> Void) {
+        self.progressCallback = progress
+        self.completionCallback = completion
+        
+        Task {
+            do {
+                if fileList.isEmpty {
+                    print("📥 [Gemma Downloader] Fetching filenames from Hugging Face...")
+                    let globs = ["*.safetensors", "*.json", "*.jinja"]
+                    let repo = Hub.Repo(id: repoId)
+                    let filenames = try await api.getFilenames(from: repo, matching: globs)
+                    self.fileList = filenames
+                    
+                    print("📥 [Gemma Downloader] Found \(filenames.count) files. Calculating total size...")
+                    var totalSize: Int64 = 0
+                    for filename in filenames {
+                        if let encodedPath = filename.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+                           let url = URL(string: "https://huggingface.co/\(repoId)/resolve/main/\(encodedPath)") {
+                            if let metadata = try? await api.getFileMetadata(url: url) {
+                                totalSize += Int64(metadata.size ?? 0)
+                            }
+                        }
+                    }
+                    self.totalExpectedBytes = totalSize
+                    UserDefaults.standard.set(self.totalExpectedBytes, forKey: self.defaultsKeyTotalBytes)
+                    print("📥 [Gemma Downloader] Total expected size: \(Double(self.totalExpectedBytes) / 1024 / 1024) MB")
+                }
+                
+                await MainActor.run {
+                    if self.isCancelled { return }
+                    self.downloadNextFile()
+                }
+            } catch {
+                if !self.isCancelled {
+                    completion(.failure(error))
+                }
+            }
+        }
+    }
+    
+    private func downloadNextFile() {
+        guard currentFileIndex < fileList.count else {
+            print("✅ [Gemma Downloader] All files downloaded successfully.")
+            UserDefaults.standard.removeObject(forKey: defaultsKeyDownloadedBytes)
+            UserDefaults.standard.removeObject(forKey: defaultsKeyTotalBytes)
+            completionCallback?(.success(()))
+            return
+        }
+        
+        let relativePath = fileList[currentFileIndex]
+        
+        // We cannot calculate precise previousFilesDownloaded without storing per-file sizes,
+        // so we will just rely on the existing downloaded bytes on disk!
+        // We will calculate total downloaded bytes by summing up the sizes of all files we have so far.
+        var previousFilesDownloaded: Int64 = 0
+        let repo = Hub.Repo(id: repoId)
+        let destinationDir = api.localRepoLocation(repo)
+        
+        for i in 0..<currentFileIndex {
+            let prevFile = fileList[i]
+            let prevPath = destinationDir.appendingPathComponent(prevFile).path
+            if let attrs = try? FileManager.default.attributesOfItem(atPath: prevPath),
+               let s = attrs[.size] as? Int64 {
+                previousFilesDownloaded += s
+            }
+        }
+        self.totalDownloadedBytes = previousFilesDownloaded
+        
+        let destinationURL = destinationDir.appendingPathComponent(relativePath)
+        self.currentDestinationURL = destinationURL
+        self.currentIncompleteURL = destinationURL.deletingLastPathComponent().appendingPathComponent(destinationURL.lastPathComponent + ".incomplete")
+        
+        // Ensure parent directory exists
+        do {
+            try FileManager.default.createDirectory(at: destinationURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+        } catch {
+            completionCallback?(.failure(error))
+            return
+        }
+        
+        // Check if file is already completely downloaded
+        if FileManager.default.fileExists(atPath: destinationURL.path) {
+            print("✅ [Gemma Downloader] File already downloaded: \(relativePath)")
+            currentFileIndex += 1
+            downloadNextFile()
+            return
+        }
+        
+        // Check if incomplete file exists for resumption
+        var existingSize: Int64 = 0
+        if FileManager.default.fileExists(atPath: currentIncompleteURL!.path) {
+            if let attrs = try? FileManager.default.attributesOfItem(atPath: currentIncompleteURL!.path),
+               let size = attrs[.size] as? Int64 {
+                existingSize = size
+            }
+        } else {
+            FileManager.default.createFile(atPath: currentIncompleteURL!.path, contents: nil)
+        }
+        
+        self.currentFileDownloadedBytes = existingSize
+        self.totalDownloadedBytes += existingSize
+        
+        do {
+            let handle = try FileHandle(forWritingTo: currentIncompleteURL!)
+            try handle.seek(toOffset: UInt64(existingSize))
+            self.fileHandle = handle
+        } catch {
+            completionCallback?(.failure(error))
+            return
+        }
+        
+        // Construct the resolve URL manually
+        guard let encodedPath = relativePath.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+              let url = URL(string: "https://huggingface.co/\(repoId)/resolve/main/\(encodedPath)") else {
+            completionCallback?(.failure(NSError(domain: "GemmaDownloader", code: 0, userInfo: [NSLocalizedDescriptionKey: "Invalid URL for \(relativePath)"])))
+            return
+        }
+        
+        let configuration = URLSessionConfiguration.default
+        let session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+        self.session = session
+        
+        var request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 30)
+        if existingSize > 0 {
+            request.setValue("bytes=\(existingSize)-", forHTTPHeaderField: "Range")
+            print("📥 [Gemma Downloader] Resuming \(relativePath) from \(existingSize) bytes...")
+        } else {
+            print("📥 [Gemma Downloader] Starting fresh download of \(relativePath)...")
+        }
+        
+        let task = session.dataTask(with: request)
+        self.activeTask = task
+        if isCancelled {
+            task.cancel()
+            return
+        }
+        task.resume()
+    }
+    
+    func cancel() {
+        isCancelled = true
+        activeTask?.cancel()
+        if totalDownloadedBytes > 0 {
+            UserDefaults.standard.set(totalDownloadedBytes, forKey: defaultsKeyDownloadedBytes)
+        }
+        cleanup()
+    }
+    
+    private func cleanup() {
+        try? fileHandle?.close()
+        fileHandle = nil
+        session?.invalidateAndCancel()
+        session = nil
+        activeTask = nil
+    }
+    
+    // MARK: - URLSessionDataDelegate
+    
+    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse, newRequest: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
+        var redirectedRequest = newRequest
+        if let originalRequest = task.originalRequest,
+           let rangeHeader = originalRequest.value(forHTTPHeaderField: "Range") {
+            redirectedRequest.setValue(rangeHeader, forHTTPHeaderField: "Range")
+        }
+        completionHandler(redirectedRequest)
+    }
+    
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        if let httpResponse = response as? HTTPURLResponse {
+            let statusCode = httpResponse.statusCode
+            
+            if statusCode == 200 && currentFileDownloadedBytes > 0 {
+                print("⚠️ [Gemma Downloader] Server returned 200 instead of 206. Restarting fresh...")
+                try? fileHandle?.truncate(atOffset: 0)
+                totalDownloadedBytes -= currentFileDownloadedBytes
+                currentFileDownloadedBytes = 0
+            }
+            
+            if statusCode == 416 {
+                print("⚠️ [Gemma Downloader] Server returned 416. Truncating and restarting...")
+                try? fileHandle?.truncate(atOffset: 0)
+                totalDownloadedBytes -= currentFileDownloadedBytes
+                currentFileDownloadedBytes = 0
+            } else if !(200...299).contains(statusCode) {
+                completionCallback?(.failure(NSError(domain: "GemmaDownloader", code: statusCode, userInfo: [NSLocalizedDescriptionKey: "Bad status code: \(statusCode)"])))
+                completionHandler(.cancel)
+                cleanup()
+                return
+            }
+            
+            let contentLength = httpResponse.expectedContentLength
+            if contentLength > 0 {
+                currentFileExpectedBytes = contentLength + currentFileDownloadedBytes
+            }
+        }
+        completionHandler(.allow)
+    }
+    
+    func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        if isCancelled { return }
+        fileHandle?.write(data)
+        currentFileDownloadedBytes += Int64(data.count)
+        totalDownloadedBytes += Int64(data.count)
+        
+        if totalExpectedBytes > 0 {
+            let fraction = Double(totalDownloadedBytes) / Double(totalExpectedBytes)
+            progressCallback?(fraction)
+            
+            // Save progress periodically (throttle to once per 0.5s to avoid disk thrashing)
+            let now = Date()
+            if now.timeIntervalSince(lastUserDefaultsSaveTime) > 0.5 {
+                UserDefaults.standard.set(totalDownloadedBytes, forKey: defaultsKeyDownloadedBytes)
+                lastUserDefaultsSaveTime = now
+            }
+        }
+    }
+    
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        cleanup()
+        
+        if let error = error {
+            let nsError = error as NSError
+            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                return
+            }
+            completionCallback?(.failure(error))
+        } else {
+            do {
+                let fileManager = FileManager.default
+                if let dest = currentDestinationURL, let inc = currentIncompleteURL {
+                    if fileManager.fileExists(atPath: dest.path) {
+                        try fileManager.removeItem(at: dest)
+                    }
+                    try fileManager.moveItem(at: inc, to: dest)
+                    print("✅ [Gemma Downloader] File downloaded and moved: \(dest.lastPathComponent)")
+                }
+                
+                DispatchQueue.main.async {
+                    if self.isCancelled { return }
+                    self.currentFileIndex += 1
+                    self.downloadNextFile()
+                }
             } catch {
                 completionCallback?(.failure(error))
             }

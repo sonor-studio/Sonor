@@ -49,6 +49,7 @@ struct ModelsSettingsView: View {
                     requiresLogin: !authManager.isLoggedIn,
                     onLogin: { self.showLoginSheet = true },
                     onDownload: { manager.downloadGemma() },
+                    onPause: { manager.pauseGemmaDownload() },
                     onCancel: { manager.cancelGemmaDownload() },
                     onUninstall: {
                         self.modelToUninstall = .gemma
@@ -107,6 +108,7 @@ struct ModelCard: View {
     var requiresLogin: Bool = false
     var onLogin: (() -> Void)? = nil
     let onDownload: () -> Void
+    var onPause: (() -> Void)? = nil
     let onCancel: () -> Void
     let onUninstall: () -> Void
     
@@ -163,8 +165,18 @@ struct ModelCard: View {
                             .font(.system(size: 12, weight: .medium).monospacedDigit())
                             .foregroundColor(.secondary)
                         
+                        if let onPause = onPause {
+                            Button(action: onPause) {
+                                Image(systemName: "pause.circle.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        
                         Button(action: onCancel) {
                             Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16))
                                 .foregroundColor(.secondary)
                         }
                         .buttonStyle(.plain)
@@ -182,19 +194,39 @@ struct ModelCard: View {
                             .font(.system(size: 12, weight: .medium).monospacedDigit())
                             .foregroundColor(.secondary)
                         
-                        Button(action: onDownload) {
-                            Image(systemName: "play.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(colorScheme == .dark ? .white : .black)
+                        if requiresLogin {
+                            Button(action: onCancel) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Button(action: { onLogin?() }) {
+                                Text(t("Log In"))
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(colorScheme == .dark ? Color.white : Color.black)
+                                    .cornerRadius(8)
+                            }
+                            .buttonStyle(.plain)
+                        } else {
+                            Button(action: onDownload) {
+                                Image(systemName: "play.circle.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                            }
+                            .buttonStyle(.plain)
+                            
+                            Button(action: onCancel) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-                        
-                        Button(action: onCancel) {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 16))
-                                .foregroundColor(.secondary)
-                        }
-                        .buttonStyle(.plain)
                     }
                     
                 case .downloaded:

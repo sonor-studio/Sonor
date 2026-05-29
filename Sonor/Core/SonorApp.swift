@@ -10,6 +10,8 @@ struct SonorApp: App {
         
         // Zawsze wyłączaj tryb incognito przy uruchomieniu aplikacji
         UserDefaults.standard.set(false, forKey: "isIncognitoMode")
+        
+        UpdateManager.shared.checkForUpdates()
     }
     
     var body: some Scene {
@@ -17,14 +19,8 @@ struct SonorApp: App {
     }
     
     private var menuBarExtraScene: some Scene {
-        if controller.isRecording {
-            return MenuBarExtra("Sonor", systemImage: "mic.fill") {
-                menuContent
-            }
-        } else {
-            return MenuBarExtra("Sonor", image: "MenuBarIcon") {
-                menuContent
-            }
+        MenuBarExtra("Sonor", image: "MenuBarIcon") {
+            menuContent
         }
     }
     

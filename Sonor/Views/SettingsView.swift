@@ -1626,7 +1626,7 @@ struct StatisticsView: View {
     private var chartsView: some View {
         Group {
             if dailyStats.count > 0 {
-                HStack(spacing: 20) {
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                     activityChart
                     paceChart
                 }
@@ -2247,12 +2247,13 @@ fileprivate struct ActivityChartView: View {
             }
             .frame(height: 180)
             .chartXAxis {
-                AxisMarks(values: .stride(by: .day)) { _ in
+                AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                     AxisValueLabel(format: .dateTime.day().month())
                 }
             }
         }
         .padding(20)
+        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
@@ -2286,12 +2287,13 @@ fileprivate struct PaceChartView: View {
             }
             .frame(height: 180)
             .chartXAxis {
-                AxisMarks(values: .stride(by: .day)) { _ in
+                AxisMarks(values: .automatic(desiredCount: 5)) { _ in
                     AxisValueLabel(format: .dateTime.day().month())
                 }
             }
         }
         .padding(20)
+        .frame(maxWidth: .infinity)
         .background(
             RoundedRectangle(cornerRadius: 16)
                 .fill(colorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
@@ -4360,6 +4362,7 @@ struct UserProfileView: View {
     }
     @ObservedObject var authManager = AuthManager.shared
     @ObservedObject var localizer = LocalizationManager.shared
+    @ObservedObject var networkMonitor = NetworkMonitor.shared
     
     @State private var isCloseHovered = false
     @State private var showDeleteConfirmation = false
@@ -4597,6 +4600,11 @@ struct UserProfileView: View {
                     
                     // Change Password Button
                     Button(action: {
+                        if !networkMonitor.isConnected {
+                            deleteError = t("Please connect to the internet to perform this action.")
+                            return
+                        }
+                        deleteError = nil
                         withAnimation {
                             isChangingPassword = true
                         }
@@ -4616,6 +4624,11 @@ struct UserProfileView: View {
                     
                     // Delete Account Button
                     Button(action: {
+                        if !networkMonitor.isConnected {
+                            deleteError = t("Please connect to the internet to perform this action.")
+                            return
+                        }
+                        deleteError = nil
                         showDeleteConfirmation = true
                     }) {
                         Text(t("Delete Account"))
@@ -4671,6 +4684,11 @@ struct UserProfileView: View {
     }
     
     private func performPasswordChange() {
+        if !networkMonitor.isConnected {
+            changePasswordError = t("Please connect to the internet to perform this action.")
+            return
+        }
+        
         let trimmedOld = oldPassword.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedNew = newPassword.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedConfirm = confirmNewPassword.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -4687,6 +4705,21 @@ struct UserProfileView: View {
         
         if trimmedNew.count < 6 {
             changePasswordError = t("Password must be at least 6 characters long.")
+            return
+        }
+        
+        if trimmedNew.rangeOfCharacter(from: .uppercaseLetters) == nil {
+            changePasswordError = t("Password must contain at least one uppercase letter.")
+            return
+        }
+        
+        if trimmedNew.rangeOfCharacter(from: .lowercaseLetters) == nil {
+            changePasswordError = t("Password must contain at least one lowercase letter.")
+            return
+        }
+        
+        if trimmedNew.rangeOfCharacter(from: .decimalDigits) == nil {
+            changePasswordError = t("Password must contain at least one number.")
             return
         }
         
@@ -4720,7 +4753,7 @@ struct UserProfileView: View {
                 }
                 
                 // If login succeeds, update password
-                try await authManager.updatePassword(newPassword: trimmedNew)
+                try await authManager.updatePassword(oldPassword: trimmedOld, newPassword: trimmedNew)
                 
                 await MainActor.run {
                     isSavingPassword = false
@@ -4741,6 +4774,11 @@ struct UserProfileView: View {
     }
     
     private func performAccountDeletion() {
+        if !networkMonitor.isConnected {
+            deleteError = t("Please connect to the internet to perform this action.")
+            return
+        }
+        
         guard !deletePassword.isEmpty else {
             deleteError = t("Password cannot be empty.")
             return
