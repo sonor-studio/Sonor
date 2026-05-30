@@ -1,6 +1,7 @@
 import Foundation
 import Security
 import Combine
+import AppKit
 
 @MainActor
 class AuthManager: ObservableObject {
@@ -9,6 +10,11 @@ class AuthManager: ObservableObject {
     @Published var isLoggedIn: Bool = false
     @Published var currentUserEmail: String? = nil
     @Published var currentUserCreatedAt: Date? = nil
+    @Published var currentUserProvider: String = "email"
+    @Published var accountDeletionError: String? = nil
+    @Published var hasSeenOnboarding: Bool = false
+    @Published var accountTier: String = "premium"
+    var pendingAccountDeletion: Bool = false
     
     private let tokenKey = "sonor.supabase.access_token"
     private let emailKey = "sonor.supabase.user_email"
@@ -21,6 +27,45 @@ class AuthManager: ObservableObject {
         return EnvReader.shared.getValue(for: "SUPABASE_ANON_KEY") ?? ""
     }
     
+    private var profileCacheURL: URL {
+        let fileManager = FileManager.default
+        let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let sonorURL = appSupportURL.appendingPathComponent("Sonor", isDirectory: true)
+        if !fileManager.fileExists(atPath: sonorURL.path) {
+            try? fileManager.createDirectory(at: sonorURL, withIntermediateDirectories: true, attributes: nil)
+        }
+        return sonorURL.appendingPathComponent("profile_cache.json")
+    }
+    
+    private func saveProfileCache(email: String, date: Date) {
+        var cache: [String: Date] = [:]
+        let url = profileCacheURL
+        if let data = try? Data(contentsOf: url),
+           let decoded = try? JSONDecoder().decode([String: Date].self, from: data) {
+            cache = decoded
+        }
+        cache[email.lowercased()] = date
+        if let encoded = try? JSONEncoder().encode(cache) {
+            try? encoded.write(to: url, options: [.atomic])
+            print("[AuthManager] Zapisano datę utworzenia profilu do cache dla \(email)")
+        }
+    }
+    
+    private func loadProfileCache(email: String) -> Date? {
+        let url = profileCacheURL
+        guard let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode([String: Date].self, from: data) else {
+            return nil
+        }
+        return decoded[email.lowercased()]
+    }
+    
+    private func initProfileCacheFromLocalSession() {
+        if let email = currentUserEmail {
+            currentUserCreatedAt = loadProfileCache(email: email)
+        }
+    }
+    
     private init() {
         checkLocalSession()
     }
@@ -28,7 +73,11 @@ class AuthManager: ObservableObject {
     private func checkLocalSession() {
         if let token = getFromKeychain(key: tokenKey), !token.isEmpty {
             isLoggedIn = true
-            currentUserEmail = getFromKeychain(key: emailKey)
+            let email = getFromKeychain(key: emailKey)
+            currentUserEmail = email
+            if let email = email {
+                currentUserCreatedAt = loadProfileCache(email: email)
+            }
             print("✅ Wykryto sesję lokalną dla użytkownika: \(currentUserEmail ?? "Nieznany")")
             Task {
                 await fetchUserDetails()
@@ -307,6 +356,90 @@ class AuthManager: ObservableObject {
         }
     }
     
+    func loginWithGoogle() {
+        guard !supabaseUrl.isEmpty else { return }
+        if let url = URL(string: "\(supabaseUrl)/auth/v1/authorize?provider=google&redirect_to=sonor://auth-callback") {
+            NSWorkspace.shared.open(url)
+        }
+    }
+    
+    func handleDeepLink(_ url: URL) {
+        guard url.scheme == "sonor", url.host == "auth-callback" else { return }
+        
+        var queryItems = [String: String]()
+        
+        if let fragment = url.fragment {
+            let pairs = fragment.components(separatedBy: "&")
+            for pair in pairs {
+                let kv = pair.components(separatedBy: "=")
+                if kv.count == 2 {
+                    queryItems[kv[0]] = kv[1]
+                }
+            }
+        }
+        
+        if let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+           let qItems = components.queryItems {
+            for item in qItems {
+                if let val = item.value {
+                    queryItems[item.name] = val
+                }
+            }
+        }
+        
+        if let accessToken = queryItems["access_token"] {
+            if self.pendingAccountDeletion {
+                self.pendingAccountDeletion = false
+                let oldEmailToVerify = self.currentUserEmail
+                
+                Task {
+                    guard let userUrl = URL(string: "\(self.supabaseUrl)/auth/v1/user") else { return }
+                    var userReq = URLRequest(url: userUrl)
+                    userReq.addValue(self.supabaseAnonKey, forHTTPHeaderField: "apikey")
+                    userReq.addValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+                    
+                    if let (data, _) = try? await URLSession.shared.data(for: userReq),
+                       let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                       let newEmail = json["email"] as? String {
+                        
+                        if newEmail.lowercased() == oldEmailToVerify?.lowercased() {
+                            await MainActor.run {
+                                self.saveToKeychain(key: self.tokenKey, value: accessToken)
+                                self.isLoggedIn = true
+                                self.accountDeletionError = nil
+                            }
+                            do {
+                                try await self.deleteAccount()
+                                await MainActor.run { self.logout() }
+                            } catch {
+                                let errMsg = error.localizedDescription
+                                await MainActor.run {
+                                    self.accountDeletionError = errMsg
+                                }
+                            }
+                        } else {
+                            print("[AuthManager] Błąd! Zalogowano na inne konto Google. Przerywam usuwanie.")
+                            await MainActor.run {
+                                self.accountDeletionError = "The selected Google account does not match. Please choose the correct account to delete it."
+                            }
+                        }
+                    } else {
+                        print("[AuthManager] Nie można zweryfikować e-maila w tokenie Google.")
+                        await MainActor.run {
+                            self.accountDeletionError = "Failed to verify the Google token. Please try again."
+                        }
+                    }
+                }
+            } else {
+                saveToKeychain(key: tokenKey, value: accessToken)
+                self.isLoggedIn = true
+                Task {
+                    await fetchUserDetails()
+                }
+            }
+        }
+    }
+    
     func logout() {
         ModelManager.shared.pauseAllDownloads()
         deleteFromKeychain(key: tokenKey)
@@ -418,6 +551,10 @@ class AuthManager: ObservableObject {
     func fetchUserDetails() async {
         print("[AuthManager] fetchUserDetails() rozpoczęte...")
         
+        if let email = currentUserEmail, currentUserCreatedAt == nil {
+            currentUserCreatedAt = loadProfileCache(email: email)
+        }
+        
         let token = getFromKeychain(key: tokenKey)
         print("[AuthManager] Status tokenu: \(token != nil ? "obecny (długość: \(token!.count))" : "BRAK")")
         
@@ -470,6 +607,16 @@ class AuthManager: ObservableObject {
             }
             
             print("[AuthManager] Pobrano ID użytkownika: \(userId)")
+            if let userEmail = userJson["email"] as? String {
+                self.currentUserEmail = userEmail
+                saveToKeychain(key: self.emailKey, value: userEmail)
+            }
+            if let appMetadata = userJson["app_metadata"] as? [String: Any],
+               let provider = appMetadata["provider"] as? String {
+                self.currentUserProvider = provider
+            } else {
+                self.currentUserProvider = "email"
+            }
             
             // 2. Pobierz profil z tabeli profiles
             guard let profileUrl = URL(string: "\(supabaseUrl)/rest/v1/profiles?id=eq.\(userId)&select=*") else { 
@@ -519,6 +666,14 @@ class AuthManager: ObservableObject {
                 print("[AuthManager] Otrzymano listę profili o rozmiarze: \(profiles.count)")
                 if let profile = profiles.first {
                     print("[AuthManager] Zawartość pierwszego profilu: \(profile)")
+                    
+                    // Parsing has_seen_onboarding and account_tier
+                    if let hasSeen = profile["has_seen_onboarding"] as? Bool {
+                        await MainActor.run { self.hasSeenOnboarding = hasSeen }
+                    }
+                    if let tier = profile["account_tier"] as? String {
+                        await MainActor.run { self.accountTier = tier }
+                    }
                     
                     // Szukamy klucza created_at
                     if let createdAtValue = profile["created_at"] {
@@ -588,6 +743,9 @@ class AuthManager: ObservableObject {
                             let finalDate = date
                             await MainActor.run {
                                 self.currentUserCreatedAt = finalDate
+                                if let email = self.currentUserEmail, let finalDate = finalDate {
+                                    self.saveProfileCache(email: email, date: finalDate)
+                                }
                             }
                         } else {
                             print("[AuthManager] Błąd: Wartość created_at nie jest typu String.")
@@ -603,6 +761,43 @@ class AuthManager: ObservableObject {
             }
         } catch {
             print("❌ Błąd pobierania danych profilu użytkownika: \(error)")
+        }
+    }
+    
+    func completeOnboarding() async throws {
+        let token = getFromKeychain(key: tokenKey)
+        guard let token = token, !token.isEmpty else { return }
+        
+        // Najpierw pobieramy userId z tokenu/auth
+        guard let userUrl = URL(string: "\(supabaseUrl)/auth/v1/user") else { return }
+        var userRequest = URLRequest(url: userUrl)
+        userRequest.httpMethod = "GET"
+        userRequest.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        userRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (userData, userResponse) = try await URLSession.shared.data(for: userRequest)
+        guard let userHttpResponse = userResponse as? HTTPURLResponse,
+              (200...299).contains(userHttpResponse.statusCode),
+              let userJson = try? JSONSerialization.jsonObject(with: userData) as? [String: Any],
+              let userId = userJson["id"] as? String else {
+            return
+        }
+        
+        guard let profileUrl = URL(string: "\(supabaseUrl)/rest/v1/profiles?id=eq.\(userId)") else { return }
+        var request = URLRequest(url: profileUrl)
+        request.httpMethod = "PATCH"
+        request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = ["has_seen_onboarding": true]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        if let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) {
+            await MainActor.run {
+                self.hasSeenOnboarding = true
+            }
         }
     }
     

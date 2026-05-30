@@ -81,23 +81,26 @@ struct ModelsSettingsView: View {
                     }
                 )
         }
-        .alert(isPresented: $showUninstallConfirmation) {
-            Alert(
-                title: Text(t("Uninstall Model")),
-                message: Text(t("Are you sure you want to uninstall this model?")),
-                primaryButton: .destructive(Text(t("Uninstall"))) {
-                    if let model = modelToUninstall {
-                        switch model {
-                        case .whisper:
-                            manager.uninstallWhisper()
-                        case .gemma:
-                            manager.uninstallGemma()
-                        }
-                    }
-                },
-                secondaryButton: .cancel(Text(t("Cancel")))
-            )
-        }
+        .background(
+            Color.clear
+                .alert(isPresented: $showUninstallConfirmation) {
+                    Alert(
+                        title: Text(t("Uninstall Model")),
+                        message: Text(t("Are you sure you want to uninstall this model?")),
+                        primaryButton: .destructive(Text(t("Uninstall"))) {
+                            if let model = modelToUninstall {
+                                switch model {
+                                case .whisper:
+                                    manager.uninstallWhisper()
+                                case .gemma:
+                                    manager.uninstallGemma()
+                                }
+                            }
+                        },
+                        secondaryButton: .cancel(Text(t("Cancel")))
+                    )
+                }
+        )
     }
 }
 
@@ -131,16 +134,18 @@ struct ModelCard: View {
                 switch state {
                 case .notDownloaded:
                     if requiresLogin {
-                        Button(action: { onLogin?() }) {
-                            Text(t("Log In"))
-                                .font(.system(size: 13, weight: .semibold))
-                                .foregroundColor(colorScheme == .dark ? .black : .white)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 8)
-                                .background(colorScheme == .dark ? Color.white : Color.black)
-                                .cornerRadius(8)
+                        if NetworkMonitor.shared.isConnected {
+                            Button(action: { onLogin?() }) {
+                                Text(t("Log In"))
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(colorScheme == .dark ? Color.white : Color.black)
+                                    .cornerRadius(8)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                     } else {
                         Button(action: onDownload) {
                             Text(t("Download"))
@@ -202,16 +207,18 @@ struct ModelCard: View {
                             }
                             .buttonStyle(.plain)
                             
-                            Button(action: { onLogin?() }) {
-                                Text(t("Log In"))
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(colorScheme == .dark ? .black : .white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(colorScheme == .dark ? Color.white : Color.black)
-                                    .cornerRadius(8)
+                            if NetworkMonitor.shared.isConnected {
+                                Button(action: { onLogin?() }) {
+                                    Text(t("Log In"))
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 8)
+                                        .background(colorScheme == .dark ? Color.white : Color.black)
+                                        .cornerRadius(8)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         } else {
                             Button(action: onDownload) {
                                 Image(systemName: "play.circle.fill")

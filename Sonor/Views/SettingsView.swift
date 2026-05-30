@@ -70,10 +70,17 @@ struct SettingsView: View {
     @State private var showLoginSheet = false
     @State private var isShowingProfileSheet = false
     @State private var isProfileCardHovered = false
+    @State private var isShowingOnboardingSheet = false
     
     @ObservedObject private var modelManager = ModelManager.shared
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
     
     var body: some View {
+        mainContent
+    }
+    
+    @ViewBuilder
+    private var mainContent: some View {
         NavigationSplitView {
             // Panel boczny (Sidebar)
             VStack(alignment: .leading, spacing: 0) {
@@ -168,7 +175,7 @@ struct SettingsView: View {
                             .foregroundStyle(authManager.isLoggedIn ? .primary : .secondary)
                         
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(authManager.isLoggedIn ? t("Premium") : t("User"))
+                            Text(authManager.isLoggedIn ? t(authManager.accountTier.capitalized) : t("User"))
                                 .font(.system(size: 13, weight: .semibold))
                             Text(authManager.currentUserEmail ?? t("Free account"))
                                 .font(.system(size: 10))
@@ -210,7 +217,7 @@ struct SettingsView: View {
                         .buttonStyle(.plain)
                         .padding(.horizontal, 10)
                         .padding(.bottom, 5)
-                    } else {
+                    } else if networkMonitor.isConnected {
                         Button(action: {
                             showLoginSheet = true
                         }) {
@@ -254,7 +261,7 @@ struct SettingsView: View {
                         case .home:
                             StatisticsView()
                         case .modes:
-                            ModesSettingsView(modes: $modes, selectedModeID: $selectedModeID, isShowingSidePanel: $isShowingSidePanel, isPremium: authManager.isLoggedIn, showLoginSheet: $showLoginSheet)
+                            ModesSettingsView(modes: $modes, selectedModeID: $selectedModeID, isShowingSidePanel: $isShowingSidePanel, isPremium: authManager.isLoggedIn && authManager.accountTier == "premium", showLoginSheet: $showLoginSheet)
                         case .dictionary:
                             DictionarySettingsView(showLoginSheet: $showLoginSheet)
                         case .snippets:
@@ -266,9 +273,12 @@ struct SettingsView: View {
                         }
                         Spacer()
                     }
-                    .padding(30)
+                    .padding(.top, 52)
+                    .padding(.horizontal, 30)
+                    .padding(.bottom, 30)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
+                .ignoresSafeArea(edges: .top)
                 
                 // Panel boczny (Opcje) widoczny cały czas dla wybranego asystenta
                 if selectedTab == .modes && (authManager.isLoggedIn || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Raw Output" || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Zwykły output"), let index = modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) {
@@ -580,6 +590,9 @@ struct SettingsView: View {
         .preferredColorScheme(effectiveColorScheme)
         .onAppear {
             isDummyFocused = true
+            if !authManager.hasSeenOnboarding && authManager.isLoggedIn {
+                isShowingOnboardingSheet = true
+            }
         }
         .alert(isPresented: $showConflictAlert) {
             Alert(
@@ -598,6 +611,27 @@ struct SettingsView: View {
                 message: Text(t("You cannot delete the assistant that is currently being used for speaking.")),
                 dismissButton: .default(Text(t("OK")))
             )
+        }
+        .sheet(isPresented: $isShowingOnboardingSheet) {
+            OnboardingView(onComplete: {
+                isShowingOnboardingSheet = false
+            })
+            .preferredColorScheme(effectiveColorScheme)
+            .frame(width: 580, height: 420)
+        }
+        .onChange(of: authManager.hasSeenOnboarding) { newValue in
+            if !newValue && authManager.isLoggedIn {
+                isShowingOnboardingSheet = true
+            } else {
+                isShowingOnboardingSheet = false
+            }
+        }
+        .onChange(of: authManager.isLoggedIn) { loggedIn in
+            if loggedIn && !authManager.hasSeenOnboarding {
+                isShowingOnboardingSheet = true
+            } else {
+                isShowingOnboardingSheet = false
+            }
         }
         .sheet(isPresented: $showLoginSheet) {
             LoginView()
@@ -639,6 +673,10 @@ struct SettingsView: View {
         .onAppear {
             loadModes()
         }
+        .overlay(
+            IncognitoAnimationOverlay()
+                .allowsHitTesting(false)
+        )
     }
     
     private func loadModes() {
@@ -775,20 +813,22 @@ struct PremiumLockView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 380)
             
-            Button(action: {
-                showLoginSheet = true
-            }) {
-                Text(t("Log In"))
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundColor(colorScheme == .dark ? .black : .white)
-                    .padding(.horizontal, 30)
-                    .padding(.vertical, 12)
-                    .background(colorScheme == .dark ? Color.white : Color.black)
-                    .cornerRadius(8)
+            if NetworkMonitor.shared.isConnected {
+                Button(action: {
+                    showLoginSheet = true
+                }) {
+                    Text(t("Log In"))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                        .padding(.horizontal, 30)
+                        .padding(.vertical, 12)
+                        .background(colorScheme == .dark ? Color.white : Color.black)
+                        .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+                .focusable(false)
+                .padding(.top, 10)
             }
-            .buttonStyle(.plain)
-            .focusable(false)
-            .padding(.top, 10)
             
             Spacer()
         }
@@ -953,11 +993,21 @@ struct ThemeTile: View {
     }
 }
 
+enum RecordingHotkeyType: String {
+    case main = "main"
+    case cancel = "cancel"
+    case pause = "pause"
+    case assistant = "assistant"
+}
+
 struct HomeSettingsView: View {
     @Environment(\.colorScheme) var appColorScheme
     @ObservedObject var localizer = LocalizationManager.shared
     @AppStorage("autoLearnDictionary") private var autoLearnDictionary = false
     @AppStorage("hotkeyString") private var hotkeyString = "Cmd + Shift + `"
+    @AppStorage("hotkeyString_cancel") private var hotkeyStringCancel = "None"
+    @AppStorage("hotkeyString_pause") private var hotkeyStringPause = "None"
+    @AppStorage("hotkeyString_assistant") private var hotkeyStringAssistant = "None"
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
     @AppStorage("appTheme") private var appTheme = "system"
     @AppStorage("playAnySound") private var playAnySound = true
@@ -965,7 +1015,10 @@ struct HomeSettingsView: View {
     @AppStorage("playSound_Error") private var playSound_Error = true
     @AppStorage("playSound_End") private var playSound_End = true
     
-    @State private var isRecordingHotkey = false
+    @ObservedObject private var memoryManager = MessageMemoryManager.shared
+    @State private var isShowingSwitchToRamAlert = false
+    
+    @State private var activeRecordingType: RecordingHotkeyType? = nil
     @State private var eventMonitor: Any?
     @State private var lastModifierPressed: UInt16? = nil
     
@@ -984,6 +1037,7 @@ struct HomeSettingsView: View {
             
             appThemeSection
             appLanguageSection
+            historyStorageSection
             keyboardShortcutSection
             audioSourceSection
             appSoundsSection
@@ -1001,6 +1055,93 @@ struct HomeSettingsView: View {
         .onDisappear {
             removeEventMonitor()
         }
+        .alert(t("Critical Warning"), isPresented: $isShowingSwitchToRamAlert) {
+            Button(t("Proceed to RAM"), role: .destructive) {
+                withAnimation {
+                    MessageMemoryManager.shared.switchToRAMMode()
+                }
+            }
+            Button(t("Keep File Storage"), role: .cancel) {
+                // Do nothing
+            }
+        } message: {
+            Text(t("Switching to RAM-only means your persistent history file will be deleted and your current history will disappear forever once you close the application. Are you sure you want to continue?"))
+        }
+    }
+    
+    @ViewBuilder
+    private var historyStorageSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("History Storage Option"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            HStack(spacing: 15) {
+                Button(action: {
+                    let current = MessageMemoryManager.shared.historyStorageType
+                    if current == "File" {
+                        isShowingSwitchToRamAlert = true
+                    }
+                }) {
+                    VStack(spacing: 10) {
+                        Image(systemName: "memorychip")
+                            .font(.system(size: 20))
+                        Text(t("RAM-only (Temporary)"))
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(memoryManager.historyStorageType == "RAM" ? Color.primary.opacity(0.1) : Color.clear)
+                    .cornerRadius(10)
+                    .contentShape(Rectangle())
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(memoryManager.historyStorageType == "RAM" ? Color.primary : Color.primary.opacity(0.2), lineWidth: memoryManager.historyStorageType == "RAM" ? 2 : 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                
+                Button(action: {
+                    let current = MessageMemoryManager.shared.historyStorageType
+                    if current == "RAM" {
+                        withAnimation {
+                            MessageMemoryManager.shared.switchToFileMode()
+                        }
+                    }
+                }) {
+                    VStack(spacing: 10) {
+                        Image(systemName: "doc.text.fill")
+                            .font(.system(size: 20))
+                        Text(t("Local File (Persistent)"))
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(memoryManager.historyStorageType == "File" ? Color.primary.opacity(0.1) : Color.clear)
+                    .cornerRadius(10)
+                    .contentShape(Rectangle())
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(memoryManager.historyStorageType == "File" ? Color.primary : Color.primary.opacity(0.2), lineWidth: memoryManager.historyStorageType == "File" ? 2 : 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Text(t("Choose whether history is stored safely in temporary RAM or written offline to a local text file that persists between app launches."))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
     }
     
     @ViewBuilder
@@ -1010,7 +1151,11 @@ struct HomeSettingsView: View {
                 .font(.system(size: 16, weight: .semibold))
             
             HStack(spacing: 15) {
-                Button(action: { hotkeyMode = .click }) {
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        hotkeyMode = .click
+                    }
+                }) {
                     VStack(spacing: 10) {
                         Image(systemName: "hand.point.up.fill")
                             .font(.system(size: 20))
@@ -1029,7 +1174,11 @@ struct HomeSettingsView: View {
                 }
                 .buttonStyle(.plain)
                 
-                Button(action: { hotkeyMode = .hold }) {
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        hotkeyMode = .hold
+                    }
+                }) {
                     VStack(spacing: 10) {
                         Image(systemName: "hand.tap.fill")
                             .font(.system(size: 20))
@@ -1053,39 +1202,18 @@ struct HomeSettingsView: View {
                 .background(Color.white.opacity(0.05))
             
             VStack(alignment: .leading, spacing: 10) {
-                Text(t("Listening activation key"))
-                    .font(.system(size: 16, weight: .bold))
+                hotkeyRow(title: "Start/Stop Recording", type: .main, hotkeyStringVal: hotkeyString)
                 
-                Button(action: {
-                    isRecordingHotkey.toggle()
-                    if isRecordingHotkey {
-                        HotkeyManager.shared.stopListening()
-                    } else {
-                        HotkeyManager.shared.startListening()
-                    }
-                }) {
-                    let isDark = appColorScheme == .dark
-                    HStack {
-                        Text(isRecordingHotkey ? t("Press keys...") : hotkeyString)
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(isRecordingHotkey ? (isDark ? .black : .white) : .primary)
-                        Spacer()
-                        Image(systemName: "keyboard")
-                            .font(.system(size: 20))
-                            .foregroundColor(isRecordingHotkey ? (isDark ? .black : .white) : .secondary)
-                    }
-                    .padding(.vertical, 12)
-                    .padding(.horizontal, 15)
-                    .background(isRecordingHotkey ? (isDark ? .white : .black) : Color.primary.opacity(0.05))
-                    .cornerRadius(10)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 10)
-                            .stroke(isRecordingHotkey ? (isDark ? .white : .black) : Color.primary.opacity(0.1), lineWidth: 1)
-                    )
+                hotkeyRow(title: "Cancel Recording", type: .cancel, hotkeyStringVal: hotkeyStringCancel)
+                
+                if hotkeyMode == .click {
+                    hotkeyRow(title: "Pause/Resume", type: .pause, hotkeyStringVal: hotkeyStringPause)
+                        .transition(.opacity.combined(with: .offset(y: -10)))
                 }
-                .buttonStyle(.plain)
-                .focusable(false)
+                
+                hotkeyRow(title: "Change Assistant", type: .assistant, hotkeyStringVal: hotkeyStringAssistant)
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.8), value: hotkeyMode)
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1097,6 +1225,45 @@ struct HomeSettingsView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
+    }
+    
+    private func hotkeyRow(title: String, type: RecordingHotkeyType, hotkeyStringVal: String) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(t(title))
+                .font(.system(size: 14, weight: .bold))
+            
+            Button(action: {
+                if activeRecordingType == type {
+                    activeRecordingType = nil
+                    HotkeyManager.shared.startListening()
+                } else {
+                    activeRecordingType = type
+                    HotkeyManager.shared.stopListening()
+                }
+            }) {
+                let isDark = appColorScheme == .dark
+                let isRecording = activeRecordingType == type
+                HStack {
+                    Text(isRecording ? t("Press keys...") : hotkeyStringVal)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(isRecording ? (isDark ? .black : .white) : .primary)
+                    Spacer()
+                    Image(systemName: "keyboard")
+                        .font(.system(size: 16))
+                        .foregroundColor(isRecording ? (isDark ? .black : .white) : .secondary)
+                }
+                .padding(.vertical, 10)
+                .padding(.horizontal, 15)
+                .background(isRecording ? (isDark ? .white : .black) : Color.primary.opacity(0.05))
+                .cornerRadius(10)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10)
+                        .stroke(isRecording ? (isDark ? .white : .black) : Color.primary.opacity(0.1), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .focusable(false)
+        }
     }
     
     @ViewBuilder
@@ -1278,7 +1445,11 @@ struct HomeSettingsView: View {
     
     private func setupEventMonitor() {
         self.eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
-            if isRecordingHotkey {
+            if let recordingType = activeRecordingType {
+                let codeKey = recordingType == .main ? "hotkeyCode" : "hotkeyCode_\(recordingType.rawValue)"
+                let modKey = recordingType == .main ? "hotkeyModifiers" : "hotkeyModifiers_\(recordingType.rawValue)"
+                let strKey = recordingType == .main ? "hotkeyString" : "hotkeyString_\(recordingType.rawValue)"
+                
                 if event.type == .flagsChanged {
                     let keyCode = event.keyCode
                     let modifierKeyCodes: Set<UInt16> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
@@ -1311,11 +1482,11 @@ struct HomeSettingsView: View {
                                 default: break
                                 }
                                 
-                                UserDefaults.standard.set(Int(keyCode), forKey: "hotkeyCode")
-                                UserDefaults.standard.set(0, forKey: "hotkeyModifiers")
-                                UserDefaults.standard.set(str, forKey: "hotkeyString")
+                                UserDefaults.standard.set(Int(keyCode), forKey: codeKey)
+                                UserDefaults.standard.set(0, forKey: modKey)
+                                UserDefaults.standard.set(str, forKey: strKey)
                                 
-                                isRecordingHotkey = false
+                                activeRecordingType = nil
                                 HotkeyManager.shared.startListening()
                                 
                                 lastModifierPressed = nil
@@ -1335,7 +1506,7 @@ struct HomeSettingsView: View {
                     // Escape (kod 53) anuluje nagrywanie
                     if keyCode == 53 {
                         print("🛑 Nagrywanie skrótu anulowane przez Escape")
-                        isRecordingHotkey = false
+                        activeRecordingType = nil
                         HotkeyManager.shared.startListening() // Przywróć nasłuchiwanie globalnego skrótu
                         return nil // Przechwyć zdarzenie, nie przekazuj dalej
                     }
@@ -1362,8 +1533,8 @@ struct HomeSettingsView: View {
                     if modifiers.contains(.control) { carbonModifiers |= UInt32(controlKey) }
                     
                     // Save to UserDefaults
-                    UserDefaults.standard.set(Int(keyCode), forKey: "hotkeyCode")
-                    UserDefaults.standard.set(Int(carbonModifiers), forKey: "hotkeyModifiers")
+                    UserDefaults.standard.set(Int(keyCode), forKey: codeKey)
+                    UserDefaults.standard.set(Int(carbonModifiers), forKey: modKey)
                     
                     // Update string representation
                     var str = ""
@@ -1375,9 +1546,9 @@ struct HomeSettingsView: View {
                     let keyChar = event.charactersIgnoringModifiers?.first ?? "`"
                     str += String(keyChar).uppercased()
                     
-                    UserDefaults.standard.set(str, forKey: "hotkeyString")
+                    UserDefaults.standard.set(str, forKey: strKey)
                     
-                    isRecordingHotkey = false
+                    activeRecordingType = nil
                     
                     // Restart HotkeyManager!
                     HotkeyManager.shared.startListening()
@@ -1407,7 +1578,7 @@ struct StatisticsView: View {
     @State private var isShowingBenchmarkSheet = false
     @State private var isShowingIncognitoExplanation = false
     @State private var isShowingExplanationFromInfoButton = false
-
+    @State private var pendingIncognitoAnimation = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
@@ -1448,6 +1619,15 @@ struct StatisticsView: View {
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("UsageStatsUpdated"))) { _ in
             loadStats()
         }
+        .onChange(of: isShowingIncognitoExplanation) { newValue in
+            if !newValue && pendingIncognitoAnimation {
+                pendingIncognitoAnimation = false
+                // Small delay to ensure sheet is fully dismissed before animation
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    NotificationCenter.default.post(name: NSNotification.Name("PlayIncognitoAnimation"), object: NSNumber(value: true))
+                }
+            }
+        }
     }
     
     @ViewBuilder
@@ -1479,9 +1659,20 @@ struct StatisticsView: View {
                         isIncognitoMode = newValue
                         if newValue {
                             if !UserDefaults.standard.bool(forKey: "skipIncognitoExplanation") {
-                                isShowingExplanationFromInfoButton = false
-                                isShowingIncognitoExplanation = true
+                                pendingIncognitoAnimation = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                                    isShowingExplanationFromInfoButton = false
+                                    isShowingIncognitoExplanation = true
+                                }
+                            } else {
+                                // No explanation, play animation directly
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    NotificationCenter.default.post(name: NSNotification.Name("PlayIncognitoAnimation"), object: NSNumber(value: true))
+                                }
                             }
+                        } else {
+                            pendingIncognitoAnimation = false
+                            NotificationCenter.default.post(name: NSNotification.Name("PlayIncognitoAnimation"), object: NSNumber(value: false))
                         }
                     }
                 ))
@@ -1819,6 +2010,27 @@ fileprivate struct RamHistoryView: View {
     @State private var isHoveringClearHistory = false
     @State private var isShowingRamExplanation = false
     
+    // Pagination state
+    @State private var currentPage = 0
+    let itemsPerPage = 5
+    
+    var reversedMessages: [MemoryMessage] {
+        memoryManager.messages.filter { !$0.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }.reversed()
+    }
+    
+    var totalPages: Int {
+        let count = reversedMessages.count
+        guard count > 0 else { return 1 }
+        return Int(ceil(Double(count) / Double(itemsPerPage)))
+    }
+    
+    var paginatedMessages: [MemoryMessage] {
+        let startIndex = currentPage * itemsPerPage
+        let endIndex = min(startIndex + itemsPerPage, reversedMessages.count)
+        guard startIndex < reversedMessages.count else { return [] }
+        return Array(reversedMessages[startIndex..<endIndex])
+    }
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             HStack {
@@ -1826,8 +2038,27 @@ fileprivate struct RamHistoryView: View {
                     Image(systemName: "clock.fill")
                         .font(.system(size: 18))
                         .foregroundColor(colorScheme == .dark ? .white : .black)
-                    Text(t("Text History (RAM only)"))
+                    Text(t("Text History"))
                         .font(.system(size: 20, weight: .bold))
+                    
+                    // Premium monochrome storage indicator badge
+                    let isRAM = memoryManager.historyStorageType == "RAM"
+                    HStack(spacing: 5) {
+                        Image(systemName: isRAM ? "memorychip" : "doc.text.fill")
+                            .font(.system(size: 10, weight: .bold))
+                        Text(t(isRAM ? "Temporary RAM" : "Local File"))
+                            .font(.system(size: 10, weight: .bold))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .foregroundColor(.primary)
+                    .background(Color.primary.opacity(0.06))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.primary.opacity(0.2), lineWidth: 1)
+                    )
+                    .padding(.leading, 4)
                     
                     Button(action: {
                         isShowingRamExplanation = true
@@ -1840,7 +2071,7 @@ fileprivate struct RamHistoryView: View {
                     .help(t("Learn more about RAM history"))
                 }
                 Spacer()
-                if !memoryManager.messages.isEmpty {
+                if !reversedMessages.isEmpty {
                     Button(action: {
                         withAnimation {
                             memoryManager.clearHistory()
@@ -1866,16 +2097,16 @@ fileprivate struct RamHistoryView: View {
                 }
             }
             
-            if memoryManager.messages.isEmpty {
-                // Modern empty state with dashed borders and clock icon
+            if reversedMessages.isEmpty {
+                // Modern empty state with dashed borders and clock/file icon
                 VStack(spacing: 16) {
-                    Image(systemName: "clock.arrow.circlepath")
+                    Image(systemName: memoryManager.historyStorageType == "File" ? "doc.text.fill" : "clock.arrow.circlepath")
                         .font(.system(size: 40))
                         .foregroundColor(.secondary.opacity(0.5))
-                    Text(t("No saved texts in RAM"))
+                    Text(t(memoryManager.historyStorageType == "File" ? "No saved texts" : "No saved texts in RAM"))
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.secondary)
-                    Text(t("Every processed text will appear here temporarily. Closing Sonor or clearing the history will permanently delete this data."))
+                    Text(t(memoryManager.historyStorageType == "File" ? "Every processed text will appear here and be stored securely in your persistent local history file." : "Every processed text will appear here temporarily. Closing Sonor or clearing the history will permanently delete this data."))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary.opacity(0.7))
                         .multilineTextAlignment(.center)
@@ -1888,33 +2119,97 @@ fileprivate struct RamHistoryView: View {
                         .stroke(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, miterLimit: 10, dash: [5, 5], dashPhase: 0))
                 )
             } else {
-                ScrollView {
-                    VStack(spacing: 12) {
-                        ForEach(memoryManager.messages.reversed()) { msg in
-                            MessageCardView(
-                                msg: msg,
-                                colorScheme: colorScheme,
-                                isCardHovered: hoveredCardId == msg.id,
-                                isCopyHovered: hoveredCopyId == msg.id,
-                                isTrashHovered: hoveredTrashId == msg.id,
-                                onCopyHover: { hovering in
-                                    hoveredCopyId = hovering ? msg.id : nil
-                                },
-                                onDeleteHover: { hovering in
-                                    hoveredTrashId = hovering ? msg.id : nil
-                                },
-                                onCardHover: { hovering in
-                                    hoveredCardId = hovering ? msg.id : nil
-                                },
-                                onDelete: {
-                                    memoryManager.deleteMessage(id: msg.id)
-                                }
-                            )
+                VStack(spacing: 12) {
+                    ScrollView {
+                        VStack(spacing: 12) {
+                            ForEach(paginatedMessages) { msg in
+                                MessageCardView(
+                                    msg: msg,
+                                    colorScheme: colorScheme,
+                                    isCardHovered: hoveredCardId == msg.id,
+                                    isCopyHovered: hoveredCopyId == msg.id,
+                                    isTrashHovered: hoveredTrashId == msg.id,
+                                    onCopyHover: { hovering in
+                                        hoveredCopyId = hovering ? msg.id : nil
+                                    },
+                                    onDeleteHover: { hovering in
+                                        hoveredTrashId = hovering ? msg.id : nil
+                                    },
+                                    onCardHover: { hovering in
+                                        hoveredCardId = hovering ? msg.id : nil
+                                    },
+                                    onDelete: {
+                                        memoryManager.deleteMessage(id: msg.id)
+                                    }
+                                )
+                            }
                         }
+                        .padding(.horizontal, 4)
                     }
-                    .padding(.horizontal, 4)
+                    .frame(maxHeight: 400) // Ograniczenie wysokości listy
+                    
+                    // Premium Pagination Controls
+                    if totalPages > 1 {
+                        HStack(spacing: 20) {
+                            Spacer()
+                            
+                            Button(action: {
+                                if currentPage > 0 {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        currentPage -= 1
+                                    }
+                                }
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "chevron.left")
+                                        .font(.system(size: 11, weight: .bold))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(currentPage > 0 ? Color.primary.opacity(0.08) : Color.clear)
+                                .foregroundColor(currentPage > 0 ? .primary : .secondary.opacity(0.3))
+                                .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(currentPage == 0)
+                            
+                            Text(String(format: t("Page %d of %d"), currentPage + 1, totalPages))
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundColor(.secondary)
+                                .frame(minWidth: 80)
+                                .multilineTextAlignment(.center)
+                            
+                            Button(action: {
+                                if currentPage < totalPages - 1 {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        currentPage += 1
+                                    }
+                                }
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "chevron.right")
+                                        .font(.system(size: 11, weight: .bold))
+                                }
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(currentPage < totalPages - 1 ? Color.primary.opacity(0.08) : Color.clear)
+                                .foregroundColor(currentPage < totalPages - 1 ? .primary : .secondary.opacity(0.3))
+                                .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(currentPage == totalPages - 1)
+                            
+                            Spacer()
+                        }
+                        .padding(.top, 10)
+                    }
                 }
-                .frame(maxHeight: 400) // Ograniczenie wysokości listy
+            }
+        }
+        .onChange(of: reversedMessages.count) { newCount in
+            let maxPage = max(0, Int(ceil(Double(newCount) / Double(itemsPerPage))) - 1)
+            if currentPage > maxPage {
+                currentPage = maxPage
             }
         }
         .sheet(isPresented: $isShowingRamExplanation) {
@@ -1938,8 +2233,11 @@ struct RamHistoryExplanationView: View {
         }
     }
     @ObservedObject private var localizer = LocalizationManager.shared
+    @ObservedObject private var memoryManager = MessageMemoryManager.shared
     
     var body: some View {
+        let isRAM = memoryManager.historyStorageType == "RAM"
+        
         VStack(spacing: 0) {
             // Upper padding spacer instead of X close button
             Spacer()
@@ -1947,11 +2245,11 @@ struct RamHistoryExplanationView: View {
             
             // Icon & Title
             VStack(spacing: 12) {
-                Image(systemName: "clock.arrow.circlepath")
+                Image(systemName: isRAM ? "clock.arrow.circlepath" : "doc.text.fill")
                     .font(.system(size: 40))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
                 
-                Text(t("Text History Privacy"))
+                Text(t(isRAM ? "Text History Privacy" : "Persistent History Privacy"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
             }
@@ -1959,33 +2257,65 @@ struct RamHistoryExplanationView: View {
             
             // Content
             VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "memorychip")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(colorScheme == .dark ? .white : .black)
-                        .frame(width: 18)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(t("Stored only in RAM"))
-                            .font(.system(size: 12, weight: .bold))
-                        Text(t("The text history is saved exclusively in the computer's operational memory (RAM), not on the disk."))
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .lineSpacing(2)
+                if isRAM {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "memorychip")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                            .frame(width: 18)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(t("Stored only in RAM"))
+                               .font(.system(size: 12, weight: .bold))
+                            Text(t("The text history is saved exclusively in the computer's operational memory (RAM), not on the disk."))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .lineSpacing(2)
+                        }
                     }
-                }
-                
-                HStack(alignment: .top, spacing: 10) {
-                    Image(systemName: "hourglass")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundColor(colorScheme == .dark ? .white : .black)
-                        .frame(width: 18)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(t("Completely temporary"))
-                            .font(.system(size: 12, weight: .bold))
-                        Text(t("All saved texts disappear immediately when you close the application. They are not recoverable, ensuring your data remains private."))
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .lineSpacing(2)
+                    
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "hourglass")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                            .frame(width: 18)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(t("Completely temporary"))
+                                .font(.system(size: 12, weight: .bold))
+                            Text(t("All saved texts disappear immediately when you close the application. They are not recoverable, ensuring your data remains private."))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .lineSpacing(2)
+                        }
+                    }
+                } else {
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "doc.text.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                            .frame(width: 18)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(t("Stored in local file"))
+                               .font(.system(size: 12, weight: .bold))
+                            Text(t("The text history is saved securely in a local text file on your disk."))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .lineSpacing(2)
+                        }
+                    }
+                    
+                    HStack(alignment: .top, spacing: 10) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                            .frame(width: 18)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(t("Persistent history"))
+                                .font(.system(size: 12, weight: .bold))
+                            Text(t("All saved texts persist between application restarts, so you never lose your history unless you manually clear it."))
+                                .font(.system(size: 11))
+                                .foregroundColor(.secondary)
+                                .lineSpacing(2)
+                        }
                     }
                 }
                 
@@ -3712,6 +4042,7 @@ struct ModesSettingsView: View {
     @Binding var showLoginSheet: Bool
     @ObservedObject private var localizer = LocalizationManager.shared
     @State private var isShowingInfo = false
+    @ObservedObject private var networkMonitor = NetworkMonitor.shared
     
     // Grid layout
     let columns = [
@@ -3786,7 +4117,7 @@ struct ModesSettingsView: View {
                         .frame(maxWidth: .infinity)
                     }
                     
-                    if !isPremium {
+                    if !isPremium && networkMonitor.isConnected {
                         VStack(spacing: 14) {
                             VStack(spacing: 6) {
                                 Text(t("Unlock new assistants after logging in"))
@@ -4049,6 +4380,56 @@ struct CustomToggleStyle: ToggleStyle {
                 .onTapGesture {
                     configuration.isOn.toggle()
                 }
+        }
+    }
+}
+struct IncognitoAnimationOverlay: View {
+    @Environment(\.colorScheme) var colorScheme
+    @State private var showBanner = false
+    @State private var isActiveMode = true
+    @ObservedObject private var localizer = LocalizationManager.shared
+    
+    var body: some View {
+        VStack {
+            if showBanner {
+                HStack(spacing: 8) {
+                    Image(systemName: isActiveMode ? "eye.slash.fill" : "eye.fill")
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                        .font(.system(size: 14))
+                    
+                    Text(isActiveMode ? t("Incognito Mode Active") : t("Incognito Mode Inactive"))
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(
+                    Capsule()
+                        .fill(colorScheme == .dark ? Color.white : Color.black)
+                        .shadow(color: Color.black.opacity(0.15), radius: 10, y: 5)
+                )
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .padding(.top, 12)
+            }
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("PlayIncognitoAnimation"))) { notification in
+            if let num = notification.object as? NSNumber {
+                isActiveMode = num.boolValue
+            } else {
+                isActiveMode = true
+            }
+            
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                showBanner = true
+            }
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                withAnimation(.easeIn(duration: 0.3)) {
+                    showBanner = false
+                }
+            }
         }
     }
 }
@@ -4369,6 +4750,7 @@ struct UserProfileView: View {
     @State private var isDeleting = false
     @State private var deleteError: String? = nil
     @State private var deletePassword = ""
+    @FocusState private var isDeleteFieldFocused: Bool
     
     // Change Password States
     @State private var isChangingPassword = false
@@ -4476,7 +4858,8 @@ struct UserProfileView: View {
                             withAnimation {
                                 showSuccessMessage = false
                                 isChangingPassword = false
-                                otpDigits = Array(repeating: "", count: 6)
+                                 otpDigits = Array(repeating: "\u{200B}", count: 6)
+                                 oldOtpDigits = Array(repeating: "\u{200B}", count: 6)
                             }
                         }
                     }
@@ -4542,6 +4925,7 @@ struct UserProfileView: View {
                     .buttonStyle(.plain)
                     .padding(.horizontal, 40)
                     .disabled(isLoadingOTP)
+                    .keyboardShortcut(.defaultAction)
                     
                     Button(action: {
                         withAnimation {
@@ -4641,12 +5025,6 @@ struct UserProfileView: View {
                                         }
                                     }
                                 }
-                                .onAppear {
-                                    if index == 0 {
-                                        updateCooldown()
-                                        startResendTimer()
-                                    }
-                                }
                         }
                     }
                     .padding(.vertical, 8)
@@ -4660,6 +5038,8 @@ struct UserProfileView: View {
                     }
                     .onAppear {
                         focusedField = 0
+                        updateCooldown()
+                        startResendTimer()
                     }
                     
                     Button(action: {
@@ -4699,6 +5079,7 @@ struct UserProfileView: View {
                     .buttonStyle(.plain)
                     .padding(.horizontal, 40)
                     .disabled(isLoadingOTP || otpToken.isEmpty)
+                    .keyboardShortcut(.defaultAction)
                     
                     Button(action: {
                         Task {
@@ -4738,7 +5119,8 @@ struct UserProfileView: View {
                             isVerifyingOTPForPassword = false
                             showSendEmailConfirmation = false
                             changePasswordError = nil
-                            otpDigits = Array(repeating: "", count: 6)
+                            otpDigits = Array(repeating: "\u{200B}", count: 6)
+                            oldOtpDigits = Array(repeating: "\u{200B}", count: 6)
                         }
                     }) {
                         Text(t("Cancel"))
@@ -4836,6 +5218,7 @@ struct UserProfileView: View {
                         .buttonStyle(.plain)
                         .focusable(false)
                         .padding(.horizontal, 24)
+                        .keyboardShortcut(.defaultAction)
                         
                         // Cancel Button
                         Button(action: {
@@ -4845,7 +5228,8 @@ struct UserProfileView: View {
                                 newPassword = ""
                                 confirmNewPassword = ""
                                 changePasswordError = nil
-                                otpDigits = Array(repeating: "", count: 6)
+                                otpDigits = Array(repeating: "\u{200B}", count: 6)
+                                oldOtpDigits = Array(repeating: "\u{200B}", count: 6)
                             }
                         }) {
                             Text(t("Cancel"))
@@ -4873,8 +5257,8 @@ struct UserProfileView: View {
                         .padding(.top, 10)
                         .padding(.bottom, 16)
                     
-                    // Premium tag if logged in
-                    Text(t("PREMIUM"))
+                    // Dynamic subscription tag if logged in
+                    Text(t(authManager.accountTier.uppercased()))
                         .font(.system(size: 10, weight: .black))
                         .foregroundColor(colorScheme == .dark ? .black : .white)
                         .padding(.horizontal, 8)
@@ -4916,44 +5300,46 @@ struct UserProfileView: View {
                     .padding(.bottom, 12)
                     
                     // Change Password Button
-                    Button(action: {
-                        if !networkMonitor.isConnected {
-                            deleteError = t("Please connect to the internet to perform this action.")
-                            return
-                        }
-                        deleteError = nil
-                        let lastSent = UserDefaults.standard.double(forKey: "lastPasswordOTPSentTime")
-                        let elapsed = Date().timeIntervalSince1970 - lastSent
-                        
-                        if elapsed < 60 {
-                            resendCooldown = Int(60 - elapsed)
-                        } else {
-                            resendCooldown = 0
-                        }
-                        
-                        if elapsed >= 60 {
-                            withAnimation {
-                                showSendEmailConfirmation = true
+                    if authManager.currentUserProvider != "google" {
+                        Button(action: {
+                            if !networkMonitor.isConnected {
+                                deleteError = t("Please connect to the internet to perform this action.")
+                                return
                             }
-                        } else {
-                            withAnimation {
-                                isVerifyingOTPForPassword = true
+                            deleteError = nil
+                            let lastSent = UserDefaults.standard.double(forKey: "lastPasswordOTPSentTime")
+                            let elapsed = Date().timeIntervalSince1970 - lastSent
+                            
+                            if elapsed < 60 {
+                                resendCooldown = Int(60 - elapsed)
+                            } else {
+                                resendCooldown = 0
                             }
-                            startResendTimer()
+                            
+                            if elapsed >= 60 {
+                                withAnimation {
+                                    showSendEmailConfirmation = true
+                                }
+                            } else {
+                                withAnimation {
+                                    isVerifyingOTPForPassword = true
+                                }
+                                startResendTimer()
+                            }
+                        }) {
+                            Text(t("Change Password"))
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundColor(.primary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                                .background(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05))
+                                .cornerRadius(10)
                         }
-                    }) {
-                        Text(t("Change Password"))
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundColor(.primary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.05))
-                            .cornerRadius(10)
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 8)
                     }
-                    .buttonStyle(.plain)
-                    .focusable(false)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
                     
                     // Delete Account Button
                     Button(action: {
@@ -4963,6 +5349,7 @@ struct UserProfileView: View {
                         }
                         deleteError = nil
                         showDeleteConfirmation = true
+                        triggerDeleteAccountFocus()
                     }) {
                         Text(t("Delete Account"))
                             .font(.system(size: 13, weight: .medium))
@@ -4999,19 +5386,63 @@ struct UserProfileView: View {
         .background(colorScheme == .dark ? Color(red: 0.05, green: 0.05, blue: 0.05) : Color.white)
         .foregroundColor(.primary)
         .alert(t("Delete Account"), isPresented: $showDeleteConfirmation) {
-            SecureField(t("Password"), text: $deletePassword)
-            Button(t("Delete"), role: .destructive) {
-                performAccountDeletion()
-            }
-            Button(t("Cancel"), role: .cancel) {
-                deletePassword = ""
+            if authManager.currentUserProvider == "google" {
+                Button(t("Delete"), role: .destructive) {
+                    performAccountDeletion()
+                }
+                Button(t("Cancel"), role: .cancel) {}
+            } else {
+                SecureField(t("Password"), text: $deletePassword)
+                    .focused($isDeleteFieldFocused)
+                    .onSubmit {
+                        performAccountDeletion()
+                    }
+                Button(t("Delete"), role: .destructive) {
+                    performAccountDeletion()
+                }
+                Button(t("Cancel"), role: .cancel) {
+                    deletePassword = ""
+                }
             }
         } message: {
-            Text(t("Please enter your password to confirm. This action cannot be undone."))
+            if authManager.currentUserProvider == "google" {
+                Text(t("You will be redirected to Google to authorize the deletion of your account. This action cannot be undone."))
+            } else {
+                Text(t("Please enter your password to confirm. This action cannot be undone."))
+            }
         }
-        .onAppear {
-            Task {
-                await authManager.fetchUserDetails()
+        .task {
+            authManager.accountDeletionError = nil
+            await authManager.fetchUserDetails()
+        }
+        .onDisappear {
+            resendTimerTask?.cancel()
+        }
+        .onChange(of: showDeleteConfirmation) { newValue in
+            if newValue {
+                triggerDeleteAccountFocus()
+            }
+        }
+        .onChange(of: authManager.isLoggedIn) { newValue in
+            if !newValue {
+                dismiss()
+            }
+        }
+        .onChange(of: authManager.accountDeletionError) { newValue in
+            if let error = newValue {
+                deleteError = t(error)
+                isDeleting = false
+            }
+        }
+    }
+    
+    private func triggerDeleteAccountFocus() {
+        isDeleteFieldFocused = true
+        for delay in [0.05, 0.1, 0.15, 0.2, 0.3, 0.5] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                if showDeleteConfirmation {
+                    isDeleteFieldFocused = true
+                }
             }
         }
     }
@@ -5109,6 +5540,15 @@ struct UserProfileView: View {
     private func performAccountDeletion() {
         if !networkMonitor.isConnected {
             deleteError = t("Please connect to the internet to perform this action.")
+            return
+        }
+        
+        if authManager.currentUserProvider == "google" {
+            deleteError = nil
+            isDeleting = true
+            authManager.accountDeletionError = nil
+            authManager.pendingAccountDeletion = true
+            authManager.loginWithGoogle()
             return
         }
         

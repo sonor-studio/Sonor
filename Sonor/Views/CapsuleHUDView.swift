@@ -1,10 +1,10 @@
 import SwiftUI
+import Combine
 
 struct CapsuleHUDView: View {
     @ObservedObject var controller: AppController
     @ObservedObject var modelManager = ModelManager.shared
     
-    @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
     @AppStorage("appTheme") private var appTheme = "system"
     
     var effectiveColorScheme: ColorScheme {
@@ -18,11 +18,22 @@ struct CapsuleHUDView: View {
         }
     }
     
+    private var isInitializing: Bool {
+        return controller.statusText == "Inicjalizacja" || controller.statusText == "Initializing"
+    }
+    
+    private var isFinalState: Bool {
+        let text = controller.statusText
+        return text == "Cancelled" || text == "Done!" || text == "No text recognized." || text == "Error: Missing model" || text == "No microphone permission" || text == "Microphone error"
+    }
+    
     private var targetWidth: CGFloat {
-        if !controller.isRecording {
-            return 232.0
+        if isInitializing || isFinalState {
+            return 284.0
+        } else if controller.isRecording && controller.activeHotkeyMode == .click {
+            return 180.0
         } else {
-            return hotkeyMode == .hold ? 232.0 : 180.0
+            return 232.0
         }
     }
     
@@ -39,6 +50,10 @@ struct CapsuleHUDView: View {
     
     // Stan przeciągania
     @State private var dragTracker = WindowDragTracker()
+    
+    // Timer i czas trwania nagrywania
+    @State private var recordingDuration: TimeInterval = 0
+    private let recordingTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
     
     // Podwidoki do odciążenia kompilatora i zapobieżenia timeoutom type-checkingu
     private var assistantSelector: some View {
@@ -64,18 +79,44 @@ struct CapsuleHUDView: View {
         .simultaneousGesture(dragGesture)
     }
     
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration) / 60
+        let seconds = Int(duration) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
     private var audioWavesView: some View {
-        let levels = Array(controller.audioLevels.suffix(36))
-        return HStack(spacing: 2) {
-            ForEach(0..<levels.count, id: \.self) { index in
-                let level = levels[index]
-                let barHeight = CGFloat(2 + (level * 350))
-                
-                RoundedRectangle(cornerRadius: 1.5)
-                    .fill(controller.isPaused ? Color.primary.opacity(0.4) : Color.primary)
-                    .frame(width: 3, height: min(barHeight, 40))
-                    .animation(.spring(response: 0.1, dampingFraction: 0.5), value: level)
+        let barCount = width > 200 ? 31 : 21
+        let levels = Array(controller.audioLevels.suffix(barCount))
+        return HStack(spacing: 0) {
+            Spacer()
+                .frame(width: 14)
+            
+            HStack(spacing: 2) {
+                ForEach(0..<levels.count, id: \.self) { index in
+                    let level = levels[index]
+                    let barHeight = CGFloat(2 + (level * 350))
+                    
+                    RoundedRectangle(cornerRadius: 1.5)
+                        .fill(controller.isPaused ? Color.primary.opacity(0.4) : Color.primary)
+                        .frame(width: 3, height: min(barHeight, 28))
+                        .animation(.spring(response: 0.1, dampingFraction: 0.5), value: level)
+                }
             }
+            
+            Spacer()
+                .frame(width: 14)
+            
+            if controller.isRecording {
+                Text(formatDuration(recordingDuration))
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(.primary.opacity(0.85))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+            
+            Spacer()
+                .frame(width: 12)
         }
         .frame(width: width, height: 40)
         .clipShape(Capsule())
@@ -221,23 +262,29 @@ struct CapsuleHUDView: View {
                 } else {
                     // Pole wyboru asystenta
                     if AuthManager.shared.isLoggedIn && modelManager.gemmaState == .downloaded {
-                        assistantSelector
+                        if !isInitializing && !isFinalState && controller.isRecording {
+                            assistantSelector
+                                .transition(.asymmetric(insertion: .offset(y: 40).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(y: 40).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
+                                .zIndex(0)
+                        }
                     }
                     
                     // Dolny pasek: Fale/Loader + Przycisk Pauza + Przycisk X
-                    HStack(spacing: 12) {
+                    HStack(spacing: (isInitializing || isFinalState) ? -40 : 12) {
                         Button(action: {
                             // Puste, żeby przechwycić zdarzenia i nie przerywać dragGesture przez animację
                         }) {
                             ZStack {
-                                if !isProcessing {
+                                if !isProcessing && controller.statusText != "Inicjalizacja" {
                                     audioWavesView
-                                        .transition(.asymmetric(insertion: .opacity, removal: .scale(scale: 0.5).combined(with: .opacity)))
+                                        .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
                                 } else {
                                     loaderView
-                                        .transition(.asymmetric(insertion: .opacity, removal: .scale(scale: 0.5).combined(with: .opacity)))
+                                        .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
                                 }
                             }
+                            .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3), value: isProcessing)
+                            .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3), value: controller.statusText)
                             .frame(width: width, height: height)
                             .contentShape(Capsule())
                             .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
@@ -245,9 +292,10 @@ struct CapsuleHUDView: View {
                         .buttonStyle(.plain)
                         .focusable(false)
                         .simultaneousGesture(dragGesture)
+                        .zIndex(1)
                         
                         // Przycisk Pauza / Wznów
-                        if showPauseButton {
+                        if showPauseButton && !isInitializing && !isFinalState {
                             Button(action: {
                                 if !dragTracker.isDragging { controller.togglePause() }
                             }) {
@@ -261,26 +309,28 @@ struct CapsuleHUDView: View {
                             .buttonStyle(.plain)
                             .focusable(false)
                             .simultaneousGesture(dragGesture)
-                            .transition(.asymmetric(
-                                    insertion: .scale.combined(with: .opacity),
-                                    removal: .scale.combined(with: .opacity)
-                                ))
+                            .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
+                            .zIndex(0)
                         }
                         
                         // Przycisk X (Anuluj)
-                        Button(action: {
-                            if !dragTracker.isDragging { controller.cancelRecording() }
-                        }) {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundColor(.primary)
-                                .frame(width: 40, height: 40)
-                                .contentShape(Rectangle())
-                                .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+                        if !isInitializing && !isFinalState {
+                            Button(action: {
+                                if !dragTracker.isDragging { controller.cancelRecording() }
+                            }) {
+                                Image(systemName: "xmark")
+                                    .font(.system(size: 15, weight: .medium))
+                                    .foregroundColor(.primary)
+                                    .frame(width: 40, height: 40)
+                                    .contentShape(Rectangle())
+                                    .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+                            }
+                            .buttonStyle(.plain)
+                            .focusable(false)
+                            .simultaneousGesture(dragGesture)
+                            .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
+                            .zIndex(0)
                         }
-                        .buttonStyle(.plain)
-                        .focusable(false)
-                        .simultaneousGesture(dragGesture)
                     }
                 }
             }
@@ -290,43 +340,46 @@ struct CapsuleHUDView: View {
         .colorScheme(effectiveColorScheme)
         .onAppear {
             controller.reloadModes()
-            showPauseButton = hotkeyMode == .click && controller.isRecording
+            showPauseButton = controller.activeHotkeyMode == .click && controller.isRecording
             width = targetWidth
-            withAnimation(.easeIn(duration: 0.3)) {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 opacity = 1.0
-            }
-        }
-        .onChange(of: hotkeyMode) { _ in
-            withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                showPauseButton = hotkeyMode == .click && controller.isRecording
-                width = targetWidth
             }
         }
         .onChange(of: controller.isRecording) { isRecording in
             if !isRecording {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
                     showPauseButton = false
-                    width = 232.0
+                    width = targetWidth
                     height = 40
                     isProcessing = true
                 }
             } else {
-                withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
-                    showPauseButton = hotkeyMode == .click
-                    width = hotkeyMode == .hold ? 232.0 : 180.0
+                recordingDuration = 0
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
+                    showPauseButton = controller.activeHotkeyMode == .click
+                    width = targetWidth
                     height = 40
-                    isProcessing = false
+                    isProcessing = controller.statusText == "Inicjalizacja" || controller.statusText == "Initializing"
                 }
             }
         }
         .onChange(of: controller.statusText) { status in
-            if status == "Done!" {
-                withAnimation(.easeOut(duration: 0.5)) {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
+                width = targetWidth
+                if status == "Inicjalizacja" || status == "Initializing" {
+                    isProcessing = true
+                } else if status == "Listening..." {
+                    isProcessing = false
+                }
+            }
+            if isFinalState {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                     opacity = 0.0
                 }
                 showList = false
-            } else if status == "Listening..." || status == "Model not downloaded" {
-                withAnimation(.easeIn(duration: 0.2)) {
+            } else if status == "Listening..." || status == "Model not downloaded" || status == "Inicjalizacja" {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                     opacity = 1.0
                 }
                 showList = false
@@ -334,14 +387,19 @@ struct CapsuleHUDView: View {
         }
         .onChange(of: controller.activeDictionaryNotification) { notification in
             if notification == nil && !controller.isRecording {
-                withAnimation(.easeOut(duration: 0.5)) {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                     opacity = 0.0
                 }
                 showList = false
             } else {
-                withAnimation(.easeIn(duration: 0.2)) {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                     opacity = 1.0
                 }
+            }
+        }
+        .onReceive(recordingTimer) { _ in
+            if controller.isRecording && !controller.isPaused && controller.statusText != "Inicjalizacja" {
+                recordingDuration += 1
             }
         }
     }

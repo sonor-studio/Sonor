@@ -13,9 +13,14 @@ class HotkeyManager {
     var onHotkeyDown: (() -> Void)?
     var onHotkeyUp: (() -> Void)?
     
+    var onCancelKeyDown: (() -> Void)?
+    var onPauseKeyDown: (() -> Void)?
+    var onAssistantKeyDown: (() -> Void)?
+    
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isKeyDown = false
+    private var activeIsHoldMode = false
     
     private init() {}
     
@@ -33,7 +38,7 @@ class HotkeyManager {
         let savedKeyCode = UserDefaults.standard.integer(forKey: "hotkeyCode")
         let hotkeyCode = savedKeyCode == 0 ? 50 : savedKeyCode
         
-        print("🎯 HotkeyManager: Nasłuchiwanie (EventTap) dla Code: \(hotkeyCode)")
+        print("🎯 HotkeyManager: Nasłuchiwanie (EventTap) włączone. Main Code: \(hotkeyCode)")
         
         let eventMask = CGEventMask((1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue) | (1 << CGEventType.flagsChanged.rawValue))
         
@@ -71,6 +76,33 @@ class HotkeyManager {
         print("🎯 HotkeyManager: Zatrzymano nasłuchiwanie")
     }
     
+    struct HotkeyDef {
+        let code: Int
+        let modifiers: Int
+        let targetModifiers: NSEvent.ModifierFlags
+        let isOnlyModifier: Bool
+        
+        init(keyCodeKey: String, modifiersKey: String, defaultCode: Int? = nil, defaultModifiers: Int? = nil) {
+            let userCode = UserDefaults.standard.object(forKey: keyCodeKey) as? Int
+            let userMods = UserDefaults.standard.object(forKey: modifiersKey) as? Int
+            
+            let finalCode = userCode ?? defaultCode ?? -1
+            let finalMods = userMods ?? defaultModifiers ?? 0
+            
+            self.code = finalCode
+            self.modifiers = finalMods
+            
+            var tm = NSEvent.ModifierFlags()
+            if (finalMods & 0x0100) != 0 { tm.insert(.command) }
+            if (finalMods & 0x0200) != 0 { tm.insert(.shift) }
+            if (finalMods & 0x0800) != 0 { tm.insert(.option) }
+            if (finalMods & 0x1000) != 0 { tm.insert(.control) }
+            self.targetModifiers = tm
+            
+            self.isOnlyModifier = (finalCode >= 54 && finalCode <= 63)
+        }
+    }
+    
     func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout {
             print("⚠️ HotkeyManager: Event Tap disabled by timeout! Re-enabling...")
@@ -89,77 +121,105 @@ class HotkeyManager {
             return Unmanaged.passUnretained(event)
         }
         
-        let savedKeyCode = UserDefaults.standard.integer(forKey: "hotkeyCode")
-        let savedModifiers = UserDefaults.standard.integer(forKey: "hotkeyModifiers")
+        let mainHotkey = HotkeyDef(keyCodeKey: "hotkeyCode", modifiersKey: "hotkeyModifiers", defaultCode: 50, defaultModifiers: 0x0100 | 0x0200)
+        let cancelHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_cancel", modifiersKey: "hotkeyModifiers_cancel")
+        let pauseHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_pause", modifiersKey: "hotkeyModifiers_pause")
+        let assistantHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_assistant", modifiersKey: "hotkeyModifiers_assistant")
         
-        let hotkeyCode = savedKeyCode == 0 ? 50 : savedKeyCode
-        let hotkeyModifiers = savedModifiers == 0 ? (0x0100 | 0x0200) : savedModifiers
-        let hotkeyMode = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
-        let isHoldMode = hotkeyMode == "Przytrzymanie" || hotkeyMode == "Hold"
-        
-        var targetModifiers = NSEvent.ModifierFlags()
-        if (hotkeyModifiers & 0x0100) != 0 { targetModifiers.insert(.command) }
-        if (hotkeyModifiers & 0x0200) != 0 { targetModifiers.insert(.shift) }
-        if (hotkeyModifiers & 0x0800) != 0 { targetModifiers.insert(.option) }
-        if (hotkeyModifiers & 0x1000) != 0 { targetModifiers.insert(.control) }
-        
-        let isOnlyModifierHotkey = hotkeyCode >= 54 && hotkeyCode <= 63
+        if !self.isKeyDown {
+            let hotkeyModeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
+            self.activeIsHoldMode = hotkeyModeString == "Przytrzymanie" || hotkeyModeString == "Hold"
+        }
+        let isHoldMode = self.activeIsHoldMode
         
         // Obsługa samych klawiszy modyfikujących (Fn, Cmd, Ctrl, Opt, Shift)
         if type == .flagsChanged {
-            if isOnlyModifierHotkey && nsEvent.keyCode == UInt16(hotkeyCode) {
-                let modifiers = nsEvent.modifierFlags
-                var isPressed = false
-                
-                switch nsEvent.keyCode {
-                case 54, 55: isPressed = modifiers.contains(.command)
-                case 56, 60: isPressed = modifiers.contains(.shift)
-                case 58, 61: isPressed = modifiers.contains(.option)
-                case 59, 62: isPressed = modifiers.contains(.control)
-                case 63: isPressed = modifiers.contains(.function)
-                default: break
-                }
-                
+            let code = Int(nsEvent.keyCode)
+            let modifiers = nsEvent.modifierFlags
+            var isPressed = false
+            
+            switch code {
+            case 54, 55: isPressed = modifiers.contains(.command)
+            case 56, 60: isPressed = modifiers.contains(.shift)
+            case 58, 61: isPressed = modifiers.contains(.option)
+            case 59, 62: isPressed = modifiers.contains(.control)
+            case 63: isPressed = modifiers.contains(.function)
+            default: break
+            }
+            
+            if mainHotkey.isOnlyModifier && code == mainHotkey.code {
                 if isPressed && !self.isKeyDown {
                     self.isKeyDown = true
-                    print("🎯 Hotkey (Mod) Down!")
+                    print("🎯 Main Hotkey (Mod) Down!")
                     DispatchQueue.main.async { self.onHotkeyDown?() }
                 } else if !isPressed && self.isKeyDown {
                     self.isKeyDown = false
-                    print("🎯 Hotkey (Mod) Up!")
+                    print("🎯 Main Hotkey (Mod) Up!")
                     if isHoldMode {
                         DispatchQueue.main.async { self.onHotkeyUp?() }
                     }
                 }
+            } else if cancelHotkey.isOnlyModifier && code == cancelHotkey.code {
+                if isPressed {
+                    print("🎯 Cancel Hotkey (Mod) Down!")
+                    DispatchQueue.main.async { self.onCancelKeyDown?() }
+                }
+            } else if pauseHotkey.isOnlyModifier && code == pauseHotkey.code {
+                if !isHoldMode && isPressed {
+                    print("🎯 Pause Hotkey (Mod) Down!")
+                    DispatchQueue.main.async { self.onPauseKeyDown?() }
+                }
+            } else if assistantHotkey.isOnlyModifier && code == assistantHotkey.code {
+                if isPressed {
+                    print("🎯 Assistant Hotkey (Mod) Down!")
+                    DispatchQueue.main.async { self.onAssistantKeyDown?() }
+                }
             }
+            
             return Unmanaged.passUnretained(event)
         }
         
         // Obsługa standardowych klawiszy + modyfikatorów
         if type == .keyDown {
             let currentModifiers = nsEvent.modifierFlags.intersection([.command, .shift, .option, .control])
+            let code = Int(nsEvent.keyCode)
             
-            if nsEvent.keyCode == UInt16(hotkeyCode) && currentModifiers == targetModifiers {
+            if code == mainHotkey.code && currentModifiers == mainHotkey.targetModifiers {
                 if !self.isKeyDown {
                     self.isKeyDown = true
-                    print("🎯 Hotkey Down!")
+                    print("🎯 Main Hotkey Down!")
                     DispatchQueue.main.async { self.onHotkeyDown?() }
                 }
-                print("🎯 Połykanie klawisza!")
+                print("🎯 Połykanie klawisza (Main)!")
                 return nil // SWALLOW!
+            } else if code == cancelHotkey.code && currentModifiers == cancelHotkey.targetModifiers {
+                print("🎯 Cancel Hotkey Down!")
+                DispatchQueue.main.async { self.onCancelKeyDown?() }
+                return nil
+            } else if code == pauseHotkey.code && currentModifiers == pauseHotkey.targetModifiers {
+                if !isHoldMode {
+                    print("🎯 Pause Hotkey Down!")
+                    DispatchQueue.main.async { self.onPauseKeyDown?() }
+                    return nil
+                }
+            } else if code == assistantHotkey.code && currentModifiers == assistantHotkey.targetModifiers {
+                print("🎯 Assistant Hotkey Down!")
+                DispatchQueue.main.async { self.onAssistantKeyDown?() }
+                return nil
             }
         }
         
         if type == .keyUp {
-            if nsEvent.keyCode == UInt16(hotkeyCode) {
+            let code = Int(nsEvent.keyCode)
+            if code == mainHotkey.code {
                 if self.isKeyDown {
                     self.isKeyDown = false
-                    print("🎯 Hotkey Up!")
+                    print("🎯 Main Hotkey Up!")
                     if isHoldMode {
                         DispatchQueue.main.async { self.onHotkeyUp?() }
                     }
                 }
-                print("🎯 Połykanie keyUp!")
+                print("🎯 Połykanie keyUp (Main)!")
                 return nil // SWALLOW!
             }
         }
@@ -167,3 +227,4 @@ class HotkeyManager {
         return Unmanaged.passUnretained(event)
     }
 }
+

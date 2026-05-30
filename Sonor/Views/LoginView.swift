@@ -23,7 +23,6 @@ struct LoginView: View {
     @State private var isLoading = false
     @State private var acceptedPrivacyPolicy = false
     @State private var showOTPVerification = false
-    @State private var showSendEmailConfirmation = false
     @State private var otpDigits: [String] = Array(repeating: "\u{200B}", count: 6)
     @State private var oldOtpDigits: [String] = Array(repeating: "\u{200B}", count: 6)
     @FocusState private var focusedField: Int?
@@ -69,79 +68,7 @@ struct LoginView: View {
                 .frame(width: 48, height: 48)
                 .foregroundColor(.primary)
             
-            if showSendEmailConfirmation {
-                Text(t("Confirm Email"))
-                    .font(.system(size: 20, weight: .bold))
-                
-                Text(t("To continue, you need to confirm your email address. We will send a 6-digit code to your email."))
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 40)
-                    .padding(.bottom, 16)
-                
-                if let error = errorMessage {
-                    Text(error)
-                        .foregroundColor(.red)
-                        .font(.system(size: 13, weight: .medium))
-                        .padding(10)
-                        .frame(maxWidth: .infinity)
-                        .background(Color.red.opacity(0.1))
-                        .cornerRadius(8)
-                        .padding(.horizontal, 40)
-                }
-                
-                Button(action: {
-                    Task {
-                        isLoading = true
-                        do {
-                            try await authManager.register(email: email, password: password)
-                            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastRegisterOTPSentTime")
-                            lastSentRegisterEmail = email
-                            startResendTimer()
-                            errorMessage = nil
-                            withAnimation {
-                                showSendEmailConfirmation = false
-                                showOTPVerification = true
-                            }
-                        } catch {
-                            errorMessage = tError(error.localizedDescription)
-                        }
-                        isLoading = false
-                    }
-                }) {
-                    HStack {
-                        if isLoading {
-                            ProgressView().controlSize(.small)
-                                .padding(.trailing, 5)
-                        }
-                        Text(t("Confirm email"))
-                            .font(.system(size: 15, weight: .bold))
-                    }
-                    .foregroundColor(colorScheme == .dark ? .black : .white)
-                    .frame(maxWidth: .infinity)
-                    .padding(12)
-                    .background(colorScheme == .dark ? Color.white : Color.black)
-                    .cornerRadius(10)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 40)
-                .disabled(isLoading)
-                
-                Button(action: {
-                    withAnimation {
-                        showSendEmailConfirmation = false
-                        errorMessage = nil
-                    }
-                }) {
-                    Text(t("Back"))
-                        .font(.system(size: 13))
-                        .foregroundColor(.primary)
-                }
-                .buttonStyle(.plain)
-                .padding(.top, 8)
-                
-            } else if showOTPVerification {
+            if showOTPVerification {
                 Text(t("Confirm Email"))
                     .font(.system(size: 20, weight: .bold))
                 
@@ -221,10 +148,6 @@ struct LoginView: View {
                                     }
                                 }
                             }
-                            .onAppear {
-                                updateCooldown()
-                                startResendTimer()
-                            }
                     }
                 }
                 .padding(.vertical, 8)
@@ -238,6 +161,8 @@ struct LoginView: View {
                 }
                 .onAppear {
                     focusedField = 0
+                    updateCooldown()
+                    startResendTimer()
                 }
                 
                 Button(action: {
@@ -261,7 +186,8 @@ struct LoginView: View {
                 }
                 .buttonStyle(.plain)
                 .padding(.horizontal, 40)
-                .disabled(isLoading || otpToken.isEmpty)
+                .disabled(isLoading || otpToken.count < 6)
+                .keyboardShortcut(.defaultAction)
                 
                 Button(action: {
                     Task {
@@ -288,9 +214,9 @@ struct LoginView: View {
                 Button(action: {
                     withAnimation {
                         showOTPVerification = false
-                        showSendEmailConfirmation = false
                         errorMessage = nil
-                        otpDigits = Array(repeating: "", count: 6)
+                        otpDigits = Array(repeating: "\u{200B}", count: 6)
+                        oldOtpDigits = Array(repeating: "\u{200B}", count: 6)
                     }
                 }) {
                     Text(t("Back"))
@@ -431,6 +357,27 @@ struct LoginView: View {
             .keyboardShortcut(.defaultAction)
             
             Button(action: {
+                authManager.loginWithGoogle()
+            }) {
+                HStack {
+                    Image("GoogleLogo")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 16, height: 16)
+                    Text(t("Continue with Google"))
+                        .font(.system(size: 15, weight: .bold))
+                }
+                .foregroundColor(.primary)
+                .frame(maxWidth: .infinity)
+                .padding(12)
+                .background(Color.primary.opacity(0.05))
+                .cornerRadius(10)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 40)
+            .disabled(isLoading)
+            
+            Button(action: {
                 withAnimation {
                     isRegistering.toggle()
                 }
@@ -449,6 +396,11 @@ struct LoginView: View {
         }
         .padding(.vertical, 30)
         .frame(maxWidth: .infinity)
+        .onChange(of: authManager.isLoggedIn) { loggedIn in
+            if loggedIn {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }
     }
     
     private func handleAuth() async {
@@ -469,19 +421,22 @@ struct LoginView: View {
                 
                 if elapsed < 60 && isSameEmail {
                     resendCooldown = Int(60 - elapsed)
-                } else {
-                    resendCooldown = 0
-                }
-                
-                if elapsed >= 60 || !isSameEmail {
-                    withAnimation {
-                        showSendEmailConfirmation = true
-                    }
-                } else {
                     withAnimation {
                         showOTPVerification = true
                     }
                     startResendTimer()
+                } else {
+                    resendCooldown = 0
+                    // 2. Wywołaj rejestrację bezpośrednio tutaj, żeby sprawdzić unikalność w auth.users i wysłać email!
+                    try await authManager.register(email: email, password: password)
+                    
+                    UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastRegisterOTPSentTime")
+                    lastSentRegisterEmail = email
+                    startResendTimer()
+                    
+                    withAnimation {
+                        showOTPVerification = true
+                    }
                 }
             } else {
                 try await authManager.login(email: email, password: password)

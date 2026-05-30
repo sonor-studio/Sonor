@@ -26,13 +26,14 @@ class AppController: NSObject, ObservableObject {
     
     var isCurrentlyProcessing: Bool {
         let nonProcessingStatuses: Set<String> = ["Ready", "Cancelled", "No microphone permission", "Microphone error", "No text recognized.", "Error: Missing model", "Done!"]
-        return !isRecording && !nonProcessingStatuses.contains(statusText)
+        return !isRecording && !nonProcessingStatuses.contains(statusText) && !statusText.hasPrefix("Mode:")
     }
     
     @Published var audioLevel: Float = 0.0
     @Published var audioLevels: [Float] = Array(repeating: 0.01, count: 40)
     @Published var availableModes: [VoiceMode] = []
     @Published var currentMode: VoiceMode?
+    @Published var activeHotkeyMode: HotkeyMode = .click
     @Published var isPaused = false {
         didSet {
             audioManager.isPaused = isPaused
@@ -98,7 +99,67 @@ class AppController: NSObject, ObservableObject {
                 self.stopRecordingAndTranscribe()
             }
         }
+        HotkeyManager.shared.onCancelKeyDown = { [weak self] in
+            self?.cancelRecording()
+        }
+        HotkeyManager.shared.onPauseKeyDown = { [weak self] in
+            self?.togglePause()
+        }
+        HotkeyManager.shared.onAssistantKeyDown = { [weak self] in
+            self?.selectNextMode()
+        }
         HotkeyManager.shared.startListening()
+    }
+    
+    func selectNextMode() {
+        let terminalStates = ["Cancelled", "Done!", "No text recognized.", "Error: Missing model", "No microphone permission", "Microphone error"]
+        if isCurrentlyProcessing || terminalStates.contains(statusText) {
+            return
+        }
+        
+        let isGemmaDownloaded = ModelManager.shared.gemmaState == .downloaded
+        let functionalModes = availableModes.filter { mode in
+            isGemmaDownloaded || mode.prompt.isEmpty
+        }
+        
+        guard !functionalModes.isEmpty else { return }
+        
+        // If only one mode is functional (e.g. Raw Output when Gemma isn't downloaded),
+        // we can't switch to anything else.
+        guard functionalModes.count > 1 else {
+            print("⚠️ Only one functional assistant available (Gemma not downloaded). Skipping switcher.")
+            return
+        }
+        
+        let currentIndex = functionalModes.firstIndex(where: { $0.id == currentMode?.id }) ?? -1
+        let nextIndex = (currentIndex + 1) % functionalModes.count
+        let nextMode = functionalModes[nextIndex]
+        
+        changeMode(nextMode)
+    }
+    
+    func changeMode(_ nextMode: VoiceMode) {
+        let previousModeName = currentMode?.name ?? "Unknown"
+        self.selectMode(nextMode)
+        
+        // Show status temporarily
+        statusText = "Mode: \(nextMode.name)"
+        if self.hudWindow?.isVisible == false {
+            self.showHUD()
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            if self.isRecording {
+                if self.statusText.hasPrefix("Mode:") {
+                    self.statusText = "Listening..."
+                }
+            } else {
+                if self.statusText.hasPrefix("Mode:") {
+                    self.statusText = "Ready"
+                    self.hudWindow?.orderOut(nil)
+                }
+            }
+        }
     }
     
     func reloadModes() {
@@ -111,13 +172,16 @@ class AppController: NSObject, ObservableObject {
     
     func toggleRecording() {
         if isCurrentlyProcessing {
-            print("⚠️ [AppController] Ignorowanie skrótu - trwa przetwarzanie poprzedniego tekstu (status: \(statusText)).")
+            print("⚠️ [AppController] Ignorowanie skrótu - nakładka przetwarza.")
             return
         }
         
         if isRecording {
             stopRecordingAndTranscribe()
         } else {
+            let modeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
+            self.activeHotkeyMode = (modeString == "Hold" || modeString == "Przytrzymanie") ? .hold : .click
+            
             guard case .downloaded = ModelManager.shared.whisperState else {
                 print("❌ Whisper model not downloaded.")
                 self.isRecording = false
@@ -168,23 +232,30 @@ class AppController: NSObject, ObservableObject {
             self.showHUD()
             self.forceFloatingWindow()
             
-            Task {
-                if self.sonorContext == nil {
-                    let path = ModelManager.shared.whisperModelURL.path
-                    if FileManager.default.fileExists(atPath: path) {
-                        let context = await Task.detached(priority: .userInitiated) {
-                            return SonorContext(modelPath: path)
-                        }.value
-                        
-                        await MainActor.run {
-                            self.sonorContext = context
-                            self.statusText = "Listening..."
+            // Start recording immediately if already loaded, otherwise apply the 1-second delay for Initialization
+            if self.sonorContext == nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    Task {
+                        let path = ModelManager.shared.whisperModelURL.path
+                        if FileManager.default.fileExists(atPath: path) {
+                            let context = await Task.detached(priority: .userInitiated) {
+                                return SonorContext(modelPath: path)
+                            }.value
+                            
+                            await MainActor.run {
+                                self.sonorContext = context
+                                self.statusText = "Listening..."
+                                self.startRecordingProcess(selectedMode: selectedMode)
+                            }
                         }
                     }
                 }
-                
-                await MainActor.run {
-                    self.startRecordingProcess(selectedMode: selectedMode)
+            } else {
+                Task {
+                    await MainActor.run {
+                        self.statusText = "Listening..."
+                        self.startRecordingProcess(selectedMode: selectedMode)
+                    }
                 }
             }
         }
@@ -215,8 +286,14 @@ class AppController: NSObject, ObservableObject {
                 Task {
                     await SoundPlayer.shared.playSound(named: "Start")
                 }
+                // Krótkie opóźnienie 100ms, aby uniknąć kolizji CoreAudio 
+                // (jednoczesna inicjalizacja AVAudioPlayer i AVAudioEngine na startRecording)
+                try? await Task.sleep(nanoseconds: 100_000_000)
+                await MainActor.run {
+                    guard self.isRecording else { return }
+                    self.startRecording()
+                }
             }
-            self.startRecording()
         }
     }
     
@@ -251,6 +328,9 @@ class AppController: NSObject, ObservableObject {
     }
     
     private func performStartRecording() {
+        self.isPaused = false
+        let modeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
+        self.activeHotkeyMode = (modeString == "Hold" || modeString == "Przytrzymanie") ? .hold : .click
         do {
             print("🎙️ Próba startu nagrywania...")
             try self.audioManager.startRecording()
@@ -486,8 +566,14 @@ class AppController: NSObject, ObservableObject {
     }
     
     func cancelRecording() {
-        guard isRecording else { return }
+        guard isRecording || isCurrentlyProcessing else { return }
+        if statusText == "Inicjalizacja" || statusText == "Initializing" {
+            print("⚠️ [AppController] Ignorowanie anulowania - faza inicjalizacji.")
+            return
+        }
+        print("🛑 Anulowano nagrywanie.")
         isRecording = false
+        self.isPaused = false
         statusText = "Cancelled"
         
         restoreModeIfNeeded()
@@ -506,7 +592,7 @@ class AppController: NSObject, ObservableObject {
             self.audioLevels = Array(repeating: 0.01, count: 40)
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             self.statusText = "Ready"
             self.hudWindow?.orderOut(nil)
         }
@@ -626,7 +712,7 @@ class AppController: NSObject, ObservableObject {
 
             print("🎯 Wybrany tryb: \(selectedMode.name)")
 
-            let isPremium = await MainActor.run { AuthManager.shared.isLoggedIn }
+            let isPremium = await MainActor.run { AuthManager.shared.isLoggedIn && AuthManager.shared.accountTier == "premium" }
             let shouldRunLLM = !selectedMode.prompt.isEmpty && isPremium
 
             if !shouldRunLLM {
@@ -645,6 +731,11 @@ class AppController: NSObject, ObservableObject {
                     }
                 }
             } else {
+                if Task.isCancelled {
+                    await MainActor.run { self.restoreModeIfNeeded() }
+                    self.hideHUDAfterDelay()
+                    return
+                }
                 if !LLMManager.shared.isReady {
                     await MainActor.run {
                         withAnimation(.easeInOut(duration: 0.3)) {
@@ -652,6 +743,11 @@ class AppController: NSObject, ObservableObject {
                         }
                     }
                     await LLMManager.shared.ensureModelWarmed()
+                }
+                if Task.isCancelled {
+                    await MainActor.run { self.restoreModeIfNeeded() }
+                    self.hideHUDAfterDelay()
+                    return
                 }
                 
                 let statusLabel: String
@@ -734,6 +830,11 @@ class AppController: NSObject, ObservableObject {
                     systemPrompt = selectedMode.prompt
                 }
                 
+                if Task.isCancelled {
+                    await MainActor.run { self.restoreModeIfNeeded() }
+                    self.hideHUDAfterDelay()
+                    return
+                }
                 var didStartStreaming = false
                 var fullGeneratedText = ""
                 _ = await LLMManager.shared.cleanStream(text: correctedText, systemPrompt: systemPrompt) { token in
@@ -752,6 +853,12 @@ class AppController: NSObject, ObservableObject {
                     }
                 }
                 print("\n=== [LLM STREAMING FINISHED] ===")
+                
+                if Task.isCancelled {
+                    await MainActor.run { self.restoreModeIfNeeded() }
+                    self.hideHUDAfterDelay()
+                    return
+                }
                 
                 // Zapisujemy do pamięci RAM na wątku głównym
                 await MainActor.run {

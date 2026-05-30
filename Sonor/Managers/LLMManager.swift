@@ -64,6 +64,10 @@ final class LLMManager {
             
             // Streaming results token by token
             for try await token in session.streamResponse(to: prompt) {
+                if Task.isCancelled {
+                    print("🛑 [LLMManager] cleanStream task cancelled! Stopping stream.")
+                    break
+                }
                 fullText += token
                 onToken(token)
             }

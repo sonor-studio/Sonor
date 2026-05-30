@@ -65,6 +65,7 @@
 		FAF8B4F32FC1212000CD090D /* Exceptions for "Sonor" folder in "Sonor" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				Info.plist,
 				"Resources/Icons/Icon Exports/Icon-iOS-ClearDark-1024x1024@1x.png",
 				"Resources/Icons/Icon Exports/Icon-iOS-ClearLight-1024x1024@1x.png",
 				"Resources/Icons/Icon Exports/Icon-iOS-Dark-1024x1024@1x.png",
@@ -493,6 +494,7 @@
 					/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src,
 					"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src/ggml-metal",
 				);
+				INFOPLIST_FILE = Sonor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Sonor;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
@@ -569,6 +571,7 @@
 					/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src,
 					"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src/ggml-metal",
 				);
+				INFOPLIST_FILE = Sonor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Sonor;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
