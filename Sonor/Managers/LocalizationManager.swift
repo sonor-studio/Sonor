@@ -368,7 +368,10 @@ public class LocalizationManager: ObservableObject {
             "Confirm Email": "E-Mail bestätigen",
             "Please enter the 6-character confirmation code sent to your email.": "Bitte geben Sie den 6-stelligen Bestätigungscode ein, der an Ihre E-Mail gesendet wurde.",
             "Confirmation Code": "Bestätigungscode",
-            "Verify": "Bestätigen"
+            "Verify": "Bestätigen",
+            "Resend Email": "E-Mail erneut senden",
+            "To continue, you need to confirm your email address. We will send a 6-digit code to your email.": "Um fortzufahren, müssen Sie Ihre E-Mail-Adresse bestätigen. Wir senden einen 6-stelligen Code an Ihre E-Mail.",
+            "Confirm email": "E-Mail bestätigen"
     ],
         "es": [
             "You can safely resume the download later without losing progress.": "Puede reanudar la descarga de forma segura más tarde sin perder progreso.",
@@ -727,7 +730,10 @@ public class LocalizationManager: ObservableObject {
             "Confirm Email": "Confirmar correo electrónico",
             "Please enter the 6-character confirmation code sent to your email.": "Por favor, introduzca el código de confirmación de 6 caracteres enviado a su correo electrónico.",
             "Confirmation Code": "Código de confirmación",
-            "Verify": "Verificar"
+            "Verify": "Verificar",
+            "Resend Email": "Reenviar correo electrónico",
+            "To continue, you need to confirm your email address. We will send a 6-digit code to your email.": "Para continuar, debe confirmar su dirección de correo electrónico. Le enviaremos un código de 6 dígitos a su correo electrónico.",
+            "Confirm email": "Confirmar correo electrónico"
     ],
         "fr": [
             "You can safely resume the download later without losing progress.": "Vous pouvez reprendre le téléchargement en toute sécurité plus tard sans perdre votre progression.",
@@ -1087,7 +1093,10 @@ public class LocalizationManager: ObservableObject {
             "Confirm Email": "Confirmer l'e-mail",
             "Please enter the 6-character confirmation code sent to your email.": "Veuillez entrer le code de confirmation à 6 caractères envoyé à votre adresse e-mail.",
             "Confirmation Code": "Code de confirmation",
-            "Verify": "Vérifier"
+            "Verify": "Vérifier",
+            "Resend Email": "Renvoyer l'e-mail",
+            "To continue, you need to confirm your email address. We will send a 6-digit code to your email.": "Pour continuer, vous devez confirmer votre adresse e-mail. Nous enverrons un code à 6 chiffres sur votre e-mail.",
+            "Confirm email": "Confirmer l'e-mail"
     ],
         "it": [
             "You can safely resume the download later without losing progress.": "Puoi riprendere in modo sicuro il download più tardi senza perdere i progressi.",
@@ -1444,7 +1453,10 @@ public class LocalizationManager: ObservableObject {
             "Confirm Email": "Conferma l'email",
             "Please enter the 6-character confirmation code sent to your email.": "Inserisci il codice di conferma a 6 caratteri inviato alla tua email.",
             "Confirmation Code": "Codice di conferma",
-            "Verify": "Verifica"
+            "Verify": "Verifica",
+            "Resend Email": "Reinvia l'email",
+            "To continue, you need to confirm your email address. We will send a 6-digit code to your email.": "Per continuare, devi confermare il tuo indirizzo email. Invieremo un codice a 6 cifre alla tua email.",
+            "Confirm email": "Conferma l'email"
     ],
         "ja": [
             "You can safely resume the download later without losing progress.": "進捗を失うことなく、後で安全にダウンロードを再開できます。",
@@ -1801,9 +1813,13 @@ public class LocalizationManager: ObservableObject {
             "Confirm Email": "メールを確認する",
             "Please enter the 6-character confirmation code sent to your email.": "メールに送信された6文字の確認コードを入力してください。",
             "Confirmation Code": "確認コード",
-            "Verify": "確認"
+            "Verify": "確認",
+            "Resend Email": "メールを再送信する",
+            "To continue, you need to confirm your email address. We will send a 6-digit code to your email.": "続行するには、メールアドレスを確認する必要があります。メールに6桁のコードを送信します。",
+            "Confirm email": "メールを確認する"
     ],
         "pl": [
+            "Resend Email": "Wyślij ponownie e-mail",
             "You can safely resume the download later without losing progress.": "Możesz bezpiecznie wznowić pobieranie później, bez utraty postępów.",
             "Scan QR Code": "Zeskanuj kod QR",
             "Scan the code with your phone to buy me a coffee on Buy Me a Coffee.": "Zeskanuj kod telefonem, aby postawić mi kawę w serwisie Buy Me a Coffee.",
@@ -2155,12 +2171,16 @@ public class LocalizationManager: ObservableObject {
             "Password must contain at least one uppercase letter.": "Hasło musi zawierać co najmniej jedną wielką literę.",
             "Password must contain at least one lowercase letter.": "Hasło musi zawierać co najmniej jedną małą literę.",
             "Password must contain at least one number.": "Hasło musi zawierać co najmniej jedną cyfrę.",
-            "Token has expired or is invalid.": "Nieprawidłowy lub wygasły token.",
+            "Token has expired or is invalid.": "Nieprawidłowy lub wygasły kod.",
             "Please connect to the internet to perform this action.": "Połącz się z internetem, aby wykonać tę akcję.",
             "Confirm Email": "Potwierdź e-mail",
             "Please enter the 6-character confirmation code sent to your email.": "Proszę wpisać 6-znakowy kod potwierdzający wysłany na Twój e-mail.",
             "Confirmation Code": "Kod potwierdzający",
-            "Verify": "Potwierdź"
+            "Verify": "Potwierdź",
+            "Incorrect old password.": "Stare hasło jest nieprawidłowe.",
+            "New password cannot be the same as the old password.": "Nowe hasło nie może być takie samo jak stare.",
+            "To continue, you need to confirm your email address. We will send a 6-digit code to your email.": "Aby kontynuować, musisz potwierdzić swój adres e-mail. Wyślemy 6-cyfrowy kod na Twój e-mail.",
+            "Confirm email": "Potwierdź e-mail"
     ],
         "pt": [
             "You can safely resume the download later without losing progress.": "Você pode retomar o download com segurança mais tarde sem perder o progresso.",
@@ -2519,7 +2539,10 @@ public class LocalizationManager: ObservableObject {
             "Confirm Email": "Confirmar E-mail",
             "Please enter the 6-character confirmation code sent to your email.": "Por favor, insira o código de confirmação de 6 caracteres enviado para o seu e-mail.",
             "Confirmation Code": "Código de Confirmação",
-            "Verify": "Verificar"
+            "Verify": "Verificar",
+            "Resend Email": "Reenviar e-mail",
+            "To continue, you need to confirm your email address. We will send a 6-digit code to your email.": "Para continuar, você precisa confirmar seu endereço de e-mail. Enviaremos um código de 6 dígitos para o seu e-mail.",
+            "Confirm email": "Confirmar e-mail"
     ],
         "zh": [
             "You can safely resume the download later without losing progress.": "您可以稍后安全地恢复下载而不会丢失进度。",
@@ -2876,7 +2899,10 @@ public class LocalizationManager: ObservableObject {
             "Confirm Email": "确认电子邮件",
             "Please enter the 6-character confirmation code sent to your email.": "请输入发送到您电子邮件的 6 字符确认代码。",
             "Confirmation Code": "确认代码",
-            "Verify": "验证"
+            "Verify": "验证",
+            "Resend Email": "重新发送电子邮件",
+            "To continue, you need to confirm your email address. We will send a 6-digit code to your email.": "要继续，您需要确认您的电子邮件地址。我们将向您的电子邮件发送一个 6 位数字的验证码。",
+            "Confirm email": "确认电子邮件"
     ]
     ]
     
@@ -2890,17 +2916,17 @@ public class LocalizationManager: ObservableObject {
     public func translateError(_ msg: String) -> String {
         let lower = msg.lowercased()
         
-        if lower.contains("already registered") || lower.contains("already exists") {
+        if lower.contains("already registered") || lower.contains("already exists") || lower.contains("email already taken") || lower.contains("email address already registered") || lower.contains("user_already_exists") {
             switch appLanguage {
-            case "pl": return "Użytkownik już istnieje."
-            case "de": return "Benutzer existiert bereits."
-            case "es": return "El usuario ya existe."
-            case "fr": return "L'utilisateur existe déjà."
-            case "it": return "L'utente esiste già."
-            case "ja": return "ユーザーは既に存在します。"
-            case "pt": return "O usuário já existe."
-            case "zh": return "用户已存在。"
-            default: return "User already exists."
+            case "pl": return "To konto już istnieje."
+            case "de": return "Dieses Konto existiert bereits."
+            case "es": return "Esta cuenta ya existe."
+            case "fr": return "Ce compte existe déjà."
+            case "it": return "Questo account esiste già."
+            case "ja": return "このアカウントは既に存在します。"
+            case "pt": return "Esta conta já existe."
+            case "zh": return "该账户已存在。"
+            default: return "This account already exists."
             }
         }
         
@@ -2915,6 +2941,20 @@ public class LocalizationManager: ObservableObject {
             case "pt": return "E-mail ou senha incorretos."
             case "zh": return "电子邮件或密码错误。"
             default: return "Invalid email or password."
+            }
+        }
+        
+        if lower.contains("token has expired") || (lower.contains("invalid") && (lower.contains("token") || lower.contains("otp"))) {
+            switch appLanguage {
+            case "pl": return "Nieprawidłowy lub wygasły kod."
+            case "de": return "Token ist abgelaufen oder ungültig."
+            case "es": return "El token ha expirado o es inválido."
+            case "fr": return "Le jeton a expiré ou est invalide."
+            case "it": return "Il token è scaduto o non valido."
+            case "ja": return "トークンの有効期限が切れているか、無効です。"
+            case "pt": return "O token expirou ou é inválido."
+            case "zh": return "令牌已过期或无效。"
+            default: return "Token has expired or is invalid."
             }
         }
         

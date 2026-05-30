@@ -64,7 +64,7 @@ class AuthManager: ObservableObject {
             throw NSError(domain: "AuthError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No valid response from server"])
         }
         
-        if httpResponse.statusCode == 200 {
+        if (200...299).contains(httpResponse.statusCode) {
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let accessToken = json["access_token"] as? String {
                 
@@ -109,7 +109,14 @@ class AuthManager: ObservableObject {
             throw NSError(domain: "AuthError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No valid response from server"])
         }
         
-        if httpResponse.statusCode == 200 {
+        if (200...299).contains(httpResponse.statusCode) {
+            // Check if user already exists using the identities array trick
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                let userObj = json["user"] as? [String: Any] ?? json
+                if let identities = userObj["identities"] as? [[String: Any]], identities.isEmpty {
+                    throw NSError(domain: "AuthError", code: 400, userInfo: [NSLocalizedDescriptionKey: "User already registered"])
+                }
+            }
             // Rejestracja powiodła się. Wymagane potwierdzenie OTP.
             // Zwracamy bez błędu, a widok wyświetli okno potwierdzenia.
             return
@@ -117,6 +124,44 @@ class AuthManager: ObservableObject {
             let errorMsg = extractErrorMessage(from: data)
             throw NSError(domain: "AuthError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
         }
+    }
+    
+    func checkEmailExists(email: String) async -> Bool {
+        guard !supabaseUrl.isEmpty, !supabaseAnonKey.isEmpty else { return false }
+        
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        
+        // Try profiles table (lowercase)
+        if let url = URL(string: "\(supabaseUrl)/rest/v1/profiles?email=eq.\(trimmedEmail)&select=id") {
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+            
+            if let (data, response) = try? await URLSession.shared.data(for: request),
+               let httpResponse = response as? HTTPURLResponse,
+               (200...299).contains(httpResponse.statusCode),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+               !json.isEmpty {
+                return true
+            }
+        }
+        
+        // Try Profiles table (uppercase)
+        if let url = URL(string: "\(supabaseUrl)/rest/v1/Profiles?email=eq.\(trimmedEmail)&select=id") {
+            var request = URLRequest(url: url)
+            request.httpMethod = "GET"
+            request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+            
+            if let (data, response) = try? await URLSession.shared.data(for: request),
+               let httpResponse = response as? HTTPURLResponse,
+               (200...299).contains(httpResponse.statusCode),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]],
+               !json.isEmpty {
+                return true
+            }
+        }
+        
+        return false
     }
     
     func verifyOTP(email: String, token: String) async throws {
@@ -142,7 +187,7 @@ class AuthManager: ObservableObject {
             throw NSError(domain: "AuthError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No valid response from server"])
         }
         
-        if httpResponse.statusCode == 200 {
+        if (200...299).contains(httpResponse.statusCode) {
             if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                let accessToken = json["access_token"] as? String {
                 
@@ -187,13 +232,83 @@ class AuthManager: ObservableObject {
             throw NSError(domain: "AuthError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No valid response from server"])
         }
         
-        if httpResponse.statusCode != 200 {
+        if !(200...299).contains(httpResponse.statusCode) {
+            let errorMsg = extractErrorMessage(from: data)
+            throw NSError(domain: "AuthError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+        }
+    }
+    
+    func requestPasswordChangeOTP(email: String) async throws {
+        guard !supabaseUrl.isEmpty, !supabaseAnonKey.isEmpty else {
+            throw NSError(domain: "AuthError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Missing Supabase keys in .env file"])
+        }
+        
+        guard let url = URL(string: "\(supabaseUrl)/auth/v1/recover") else {
+            throw NSError(domain: "AuthError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid Supabase URL"])
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = ["email": email]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AuthError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No valid response from server"])
+        }
+        
+        if !(200...299).contains(httpResponse.statusCode) {
+            let errorMsg = extractErrorMessage(from: data)
+            throw NSError(domain: "AuthError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+        }
+    }
+    
+    func verifyPasswordChangeOTP(email: String, token: String) async throws {
+        guard !supabaseUrl.isEmpty, !supabaseAnonKey.isEmpty else {
+            throw NSError(domain: "AuthError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Missing Supabase keys in .env file"])
+        }
+        
+        guard let url = URL(string: "\(supabaseUrl)/auth/v1/verify") else {
+            throw NSError(domain: "AuthError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid Supabase URL"])
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = ["type": "recovery", "email": email, "token": token]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AuthError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No valid response from server"])
+        }
+        
+        if (200...299).contains(httpResponse.statusCode) {
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let accessToken = json["access_token"] as? String {
+                
+                // Save new recovery session
+                saveToKeychain(key: tokenKey, value: accessToken)
+                saveToKeychain(key: emailKey, value: email)
+                
+                self.isLoggedIn = true
+                self.currentUserEmail = email
+            }
+        } else {
             let errorMsg = extractErrorMessage(from: data)
             throw NSError(domain: "AuthError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
         }
     }
     
     func logout() {
+        ModelManager.shared.pauseAllDownloads()
         deleteFromKeychain(key: tokenKey)
         deleteFromKeychain(key: emailKey)
         self.isLoggedIn = false
@@ -202,6 +317,7 @@ class AuthManager: ObservableObject {
     }
     
     func deleteAccount() async throws {
+        ModelManager.shared.pauseAllDownloads()
         print("[AuthManager] Rozpoczęcie procesu usuwania konta...")
         
         let token = getFromKeychain(key: tokenKey)
@@ -291,7 +407,7 @@ class AuthManager: ObservableObject {
             throw NSError(domain: "AuthError", code: 500, userInfo: [NSLocalizedDescriptionKey: "Brak odpowiedzi od serwera."])
         }
         
-        if httpResponse.statusCode == 200 {
+        if (200...299).contains(httpResponse.statusCode) {
             print("[AuthManager] Hasło zostało pomyślnie zmienione.")
         } else {
             let errorMsg = extractErrorMessage(from: data)

@@ -210,6 +210,21 @@ class ModelManager: ObservableObject {
         }
     }
     
+    func pauseWhisperDownload() {
+        print("⚠️ [Whisper] Pausing Whisper download...")
+        activeWhisperDownloader?.cancel()
+        activeWhisperDownloader = nil
+        
+        var finalProgress = 0.0
+        let incompleteURL = whisperModelURL.deletingLastPathComponent().appendingPathComponent(whisperModelURL.lastPathComponent + ".incomplete")
+        if let attrs = try? FileManager.default.attributesOfItem(atPath: incompleteURL.path),
+           let size = attrs[.size] as? Int64 {
+            finalProgress = min(Double(size) / 574_823_136.0, 0.99)
+        }
+        
+        whisperState = .paused(progress: finalProgress)
+    }
+
     func cancelWhisperDownload() {
         print("⚠️ [Whisper] Cancelling Whisper download...")
         activeWhisperDownloader?.cancel()
@@ -219,6 +234,15 @@ class ModelManager: ObservableObject {
         // Clean up the incomplete download file on cancellation
         let incompleteURL = whisperModelURL.deletingLastPathComponent().appendingPathComponent(whisperModelURL.lastPathComponent + ".incomplete")
         try? FileManager.default.removeItem(at: incompleteURL)
+    }
+    
+    func pauseAllDownloads() {
+        if case .downloading = whisperState {
+            pauseWhisperDownload()
+        }
+        if case .downloading = gemmaState {
+            pauseGemmaDownload()
+        }
     }
     
     func uninstallWhisper() {

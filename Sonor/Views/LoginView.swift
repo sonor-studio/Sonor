@@ -23,67 +23,43 @@ struct LoginView: View {
     @State private var isLoading = false
     @State private var acceptedPrivacyPolicy = false
     @State private var showOTPVerification = false
-    @State private var otpDigits: [String] = Array(repeating: "", count: 6)
+    @State private var showSendEmailConfirmation = false
+    @State private var otpDigits: [String] = Array(repeating: "\u{200B}", count: 6)
+    @State private var oldOtpDigits: [String] = Array(repeating: "\u{200B}", count: 6)
     @FocusState private var focusedField: Int?
-    @State private var resendCooldown: Int = 60
+    @State private var resendCooldown: Int = UserDefaults.standard.integer(forKey: "resendCooldown")
     @State private var resendTimerTask: Task<Void, Never>? = nil
+    @State private var lastSentRegisterEmail = ""
+    
+    private func updateCooldown() {
+        let lastSent = UserDefaults.standard.double(forKey: "lastRegisterOTPSentTime")
+        let elapsed = Date().timeIntervalSince1970 - lastSent
+        if elapsed < 60 {
+            resendCooldown = Int(60 - elapsed)
+        } else {
+            resendCooldown = 0
+            resendTimerTask?.cancel()
+        }
+    }
     
     private func startResendTimer() {
-        resendCooldown = 60
+        updateCooldown()
         resendTimerTask?.cancel()
         resendTimerTask = Task {
-            while resendCooldown > 0 {
+            while true {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 if Task.isCancelled { break }
                 await MainActor.run {
-                    resendCooldown -= 1
+                    updateCooldown()
                 }
+                if resendCooldown <= 0 { break }
             }
         }
     }
     
-    private func binding(for index: Int) -> Binding<String> {
-        Binding<String>(
-            get: {
-                let val = self.otpDigits[index]
-                return val.isEmpty ? "\u{200B}" : val
-            },
-            set: { newValue in
-                let oldVal = self.otpDigits[index]
-                let filtered = newValue.filter { $0.isNumber }
-                
-                if filtered.count > 1 {
-                    let chars = Array(filtered.prefix(6))
-                    for i in 0..<chars.count {
-                        self.otpDigits[i] = String(chars[i])
-                    }
-                    self.focusedField = min(chars.count, 5)
-                } else if filtered.count == 1 {
-                    self.otpDigits[index] = filtered
-                    if index < 5 { self.focusedField = index + 1 }
-                } else {
-                    if newValue == "" {
-                        if oldVal.isEmpty {
-                            if index > 0 {
-                                self.focusedField = index - 1
-                                self.otpDigits[index - 1] = ""
-                            }
-                        } else {
-                            self.otpDigits[index] = ""
-                            if index > 0 {
-                                self.focusedField = index - 1
-                            }
-                        }
-                    } else {
-                        self.otpDigits[index] = ""
-                    }
-                }
-            }
-        )
-    }
     
     private var otpToken: String {
-        otpDigits.joined()
+        otpDigits.joined().filter { $0.isNumber }
     }
     var body: some View {
         VStack(spacing: 14) {
@@ -93,7 +69,79 @@ struct LoginView: View {
                 .frame(width: 48, height: 48)
                 .foregroundColor(.primary)
             
-            if showOTPVerification {
+            if showSendEmailConfirmation {
+                Text(t("Confirm Email"))
+                    .font(.system(size: 20, weight: .bold))
+                
+                Text(t("To continue, you need to confirm your email address. We will send a 6-digit code to your email."))
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 16)
+                
+                if let error = errorMessage {
+                    Text(error)
+                        .foregroundColor(.red)
+                        .font(.system(size: 13, weight: .medium))
+                        .padding(10)
+                        .frame(maxWidth: .infinity)
+                        .background(Color.red.opacity(0.1))
+                        .cornerRadius(8)
+                        .padding(.horizontal, 40)
+                }
+                
+                Button(action: {
+                    Task {
+                        isLoading = true
+                        do {
+                            try await authManager.register(email: email, password: password)
+                            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastRegisterOTPSentTime")
+                            lastSentRegisterEmail = email
+                            startResendTimer()
+                            errorMessage = nil
+                            withAnimation {
+                                showSendEmailConfirmation = false
+                                showOTPVerification = true
+                            }
+                        } catch {
+                            errorMessage = tError(error.localizedDescription)
+                        }
+                        isLoading = false
+                    }
+                }) {
+                    HStack {
+                        if isLoading {
+                            ProgressView().controlSize(.small)
+                                .padding(.trailing, 5)
+                        }
+                        Text(t("Confirm email"))
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(12)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(10)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 40)
+                .disabled(isLoading)
+                
+                Button(action: {
+                    withAnimation {
+                        showSendEmailConfirmation = false
+                        errorMessage = nil
+                    }
+                }) {
+                    Text(t("Back"))
+                        .font(.system(size: 13))
+                        .foregroundColor(.primary)
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 8)
+                
+            } else if showOTPVerification {
                 Text(t("Confirm Email"))
                     .font(.system(size: 20, weight: .bold))
                 
@@ -117,7 +165,7 @@ struct LoginView: View {
                 
                 HStack(spacing: 8) {
                     ForEach(0..<6, id: \.self) { index in
-                        TextField("", text: binding(for: index))
+                        TextField("", text: $otpDigits[index])
                             .textFieldStyle(.plain)
                             .font(.system(size: 24, weight: .bold))
                             .multilineTextAlignment(.center)
@@ -129,12 +177,60 @@ struct LoginView: View {
                                     .stroke(focusedField == index ? Color.blue : Color.clear, lineWidth: 2)
                             )
                             .focused($focusedField, equals: index)
+                            .onChange(of: otpDigits[index]) { newValue in
+                                let oldVal = oldOtpDigits[index]
+                                let filtered = newValue.filter { $0.isNumber }
+                                
+                                if filtered.isEmpty {
+                                    if newValue == "" {
+                                        // USER PRESSED BACKSPACE
+                                        otpDigits[index] = "\u{200B}"
+                                        oldOtpDigits[index] = "\u{200B}"
+                                        if index > 0 {
+                                            focusedField = index - 1
+                                        }
+                                    } else if newValue == "\u{200B}" {
+                                        // Recursive call after setting "\u{200B}"
+                                        oldOtpDigits[index] = "\u{200B}"
+                                    } else {
+                                        // WPISANO LITERĘ
+                                        // Odrzucamy literę, wracamy do poprzedniej wartości bez zmiany fokusu
+                                        otpDigits[index] = oldVal
+                                    }
+                                    return
+                                }
+                                
+                                // Wpisano lub wklejono więcej cyfr
+                                if filtered.count > 1 {
+                                    let chars = Array(filtered.prefix(6))
+                                    for i in 0..<chars.count {
+                                        if index + i < 6 {
+                                            otpDigits[index + i] = String(chars[i])
+                                            oldOtpDigits[index + i] = String(chars[i])
+                                        }
+                                    }
+                                    focusedField = min(index + chars.count, 5)
+                                } else { // filtered.count == 1
+                                    otpDigits[index] = filtered
+                                    oldOtpDigits[index] = filtered
+                                    
+                                    if oldVal != filtered {
+                                        if index < 5 {
+                                            focusedField = index + 1
+                                        }
+                                    }
+                                }
+                            }
+                            .onAppear {
+                                updateCooldown()
+                                startResendTimer()
+                            }
                     }
                 }
                 .padding(.vertical, 8)
                 .onChange(of: focusedField) { newValue in
                     if let newIndex = newValue {
-                        let firstEmpty = otpDigits.firstIndex(where: { $0.isEmpty }) ?? 5
+                        let firstEmpty = otpDigits.firstIndex(where: { $0 == "\u{200B}" || $0.isEmpty }) ?? 5
                         if newIndex > firstEmpty {
                             focusedField = firstEmpty
                         }
@@ -172,6 +268,7 @@ struct LoginView: View {
                         isLoading = true
                         do {
                             try await authManager.resendOTP(email: email)
+                            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastRegisterOTPSentTime")
                             startResendTimer()
                             errorMessage = nil
                         } catch {
@@ -182,7 +279,7 @@ struct LoginView: View {
                 }) {
                     Text(resendCooldown > 0 ? t("Resend Email") + " (\(resendCooldown)s)" : t("Resend Email"))
                         .font(.system(size: 13))
-                        .foregroundColor(resendCooldown > 0 ? .secondary : .blue)
+                        .foregroundColor(resendCooldown > 0 ? .secondary : .primary)
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 8)
@@ -191,12 +288,14 @@ struct LoginView: View {
                 Button(action: {
                     withAnimation {
                         showOTPVerification = false
+                        showSendEmailConfirmation = false
                         errorMessage = nil
+                        otpDigits = Array(repeating: "", count: 6)
                     }
                 }) {
                     Text(t("Back"))
                         .font(.system(size: 13))
-                        .foregroundColor(.blue)
+                        .foregroundColor(.primary)
                 }
                 .buttonStyle(.plain)
                 .padding(.top, 4)
@@ -340,7 +439,7 @@ struct LoginView: View {
             }) {
                 Text(isRegistering ? t("Already have an account? Log In") : t("Don't have an account? Sign Up"))
                     .font(.system(size: 13))
-                    .foregroundColor(.blue)
+                    .foregroundColor(.primary)
             }
             .buttonStyle(.plain)
             .padding(.top, 4)
@@ -357,12 +456,33 @@ struct LoginView: View {
         errorMessage = nil
         do {
             if isRegistering {
-                try await authManager.register(email: email, password: password)
-                // Registration succeeded, show OTP Verification
-                withAnimation {
-                    showOTPVerification = true
+                // 1. Sprawdź bezpośrednio w bazie danych, czy e-mail istnieje
+                let exists = await authManager.checkEmailExists(email: email)
+                if exists {
+                    throw NSError(domain: "AuthError", code: 400, userInfo: [NSLocalizedDescriptionKey: "User already registered"])
                 }
-                startResendTimer()
+                
+                let lastSent = UserDefaults.standard.double(forKey: "lastRegisterOTPSentTime")
+                let elapsed = Date().timeIntervalSince1970 - lastSent
+                
+                let isSameEmail = (email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == lastSentRegisterEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
+                
+                if elapsed < 60 && isSameEmail {
+                    resendCooldown = Int(60 - elapsed)
+                } else {
+                    resendCooldown = 0
+                }
+                
+                if elapsed >= 60 || !isSameEmail {
+                    withAnimation {
+                        showSendEmailConfirmation = true
+                    }
+                } else {
+                    withAnimation {
+                        showOTPVerification = true
+                    }
+                    startResendTimer()
+                }
             } else {
                 try await authManager.login(email: email, password: password)
                 presentationMode.wrappedValue.dismiss()

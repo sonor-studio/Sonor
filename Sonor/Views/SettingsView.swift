@@ -4379,6 +4379,47 @@ struct UserProfileView: View {
     @State private var isSavingPassword = false
     @State private var showSuccessMessage = false
     
+    // OTP States for Password Change
+    @State private var isVerifyingOTPForPassword = false
+    @State private var showSendEmailConfirmation = false
+    @State private var otpDigits: [String] = Array(repeating: "\u{200B}", count: 6)
+    @State private var oldOtpDigits: [String] = Array(repeating: "\u{200B}", count: 6)
+    @FocusState private var focusedField: Int?
+    @State private var resendCooldown: Int = 60
+    @State private var resendTimerTask: Task<Void, Never>? = nil
+    @State private var isLoadingOTP = false
+    
+    private func updateCooldown() {
+        let lastSent = UserDefaults.standard.double(forKey: "lastPasswordOTPSentTime")
+        let elapsed = Date().timeIntervalSince1970 - lastSent
+        if elapsed < 60 {
+            resendCooldown = Int(60 - elapsed)
+        } else {
+            resendCooldown = 0
+            resendTimerTask?.cancel()
+        }
+    }
+    
+    private func startResendTimer() {
+        updateCooldown()
+        resendTimerTask?.cancel()
+        resendTimerTask = Task {
+            while true {
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                if Task.isCancelled { break }
+                await MainActor.run {
+                    updateCooldown()
+                }
+                if resendCooldown <= 0 { break }
+            }
+        }
+    }
+    
+    
+    private var otpToken: String {
+        otpDigits.joined().filter { $0.isNumber }
+    }
+    
     private var formattedCreationDate: String {
         guard let date = authManager.currentUserCreatedAt else {
             return t("Loading...")
@@ -4435,10 +4476,281 @@ struct UserProfileView: View {
                             withAnimation {
                                 showSuccessMessage = false
                                 isChangingPassword = false
+                                otpDigits = Array(repeating: "", count: 6)
                             }
                         }
                     }
                 }
+            } else if showSendEmailConfirmation {
+                VStack(spacing: 14) {
+                    Text(t("Confirm Email"))
+                        .font(.system(size: 20, weight: .bold))
+                        .padding(.top, 10)
+                    
+                    Text(t("To continue, you need to confirm your email address. We will send a 6-digit code to your email."))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                        .padding(.bottom, 16)
+                    
+                    if let error = changePasswordError {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.system(size: 13, weight: .medium))
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                            .padding(.horizontal, 40)
+                    }
+                    
+                    Button(action: {
+                        Task {
+                            isLoadingOTP = true
+                            changePasswordError = nil
+                            do {
+                                if let email = authManager.currentUserEmail {
+                                    try await authManager.requestPasswordChangeOTP(email: email)
+                                    UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastPasswordOTPSentTime")
+                                    startResendTimer()
+                                    withAnimation {
+                                        showSendEmailConfirmation = false
+                                        isVerifyingOTPForPassword = true
+                                    }
+                                }
+                            } catch {
+                                changePasswordError = tError(error.localizedDescription)
+                            }
+                            isLoadingOTP = false
+                        }
+                    }) {
+                        HStack {
+                            if isLoadingOTP {
+                                ProgressView().controlSize(.small)
+                                    .padding(.trailing, 5)
+                            }
+                            Text(t("Confirm email"))
+                                .font(.system(size: 15, weight: .bold))
+                        }
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                        .frame(maxWidth: .infinity)
+                        .padding(12)
+                        .background(colorScheme == .dark ? Color.white : Color.black)
+                        .cornerRadius(10)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 40)
+                    .disabled(isLoadingOTP)
+                    
+                    Button(action: {
+                        withAnimation {
+                            showSendEmailConfirmation = false
+                            changePasswordError = nil
+                        }
+                    }) {
+                        Text(t("Cancel"))
+                            .font(.system(size: 13))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 8)
+                    
+                    Spacer()
+                }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            } else if isVerifyingOTPForPassword {
+                VStack(spacing: 14) {
+                    Text(t("Confirm Email"))
+                        .font(.system(size: 20, weight: .bold))
+                        .padding(.top, 10)
+                    
+                    Text(t("Please enter the 6-character confirmation code sent to your email."))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                        .padding(.bottom, 4)
+                    
+                    if let error = changePasswordError {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.system(size: 13, weight: .medium))
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                            .padding(.horizontal, 40)
+                    }
+                    
+                    HStack(spacing: 8) {
+                        ForEach(0..<6, id: \.self) { index in
+                            TextField("", text: $otpDigits[index])
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 24, weight: .bold))
+                                .multilineTextAlignment(.center)
+                                .frame(width: 40, height: 50)
+                                .background(Color.primary.opacity(0.05))
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(focusedField == index ? Color.blue : Color.clear, lineWidth: 2)
+                                )
+                                .focused($focusedField, equals: index)
+                                .onChange(of: otpDigits[index]) { newValue in
+                                    let oldVal = oldOtpDigits[index]
+                                    let filtered = newValue.filter { $0.isNumber }
+                                    
+                                    if filtered.isEmpty {
+                                        if newValue == "" {
+                                            // USER PRESSED BACKSPACE
+                                            otpDigits[index] = "\u{200B}"
+                                            oldOtpDigits[index] = "\u{200B}"
+                                            if index > 0 {
+                                                focusedField = index - 1
+                                            }
+                                        } else if newValue == "\u{200B}" {
+                                            // Recursive call after setting "\u{200B}"
+                                            oldOtpDigits[index] = "\u{200B}"
+                                        } else {
+                                            // WPISANO LITERĘ
+                                            // Odrzucamy literę, wracamy do poprzedniej wartości bez zmiany fokusu
+                                            otpDigits[index] = oldVal
+                                        }
+                                        return
+                                    }
+                                    
+                                    // Wpisano lub wklejono więcej cyfr
+                                    if filtered.count > 1 {
+                                        let chars = Array(filtered.prefix(6))
+                                        for i in 0..<chars.count {
+                                            if index + i < 6 {
+                                                otpDigits[index + i] = String(chars[i])
+                                                oldOtpDigits[index + i] = String(chars[i])
+                                            }
+                                        }
+                                        focusedField = min(index + chars.count, 5)
+                                    } else { // filtered.count == 1
+                                        otpDigits[index] = filtered
+                                        oldOtpDigits[index] = filtered
+                                        
+                                        if oldVal != filtered {
+                                            if index < 5 {
+                                                focusedField = index + 1
+                                            }
+                                        }
+                                    }
+                                }
+                                .onAppear {
+                                    if index == 0 {
+                                        updateCooldown()
+                                        startResendTimer()
+                                    }
+                                }
+                        }
+                    }
+                    .padding(.vertical, 8)
+                    .onChange(of: focusedField) { newValue in
+                        if let newIndex = newValue {
+                            let firstEmpty = otpDigits.firstIndex(where: { $0 == "\u{200B}" || $0.isEmpty }) ?? 5
+                            if newIndex > firstEmpty {
+                                focusedField = firstEmpty
+                            }
+                        }
+                    }
+                    .onAppear {
+                        focusedField = 0
+                    }
+                    
+                    Button(action: {
+                        Task {
+                            isLoadingOTP = true
+                            changePasswordError = nil
+                            do {
+                                if let email = authManager.currentUserEmail {
+                                    try await authManager.verifyPasswordChangeOTP(email: email, token: otpToken)
+                                    // OTP Verified!
+                                    UserDefaults.standard.set(0.0, forKey: "lastPasswordOTPSentTime")
+                                    withAnimation {
+                                        isVerifyingOTPForPassword = false
+                                        isChangingPassword = true
+                                    }
+                                }
+                            } catch {
+                                changePasswordError = tError(error.localizedDescription)
+                            }
+                            isLoadingOTP = false
+                        }
+                    }) {
+                        HStack {
+                            if isLoadingOTP {
+                                ProgressView().controlSize(.small)
+                                    .padding(.trailing, 5)
+                            }
+                            Text(t("Verify"))
+                                .font(.system(size: 15, weight: .bold))
+                        }
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                        .frame(maxWidth: .infinity)
+                        .padding(12)
+                        .background(colorScheme == .dark ? Color.white : Color.black)
+                        .cornerRadius(10)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 40)
+                    .disabled(isLoadingOTP || otpToken.isEmpty)
+                    
+                    Button(action: {
+                        Task {
+                            isLoadingOTP = true
+                            let lastSent = UserDefaults.standard.double(forKey: "lastPasswordOTPSentTime")
+                            let elapsed = Date().timeIntervalSince1970 - lastSent
+                            if elapsed >= 60 {
+                                do {
+                                    if let email = authManager.currentUserEmail {
+                                        try await authManager.requestPasswordChangeOTP(email: email)
+                                        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastPasswordOTPSentTime")
+                                        startResendTimer()
+                                        changePasswordError = nil
+                                    }
+                                } catch {
+                                    changePasswordError = tError(error.localizedDescription)
+                                }
+                            } else {
+                                if resendCooldown == 0 {
+                                    resendCooldown = Int(60 - elapsed)
+                                    startResendTimer()
+                                }
+                            }
+                            isLoadingOTP = false
+                        }
+                    }) {
+                        Text(resendCooldown > 0 ? t("Resend Email") + " (\(resendCooldown)s)" : t("Resend Email"))
+                            .font(.system(size: 13))
+                            .foregroundColor(resendCooldown > 0 ? .secondary : .primary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 8)
+                    .disabled(resendCooldown > 0 || isLoadingOTP)
+                    
+                    Button(action: {
+                        withAnimation {
+                            isVerifyingOTPForPassword = false
+                            showSendEmailConfirmation = false
+                            changePasswordError = nil
+                            otpDigits = Array(repeating: "", count: 6)
+                        }
+                    }) {
+                        Text(t("Cancel"))
+                            .font(.system(size: 13))
+                            .foregroundColor(.primary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                    
+                    Spacer()
+                }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             } else if isChangingPassword {
                 VStack(spacing: 14) {
                     Text(t("Change Password"))
@@ -4446,6 +4758,17 @@ struct UserProfileView: View {
                         .foregroundColor(.primary)
                         .padding(.top, 10)
                         .padding(.bottom, 6)
+                        
+                    if let error = changePasswordError {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.system(size: 13, weight: .medium))
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                            .padding(.horizontal, 24)
+                    }
                     
                     VStack(alignment: .leading, spacing: 6) {
                         Text(t("Old password"))
@@ -4489,14 +4812,7 @@ struct UserProfileView: View {
                     }
                     .padding(.horizontal, 24)
                     
-                    if let changePasswordError = changePasswordError {
-                        Text(changePasswordError)
-                            .font(.system(size: 11))
-                            .foregroundColor(.red)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 24)
-                            .padding(.top, 4)
-                    }
+                            // Error message removed from here
                     
                     Spacer()
                     
@@ -4529,6 +4845,7 @@ struct UserProfileView: View {
                                 newPassword = ""
                                 confirmNewPassword = ""
                                 changePasswordError = nil
+                                otpDigits = Array(repeating: "", count: 6)
                             }
                         }) {
                             Text(t("Cancel"))
@@ -4605,8 +4922,24 @@ struct UserProfileView: View {
                             return
                         }
                         deleteError = nil
-                        withAnimation {
-                            isChangingPassword = true
+                        let lastSent = UserDefaults.standard.double(forKey: "lastPasswordOTPSentTime")
+                        let elapsed = Date().timeIntervalSince1970 - lastSent
+                        
+                        if elapsed < 60 {
+                            resendCooldown = Int(60 - elapsed)
+                        } else {
+                            resendCooldown = 0
+                        }
+                        
+                        if elapsed >= 60 {
+                            withAnimation {
+                                showSendEmailConfirmation = true
+                            }
+                        } else {
+                            withAnimation {
+                                isVerifyingOTPForPassword = true
+                            }
+                            startResendTimer()
                         }
                     }) {
                         Text(t("Change Password"))
