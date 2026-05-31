@@ -228,7 +228,7 @@ class AppController: NSObject, ObservableObject {
             
             // Pokaż HUD OD RAZU, zanim zacznie grać dźwięk
             self.isRecording = true
-            self.statusText = self.sonorContext == nil ? "Inicjalizacja" : "Listening..."
+            self.statusText = self.sonorContext == nil ? "Initializing" : "Listening..."
             self.showHUD()
             self.forceFloatingWindow()
             
@@ -244,7 +244,6 @@ class AppController: NSObject, ObservableObject {
                             
                             await MainActor.run {
                                 self.sonorContext = context
-                                self.statusText = "Listening..."
                                 self.startRecordingProcess(selectedMode: selectedMode)
                             }
                         }
@@ -253,7 +252,6 @@ class AppController: NSObject, ObservableObject {
             } else {
                 Task {
                     await MainActor.run {
-                        self.statusText = "Listening..."
                         self.startRecordingProcess(selectedMode: selectedMode)
                     }
                 }
@@ -331,43 +329,54 @@ class AppController: NSObject, ObservableObject {
         self.isPaused = false
         let modeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
         self.activeHotkeyMode = (modeString == "Hold" || modeString == "Przytrzymanie") ? .hold : .click
-        do {
-            print("🎙️ Próba startu nagrywania...")
-            try self.audioManager.startRecording()
-            self.isRecording = true
-            self.statusText = "Listening..."
-            
-            // Monitorowanie poziomu głośności do UI (.common mode chroni przed zatrzymywaniem przy przeciąganiu)
-            let timer = Timer(timeInterval: 0.05, repeats: true) { timer in
-                Task { @MainActor [weak self] in
-                    guard let self = self else {
-                        timer.invalidate()
-                        return
+        
+        print("🎙️ Próba startu nagrywania (asynchronicznie)...")
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self = self else { return }
+            do {
+                try self.audioManager.startRecording()
+                
+                DispatchQueue.main.async {
+                    self.isRecording = true
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        self.statusText = "Listening..."
                     }
-                    if self.isRecording {
-                        if !self.isPaused {
-                            let level = self.audioManager.audioLevel
-                            self.audioLevel = level
-                            
-                            self.audioLevels.append(max(0.01, level))
-                            if self.audioLevels.count > 40 {
-                                self.audioLevels.removeFirst()
+                    
+                    // Monitorowanie poziomu głośności do UI (.common mode chroni przed zatrzymywaniem przy przeciąganiu)
+                    let timer = Timer(timeInterval: 0.05, repeats: true) { timer in
+                        Task { @MainActor [weak self] in
+                            guard let self = self else {
+                                timer.invalidate()
+                                return
+                            }
+                            if self.isRecording {
+                                if !self.isPaused {
+                                    let level = self.audioManager.audioLevel
+                                    self.audioLevel = level
+                                    
+                                    self.audioLevels.append(max(0.01, level))
+                                    if self.audioLevels.count > 40 {
+                                        self.audioLevels.removeFirst()
+                                    }
+                                }
+                            } else {
+                                withAnimation {
+                                    self.audioLevels = Array(repeating: 0.01, count: 40)
+                                }
+                                timer.invalidate()
                             }
                         }
-                    } else {
-                        withAnimation {
-                            self.audioLevels = Array(repeating: 0.01, count: 40)
-                        }
-                        timer.invalidate()
                     }
+                    RunLoop.main.add(timer, forMode: .common)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    print("❌ Błąd mikrofonu: \(error.localizedDescription)")
+                    self.statusText = "Microphone error"
+                    self.isRecording = false
+                    self.hideHUDAfterDelay()
                 }
             }
-            RunLoop.main.add(timer, forMode: .common)
-        } catch {
-            print("❌ Błąd mikrofonu: \(error.localizedDescription)")
-            self.statusText = "Microphone error"
-            self.isRecording = false
-            self.hideHUDAfterDelay()
         }
     }
     
@@ -474,7 +483,7 @@ class AppController: NSObject, ObservableObject {
         window.title = ""
         window.minSize = NSSize(width: 1000, height: 600)
         window.center()
-        window.contentView = NSHostingView(rootView: SettingsView())
+        window.contentView = NSHostingView(rootView: MainAppView())
         window.isReleasedWhenClosed = false
         window.backgroundColor = .windowBackgroundColor
         window.isOpaque = true
@@ -567,7 +576,7 @@ class AppController: NSObject, ObservableObject {
     
     func cancelRecording() {
         guard isRecording || isCurrentlyProcessing else { return }
-        if statusText == "Inicjalizacja" || statusText == "Initializing" {
+        if statusText == "Initializing" {
             print("⚠️ [AppController] Ignorowanie anulowania - faza inicjalizacji.")
             return
         }
@@ -1022,85 +1031,39 @@ class AppController: NSObject, ObservableObject {
     }
     
     func detectWordCorrections(from initial: String, to current: String) -> [(wrong: String, correct: String)] {
-        // Rozbij na słowa
         let initialWords = initial.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
         let currentWords = current.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
         
         guard initialWords != currentWords else { return [] }
         
-        let m = initialWords.count
-        let n = currentWords.count
+        let diff = currentWords.difference(from: initialWords)
         
-        // Bezpieczne zabezpieczenie przed pustymi zakresami w Swift
-        guard m > 0 && n > 0 else { return [] }
+        var removes: [(index: Int, word: String)] = []
+        var inserts: [(index: Int, word: String)] = []
         
-        // DP table for LCS
-        var dp = Array(repeating: Array(repeating: 0, count: n + 1), count: m + 1)
-        
-        for i in 1...m {
-            for j in 1...n {
-                if initialWords[i-1] == currentWords[j-1] {
-                    dp[i][j] = dp[i-1][j-1] + 1
-                } else {
-                    dp[i][j] = max(dp[i-1][j], dp[i][j-1])
-                }
+        for change in diff {
+            switch change {
+            case .remove(let offset, let element, _):
+                removes.append((offset, element))
+            case .insert(let offset, let element, _):
+                inserts.append((offset, element))
             }
         }
         
-        // Backtrack to find differences
-        var i = m
-        var j = n
-        
-        var diffs: [(wrong: [String], correct: [String])] = []
-        
-        var currentWrong: [String] = []
-        var currentCorrect: [String] = []
-        
-        while i > 0 || j > 0 {
-            if i > 0 && j > 0 && initialWords[i-1] == currentWords[j-1] {
-                if !currentWrong.isEmpty || !currentCorrect.isEmpty {
-                    diffs.append((currentWrong, currentCorrect))
-                    currentWrong.removeAll()
-                    currentCorrect.removeAll()
-                }
-                i -= 1
-                j -= 1
-            } else if j > 0 && (i == 0 || dp[i][j-1] >= dp[i-1][j]) {
-                currentCorrect.insert(currentWords[j-1], at: 0)
-                j -= 1
-            } else {
-                currentWrong.insert(initialWords[i-1], at: 0)
-                i -= 1
-            }
-        }
-        
-        if !currentWrong.isEmpty || !currentCorrect.isEmpty {
-            diffs.append((currentWrong, currentCorrect))
-        }
+        removes.sort { $0.index < $1.index }
+        inserts.sort { $0.index < $1.index }
         
         var corrections: [(wrong: String, correct: String)] = []
         
-        // Analyze diffs
-        for diff in diffs.reversed() {
-            let wrongWords = diff.wrong
-            let correctWords = diff.correct
-            
-            // Dopuszczamy poprawki o długości max 2 słów na stronę
-            guard !wrongWords.isEmpty && !correctWords.isEmpty else { continue }
-            guard wrongWords.count <= 2 && correctWords.count <= 2 else { continue }
-            
-            let wrongText = wrongWords.joined(separator: " ").trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-            let correctText = correctWords.joined(separator: " ").trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
-            
-            guard !wrongText.isEmpty && !correctText.isEmpty else { continue }
-            
-            if wrongText.lowercased() != correctText.lowercased() || wrongText != correctText {
-                corrections.append((wrongText, correctText))
-            }
+        if removes.count <= 2 && inserts.count <= 2 && !removes.isEmpty && !inserts.isEmpty {
+            let wrong = removes.map { $0.word }.joined(separator: " ")
+            let correct = inserts.map { $0.word }.joined(separator: " ")
+            corrections.append((wrong: wrong, correct: correct))
         }
         
         return corrections
     }
+
     
     func addDictionaryEntriesAndNotify(corrections: [(wrong: String, correct: String)]) {
         var newLearnedEntries: [LearnedEntry] = []

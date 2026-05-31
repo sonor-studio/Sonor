@@ -12,7 +12,6 @@ class AuthManager: ObservableObject {
     @Published var currentUserCreatedAt: Date? = nil
     @Published var currentUserProvider: String = "email"
     @Published var accountDeletionError: String? = nil
-    @Published var hasSeenOnboarding: Bool = false
     @Published var accountTier: String = "premium"
     var pendingAccountDeletion: Bool = false
     
@@ -667,10 +666,7 @@ class AuthManager: ObservableObject {
                 if let profile = profiles.first {
                     print("[AuthManager] Zawartość pierwszego profilu: \(profile)")
                     
-                    // Parsing has_seen_onboarding and account_tier
-                    if let hasSeen = profile["has_seen_onboarding"] as? Bool {
-                        await MainActor.run { self.hasSeenOnboarding = hasSeen }
-                    }
+                    // Parsing account_tier
                     if let tier = profile["account_tier"] as? String {
                         await MainActor.run { self.accountTier = tier }
                     }
@@ -745,6 +741,13 @@ class AuthManager: ObservableObject {
                                 self.currentUserCreatedAt = finalDate
                                 if let email = self.currentUserEmail, let finalDate = finalDate {
                                     self.saveProfileCache(email: email, date: finalDate)
+                                    
+                                    if self.currentUserProvider == "google" {
+                                        let diff = abs(Date().timeIntervalSince(finalDate))
+                                        if diff < 120 {
+                                            NotificationCenter.default.post(name: Notification.Name("ShowThankYouView"), object: nil)
+                                        }
+                                    }
                                 }
                             }
                         } else {
@@ -764,41 +767,9 @@ class AuthManager: ObservableObject {
         }
     }
     
-    func completeOnboarding() async throws {
-        let token = getFromKeychain(key: tokenKey)
-        guard let token = token, !token.isEmpty else { return }
-        
-        // Najpierw pobieramy userId z tokenu/auth
-        guard let userUrl = URL(string: "\(supabaseUrl)/auth/v1/user") else { return }
-        var userRequest = URLRequest(url: userUrl)
-        userRequest.httpMethod = "GET"
-        userRequest.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
-        userRequest.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        
-        let (userData, userResponse) = try await URLSession.shared.data(for: userRequest)
-        guard let userHttpResponse = userResponse as? HTTPURLResponse,
-              (200...299).contains(userHttpResponse.statusCode),
-              let userJson = try? JSONSerialization.jsonObject(with: userData) as? [String: Any],
-              let userId = userJson["id"] as? String else {
-            return
-        }
-        
-        guard let profileUrl = URL(string: "\(supabaseUrl)/rest/v1/profiles?id=eq.\(userId)") else { return }
-        var request = URLRequest(url: profileUrl)
-        request.httpMethod = "PATCH"
-        request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
-        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        let body: [String: Any] = ["has_seen_onboarding": true]
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        
-        let (_, response) = try await URLSession.shared.data(for: request)
-        if let httpResponse = response as? HTTPURLResponse, (200...299).contains(httpResponse.statusCode) {
-            await MainActor.run {
-                self.hasSeenOnboarding = true
-            }
-        }
+    func completeOnboarding() async {
+        // Obsolete function since Onboarding is now local. 
+        // We keep it as a no-op just in case it's called elsewhere, or we can just leave it empty.
     }
     
     private func extractErrorMessage(from data: Data) -> String {

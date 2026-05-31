@@ -462,6 +462,11 @@ struct LoginView: View {
         do {
             try await authManager.verifyOTP(email: email, token: otpToken)
             presentationMode.wrappedValue.dismiss()
+            if isRegistering {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.post(name: Notification.Name("ShowThankYouView"), object: nil)
+                }
+            }
         } catch {
             let errorMsg = error.localizedDescription
             if errorMsg.lowercased().contains("token has expired or is invalid") || errorMsg.lowercased().contains("invalid") {

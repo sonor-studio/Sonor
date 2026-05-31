@@ -19,7 +19,7 @@ struct CapsuleHUDView: View {
     }
     
     private var isInitializing: Bool {
-        return controller.statusText == "Inicjalizacja" || controller.statusText == "Initializing"
+        return controller.statusText == "Initializing"
     }
     
     private var isFinalState: Bool {
@@ -227,7 +227,7 @@ struct CapsuleHUDView: View {
                         controller.undoDictionaryEntry()
                     }
                 }) {
-                    Text("Undo")
+                    Text(t("Undo"))
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
                         .padding(.horizontal, 10)
@@ -275,7 +275,7 @@ struct CapsuleHUDView: View {
                             // Puste, żeby przechwycić zdarzenia i nie przerywać dragGesture przez animację
                         }) {
                             ZStack {
-                                if !isProcessing && controller.statusText != "Inicjalizacja" {
+                                if !isProcessing && controller.statusText != "Initializing" {
                                     audioWavesView
                                         .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
                                 } else {
@@ -360,14 +360,14 @@ struct CapsuleHUDView: View {
                     showPauseButton = controller.activeHotkeyMode == .click
                     width = targetWidth
                     height = 40
-                    isProcessing = controller.statusText == "Inicjalizacja" || controller.statusText == "Initializing"
+                    isProcessing = controller.statusText == "Initializing"
                 }
             }
         }
         .onChange(of: controller.statusText) { status in
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
                 width = targetWidth
-                if status == "Inicjalizacja" || status == "Initializing" {
+                if status == "Initializing" {
                     isProcessing = true
                 } else if status == "Listening..." {
                     isProcessing = false
@@ -378,7 +378,7 @@ struct CapsuleHUDView: View {
                     opacity = 0.0
                 }
                 showList = false
-            } else if status == "Listening..." || status == "Model not downloaded" || status == "Inicjalizacja" {
+            } else if status == "Listening..." || status == "Model not downloaded" || status == "Initializing" {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                     opacity = 1.0
                 }
@@ -398,7 +398,7 @@ struct CapsuleHUDView: View {
             }
         }
         .onReceive(recordingTimer) { _ in
-            if controller.isRecording && !controller.isPaused && controller.statusText != "Inicjalizacja" {
+            if controller.isRecording && !controller.isPaused && controller.statusText != "Initializing" {
                 recordingDuration += 1
             }
         }
