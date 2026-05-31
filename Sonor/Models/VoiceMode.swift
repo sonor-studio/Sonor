@@ -1,23 +1,31 @@
 import Foundation
+import CoreGraphics
+
+enum AudioBehavior: String, Codable, CaseIterable {
+    case keep
+    case mute
+    case pause
+}
+
 
 struct VoiceMode: Identifiable, Codable, Equatable {
     var id: UUID
     var name: String
     var prompt: String
     var boundAppBundleIDs: [String]
-    var pauseMusic: Bool
+    var audioBehavior: AudioBehavior?
     var assistantType: String? // "dictation" or "edit"
     var passAppName: Bool?
     var passCopiedText: Bool?
     var language: String? // "auto", "pl", "en", etc.
     var isBuiltIn: Bool? // true dla wbudowanych
     
-    init(id: UUID = UUID(), name: String, prompt: String, boundAppBundleIDs: [String] = [], pauseMusic: Bool = false, assistantType: String? = "dictation", passAppName: Bool? = true, passCopiedText: Bool? = true, language: String? = "auto", isBuiltIn: Bool? = false) {
+    init(id: UUID = UUID(), name: String, prompt: String, boundAppBundleIDs: [String] = [], audioBehavior: AudioBehavior? = .keep, assistantType: String? = "dictation", passAppName: Bool? = true, passCopiedText: Bool? = true, language: String? = "auto", isBuiltIn: Bool? = false) {
         self.id = id
         self.name = name
         self.prompt = prompt
         self.boundAppBundleIDs = boundAppBundleIDs
-        self.pauseMusic = pauseMusic
+        self.audioBehavior = audioBehavior
         self.assistantType = assistantType
         self.passAppName = passAppName
         self.passCopiedText = passCopiedText
@@ -34,18 +42,54 @@ struct VoiceMode: Identifiable, Codable, Equatable {
     
     // Domyślne tryby
     static let defaults: [VoiceMode] = [
-        VoiceMode(name: "Raw Output", prompt: "", boundAppBundleIDs: [], pauseMusic: false, assistantType: "dictation", isBuiltIn: true),
-        VoiceMode(name: "Text Smoothing", prompt: "Clean up and organize this spoken text. Remove stuttering, filler words, repetitions, speech errors, and grammatical mistakes. Add appropriate punctuation. Preserve 100% of the original meaning, vocabulary, and tone (do not change it to formal or any other style).\n\nCRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Do not translate the text under any circumstances. Reply ONLY with the cleaned-up text.", boundAppBundleIDs: [], pauseMusic: false, assistantType: "dictation", isBuiltIn: true),
-        VoiceMode(name: "Formal Email", prompt: "Transform this spoken text into a professional, elegant, and formal business email in the language of the spoken text. Retain all key information, requests, and points, but elevate the style from casual spoken thoughts to formal business correspondence.\n\nCRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Do not translate the text under any circumstances. Reply ONLY with the email content.", boundAppBundleIDs: [], pauseMusic: false, assistantType: "dictation", isBuiltIn: true),
-        VoiceMode(name: "Structured Note", prompt: "Organize this spoken text and convert it into a clear, structured note.\nUse ONLY plain text.\n\nKey formatting and content rules:\n1. NO EXTRAPOLATION: Structure only the information that was directly spoken. Do not add your own thoughts, action plans, 'to consider' sections, or extra suggestions not dictated by the user. If the user mentioned not needing something, simply omit it or record it exactly as spoken without adding comments or advice at the bottom.\n2. PARAGRAPH BREAKS: Separate related thoughts into clean paragraphs with empty lines.\n3. INDENTATION: Use appropriate spacing (tabs/spaces) at the start of lines to create a visual hierarchical structure for sub-bullets.\n4. HEADERS: If the text naturally divides into sections, highlight headers using UPPERCASE letters only (e.g., SHOPPING LIST, NOTES). Do not create artificial introduction sections (like INTRODUCTION).\n\nCRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Do not translate the text under any circumstances. Reply ONLY with the formatted plain text, with no introductory or concluding remarks.", boundAppBundleIDs: [], pauseMusic: false, assistantType: "dictation", isBuiltIn: true)
+        VoiceMode(name: "Raw Output", prompt: "", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
+        VoiceMode(name: "Text Smoothing", prompt: "Clean up and organize this spoken text. Remove stuttering, filler words, repetitions, speech errors, and grammatical mistakes. Add appropriate punctuation. Preserve 100% of the original meaning, vocabulary, and tone (do not change it to formal or any other style).\n\nCRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Do not translate the text under any circumstances. Reply ONLY with the cleaned-up text.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
+        VoiceMode(name: "Formal Email", prompt: "Transform this spoken text into a professional, elegant, and formal business email in the language of the spoken text. Retain all key information, requests, and points, but elevate the style from casual spoken thoughts to formal business correspondence.\n\nCRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Do not translate the text under any circumstances. Reply ONLY with the email content.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
+        VoiceMode(name: "Structured Note", prompt: "Organize this spoken text and convert it into a clear, structured note.\nUse ONLY plain text.\n\nKey formatting and content rules:\n1. NO EXTRAPOLATION: Structure only the information that was directly spoken. Do not add your own thoughts, action plans, 'to consider' sections, or extra suggestions not dictated by the user. If the user mentioned not needing something, simply omit it or record it exactly as spoken without adding comments or advice at the bottom.\n2. PARAGRAPH BREAKS: Separate related thoughts into clean paragraphs with empty lines.\n3. INDENTATION: Use appropriate spacing (tabs/spaces) at the start of lines to create a visual hierarchical structure for sub-bullets.\n4. HEADERS: If the text naturally divides into sections, highlight headers using UPPERCASE letters only (e.g., SHOPPING LIST, NOTES). Do not create artificial introduction sections (like INTRODUCTION).\n\nCRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Do not translate the text under any circumstances. Reply ONLY with the formatted plain text, with no introductory or concluding remarks.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true)
     ]
     
     static func loadAndMigrateModes() -> [VoiceMode] {
-        guard let voiceModesData = UserDefaults.standard.data(forKey: "voiceModes"),
-              var modes = try? JSONDecoder().decode([VoiceMode].self, from: voiceModesData) else {
-            // Brak zapisanych, zapisz domyślne i zwróć
+        guard let voiceModesData = UserDefaults.standard.data(forKey: "voiceModes") else {
             save(defaults)
             return defaults
+        }
+        
+        var modes = [VoiceMode]()
+        if let decoded = try? JSONDecoder().decode([VoiceMode].self, from: voiceModesData) {
+            modes = decoded
+        } else {
+            // Spróbujmy zdekodować ze starym typem pauseMusic
+            struct OldVoiceMode: Codable {
+                var id: UUID
+                var name: String
+                var prompt: String
+                var boundAppBundleIDs: [String]
+                var pauseMusic: Bool
+                var assistantType: String?
+                var passAppName: Bool?
+                var passCopiedText: Bool?
+                var language: String?
+                var isBuiltIn: Bool?
+            }
+            if let oldModes = try? JSONDecoder().decode([OldVoiceMode].self, from: voiceModesData) {
+                modes = oldModes.map { old in
+                    VoiceMode(
+                        id: old.id,
+                        name: old.name,
+                        prompt: old.prompt,
+                        boundAppBundleIDs: old.boundAppBundleIDs,
+                        audioBehavior: old.pauseMusic ? .mute : .keep,
+                        assistantType: old.assistantType,
+                        passAppName: old.passAppName,
+                        passCopiedText: old.passCopiedText,
+                        language: old.language,
+                        isBuiltIn: old.isBuiltIn
+                    )
+                }
+            } else {
+                save(defaults)
+                return defaults
+            }
         }
         
         let oldBuiltInNames = ["Poprawianie", "Formalny", "Strukturyzowana notatka"]
@@ -98,7 +142,6 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                 modes.insert(defaults[3], at: min(modes.count, 3))
             }
         }
-        
         save(modes)
         return modes
     }

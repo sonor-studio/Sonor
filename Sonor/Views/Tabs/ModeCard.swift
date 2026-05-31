@@ -82,7 +82,7 @@ struct ModeCard: View {
                         .font(.system(size: 10, weight: .semibold))
                     Spacer()
                     
-                    if mode.pauseMusic {
+                    if mode.audioBehavior == .mute || mode.audioBehavior == .pause {
                         Image(systemName: "speaker.slash.fill")
                             .font(.system(size: 12))
                     }

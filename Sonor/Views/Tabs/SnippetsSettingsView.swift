@@ -138,6 +138,8 @@ struct SnippetsSettingsView: View {
                     
                     addButtonView
                 }
+                
+                dynamicVariablesHelperView
             }
         }
         .padding(20)
@@ -149,6 +151,48 @@ struct SnippetsSettingsView: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
+    }
+    
+    private var dynamicVariablesHelperView: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                Text(t("Dynamic variables:"))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+                    
+                dynamicVariableButton(title: "Clipboard", tag: "{{clipboard}}", icon: "doc.on.clipboard")
+                dynamicVariableButton(title: "Date", tag: "{{date}}", icon: "calendar")
+                dynamicVariableButton(title: "Time", tag: "{{time}}", icon: "clock")
+                dynamicVariableButton(title: "Active App", tag: "{{active_app}}", icon: "macwindow")
+                dynamicVariableButton(title: "Day of Week", tag: "{{day_of_week}}", icon: "calendar.badge.clock")
+            }
+        }
+        .padding(.top, 4)
+    }
+    
+    private func dynamicVariableButton(title: String, tag: String, icon: String) -> some View {
+        Button(action: {
+            newExpansion.append(tag)
+        }) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                Text(t(title))
+                    .font(.system(size: 10, weight: .medium))
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                RoundedRectangle(cornerRadius: 6)
+                    .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1), lineWidth: 1)
+            )
+            .foregroundColor(.primary.opacity(0.8))
+        }
+        .buttonStyle(.plain)
     }
     
     private func rowView(key: String, value: String) -> some View {
@@ -219,7 +263,6 @@ struct SnippetsSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             headerView
-            
             if !AuthManager.shared.isLoggedIn {
                 PremiumLockView(showLoginSheet: $showLoginSheet)
             } else {

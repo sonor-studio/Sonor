@@ -1,4 +1,6 @@
 import SwiftUI
+import CoreGraphics
+import ScreenCaptureKit
 import AppKit
 import UniformTypeIdentifiers
 import Carbon
@@ -68,6 +70,10 @@ struct MainAppView: View {
     
     @ObservedObject private var authManager = AuthManager.shared
     @State private var showLoginSheet = false
+    
+    @State private var showAudioPermissionModal = false
+    @State private var previousAudioBehavior: AudioBehavior? = nil
+    @State private var currentModeIDForAudioPermission: UUID? = nil
     @State private var isShowingProfileSheet = false
     @State private var isProfileCardHovered = false
     @State private var isShowingOnboardingSheet = false
@@ -531,9 +537,31 @@ struct MainAppView: View {
                                 }
                             }
                             
-                                                Toggle(t("Pause music"), isOn: modeBinding.pauseMusic)
-                                .toggleStyle(CustomToggleStyle())
-                                .font(.system(size: 12))
+                            Picker(t("Audio behavior"), selection: Binding(
+                                get: { modeBinding.wrappedValue.audioBehavior ?? .keep },
+                                set: { newValue in
+                                    let oldValue = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                    modeBinding.wrappedValue.audioBehavior = newValue
+                                    
+                                    if newValue == .pause {
+                                        if !CGPreflightScreenCaptureAccess() {
+                                            self.previousAudioBehavior = oldValue
+                                            self.currentModeIDForAudioPermission = modeBinding.wrappedValue.id
+                                            self.showAudioPermissionModal = true
+                                        } else {
+                                            saveModes()
+                                        }
+                                    } else {
+                                        saveModes()
+                                    }
+                                }
+                            )) {
+                                Text(t("Keep sound")).tag(AudioBehavior.keep)
+                                Text(t("Mute system")).tag(AudioBehavior.mute)
+                                Text(t("Pause media")).tag(AudioBehavior.pause)
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                            .font(.system(size: 12))
                                 
 
                             }
@@ -681,6 +709,22 @@ struct MainAppView: View {
                     ModelDownloadErrorView(error: modelManager.downloadError ?? t("An unknown network error occurred."))
                         .preferredColorScheme(effectiveColorScheme)
                 }
+                .sheet(isPresented: $showAudioPermissionModal) {
+                    AudioPermissionExplanationView(
+                        onAccept: {
+                            requestScreenCaptureAccess()
+                            saveModes()
+                        },
+                        onCancel: {
+                            if let id = currentModeIDForAudioPermission,
+                               let index = modes.firstIndex(where: { $0.id == id }) {
+                                modes[index].audioBehavior = previousAudioBehavior ?? .keep
+                                saveModes()
+                            }
+                        }
+                    )
+                    .preferredColorScheme(effectiveColorScheme)
+                }
         )
         .onAppear {
             loadModes()
@@ -702,6 +746,7 @@ struct MainAppView: View {
     private func saveModes() {
         if let data = try? JSONEncoder().encode(modes) {
             UserDefaults.standard.set(data, forKey: "voiceModes")
+            UserDefaults.standard.synchronize()
             NotificationCenter.default.post(name: Notification.Name("VoiceModesUpdated"), object: nil)
         }
     }
@@ -800,6 +845,22 @@ struct MainAppView: View {
         if isDeletingActive {
             UserDefaults.standard.set(selectedModeID, forKey: "activeModeID")
             NotificationCenter.default.post(name: Notification.Name("VoiceModesUpdated"), object: nil)
+        }
+    }
+    
+    private func requestScreenCaptureAccess() {
+        if !CGPreflightScreenCaptureAccess() {
+            if #available(macOS 14.4, *) {
+                CGRequestScreenCaptureAccess()
+            } else {
+                CGRequestScreenCaptureAccess()
+            }
+            
+            // macOS często ukrywa prompt, jeśli użytkownik już wcześniej usunął aplikację z uprawnień.
+            // Otwieramy System Settings automatycznie, żeby użytkownik mógł zaznaczyć checkboxa.
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
     

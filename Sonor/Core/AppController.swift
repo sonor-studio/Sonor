@@ -46,9 +46,7 @@ class AppController: NSObject, ObservableObject {
     private var targetAppBundleID: String? = nil
     private var didPauseMusic: Bool = false
     var hudWindow: NSPanel?
-    private var pausedApps: [String] = []
     private var currentTask: Task<Void, Never>?
-    private var modeBeforeAutomation: VoiceMode?
     
     override init() {
         super.init()
@@ -67,6 +65,34 @@ class AppController: NSObject, ObservableObject {
         
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
         self.currentMode = modes.first(where: { $0.id.uuidString == activeModeID }) ?? modes.first
+        
+        // Sprawdzenie uprawnień z opóźnieniem (aby system zdążył je odświeżyć po restarcie)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+            if !CGPreflightScreenCaptureAccess() {
+                var updatedModes = VoiceMode.loadAndMigrateModes()
+                var changed = false
+                for i in 0..<updatedModes.count {
+                    if updatedModes[i].audioBehavior == .pause {
+                        updatedModes[i].audioBehavior = .mute
+                        changed = true
+                    }
+                }
+                
+                if changed {
+                    print("⚠️ Brak uprawnień do ScreenCaptureKit - degraduję wszystkie opcje pauzowania na wyciszanie.")
+                    if let data = try? JSONEncoder().encode(updatedModes) {
+                        UserDefaults.standard.set(data, forKey: "voiceModes")
+                        NotificationCenter.default.post(name: Notification.Name("VoiceModesUpdated"), object: nil)
+                    }
+                    self.availableModes = updatedModes
+                    
+                    if let activeModeID = UserDefaults.standard.string(forKey: "activeModeID"),
+                       let updatedActive = updatedModes.first(where: { $0.id.uuidString == activeModeID }) {
+                        self.currentMode = updatedActive
+                    }
+                }
+            }
+        }
         
         // Do not init SonorContext here anymore, we will lazy load it when recording starts if the model is downloaded.
         // Also check if model was bundled (fallback) or use downloaded path.
@@ -209,21 +235,20 @@ class AppController: NSObject, ObservableObject {
             // Określ tryb na starcie
             let selectedMode: VoiceMode
             if !AuthManager.shared.isLoggedIn {
-                // Użytkownicy darmowi mogą korzystać tylko ze zwykłego outputu o domyślnych ustawieniach
                 selectedMode = VoiceMode.defaults.first!
                 self.currentMode = selectedMode
-                modeBeforeAutomation = nil
             } else {
                 if let bundleID = self.targetAppBundleID,
                    let autoMode = availableModes.first(where: { $0.boundAppBundleIDs.contains(bundleID) }) {
                     selectedMode = autoMode
-                    modeBeforeAutomation = currentMode // Zapisz poprzedni tryb
                     print("🤖 Automatycznie wybrano tryb dla aplikacji \(bundleID): \(selectedMode.name)")
                 } else {
                     selectedMode = currentMode ?? availableModes.first ?? VoiceMode.defaults.first!
-                    modeBeforeAutomation = nil // Brak automatyzacji
                 }
-                self.currentMode = selectedMode // Aktualizuj UI
+                
+                if self.currentMode?.id != selectedMode.id {
+                    self.selectMode(selectedMode) // Aktualizuj UI i persist w UserDefaults
+                }
             }
             
             // Pokaż HUD OD RAZU, zanim zacznie grać dźwięk
@@ -260,36 +285,45 @@ class AppController: NSObject, ObservableObject {
     }
     
     private func startRecordingProcess(selectedMode: VoiceMode) {
-        // Pauzowanie muzyki jeśli wymagane
-        if selectedMode.pauseMusic {
-            print("🎵 Sprawdzanie i pauzowanie multimediów (Native)...")
-            Task {
-                // Odtwórz dźwięk w tle (fire-and-forget)
-                Task {
-                    await SoundPlayer.shared.playSound(named: "Start")
+        Task.detached {
+            let behavior = selectedMode.audioBehavior ?? .keep
+            var shouldMuteOrPause = false
+            
+            if behavior == .pause {
+                if #available(macOS 12.3, *) {
+                    shouldMuteOrPause = await AudioCaptureManager.shared.checkIsAudioPlaying()
                 }
-                // Krótkie opóźnienie 200ms, aby dźwięk zdążył ruszyć zanim wyciszymy system
-                try? await Task.sleep(nanoseconds: 200_000_000)
-                await MainActor.run {
-                    guard self.isRecording else { return }
-                    self.pauseMultimedia {
-                        self.startRecording()
+            } else if behavior == .mute {
+                shouldMuteOrPause = self.isAudioActivelyPlayingPmset()
+            }
+            
+            await MainActor.run {
+                if behavior != .keep {
+                    if shouldMuteOrPause {
+                        if behavior == .pause {
+                            print("🎵 Pauzowanie multimediów (System Media Key)...")
+                            self.pauseMultimedia(behavior: .pause)
+                        } else if behavior == .mute {
+                            print("🎵 Wyciszanie multimediów (Mute System)...")
+                            self.pauseMultimedia(behavior: .mute)
+                        }
+                    } else {
+                        print("🔊 [VolumeControl] Urządzenie nie wydaje dźwięku, pomijam akcję.")
+                        self.didPauseMusic = false
                     }
                 }
-            }
-        } else {
-            self.didPauseMusic = false
-            Task {
-                // Odtwórz dźwięk w tle (fire-and-forget)
+                
                 Task {
-                    await SoundPlayer.shared.playSound(named: "Start")
-                }
-                // Krótkie opóźnienie 100ms, aby uniknąć kolizji CoreAudio 
-                // (jednoczesna inicjalizacja AVAudioPlayer i AVAudioEngine na startRecording)
-                try? await Task.sleep(nanoseconds: 100_000_000)
-                await MainActor.run {
-                    guard self.isRecording else { return }
-                    self.startRecording()
+                    // Odtwórz dźwięk w tle (fire-and-forget)
+                    Task {
+                        await SoundPlayer.shared.playSound(named: "Start")
+                    }
+                    // Krótkie opóźnienie 200ms, aby dźwięk zdążył ruszyć zanim uruchomimy nagrywanie
+                    try? await Task.sleep(nanoseconds: 200_000_000)
+                    await MainActor.run {
+                        guard self.isRecording else { return }
+                        self.startRecording()
+                    }
                 }
             }
         }
@@ -585,16 +619,16 @@ class AppController: NSObject, ObservableObject {
         self.isPaused = false
         statusText = "Cancelled"
         
-        restoreModeIfNeeded()
-        
-        currentTask?.cancel()
+        let taskToCancel = currentTask
         currentTask = nil
+        taskToCancel?.cancel()
         
-        _ = audioManager.stopRecording()
+        Task.detached {
+            _ = await self.audioManager.stopRecording()
+        }
         
         if self.didPauseMusic {
             self.resumeMultimedia()
-            self.didPauseMusic = false
         }
         
         withAnimation {
@@ -602,20 +636,14 @@ class AppController: NSObject, ObservableObject {
         }
         
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            self.statusText = "Ready"
-            self.hudWindow?.orderOut(nil)
+            if !self.isRecording && self.statusText == "Cancelled" {
+                self.statusText = "Ready"
+                self.hudWindow?.orderOut(nil)
+            }
         }
     }
     
-    @MainActor
-    private func restoreModeIfNeeded() {
-        if let previousMode = modeBeforeAutomation {
-            self.currentMode = previousMode
-            modeBeforeAutomation = nil
-            print("⏪ Przywrócono tryb sprzed automatyzacji: \(previousMode.name)")
-        }
-    }
-    
+
     private func hideHUDAfterDelay() {
         Task {
             await MainActor.run {
@@ -652,14 +680,12 @@ class AppController: NSObject, ObservableObject {
         // Natychmiastowe przywrócenie dźwięku po zakończeniu nagrywania
         if self.didPauseMusic {
             self.resumeMultimedia()
-            self.didPauseMusic = false
         }
         
         currentTask = Task {
             guard let context = sonorContext else {
                 await MainActor.run { 
                     self.statusText = "Error: Missing model" 
-                    self.restoreModeIfNeeded()
                 }
                 await SoundPlayer.shared.playSound(named: "Error")
                 self.hideHUDAfterDelay()
@@ -670,7 +696,6 @@ class AppController: NSObject, ObservableObject {
                 print("⚠️ Zbyt krótkie nagranie (\(samples.count) próbek). Pomijam transkrypcję.")
                 await MainActor.run { 
                     self.statusText = "No text recognized." 
-                    self.restoreModeIfNeeded()
                 }
                 await SoundPlayer.shared.playSound(named: "Error")
                 self.hideHUDAfterDelay()
@@ -682,9 +707,6 @@ class AppController: NSObject, ObservableObject {
             
             if Task.isCancelled {
                 print("Task cancelled after transcription.")
-                await MainActor.run { 
-                    self.restoreModeIfNeeded() 
-                }
                 self.hideHUDAfterDelay()
                 return
             }
@@ -697,7 +719,6 @@ class AppController: NSObject, ObservableObject {
             guard !rawText.isEmpty else {
                 await MainActor.run { 
                     self.statusText = "No text recognized." 
-                    self.restoreModeIfNeeded()
                 }
                 await SoundPlayer.shared.playSound(named: "Error")
                 self.hideHUDAfterDelay()
@@ -741,7 +762,6 @@ class AppController: NSObject, ObservableObject {
                 }
             } else {
                 if Task.isCancelled {
-                    await MainActor.run { self.restoreModeIfNeeded() }
                     self.hideHUDAfterDelay()
                     return
                 }
@@ -754,7 +774,6 @@ class AppController: NSObject, ObservableObject {
                     await LLMManager.shared.ensureModelWarmed()
                 }
                 if Task.isCancelled {
-                    await MainActor.run { self.restoreModeIfNeeded() }
                     self.hideHUDAfterDelay()
                     return
                 }
@@ -840,7 +859,6 @@ class AppController: NSObject, ObservableObject {
                 }
                 
                 if Task.isCancelled {
-                    await MainActor.run { self.restoreModeIfNeeded() }
                     self.hideHUDAfterDelay()
                     return
                 }
@@ -864,7 +882,6 @@ class AppController: NSObject, ObservableObject {
                 print("\n=== [LLM STREAMING FINISHED] ===")
                 
                 if Task.isCancelled {
-                    await MainActor.run { self.restoreModeIfNeeded() }
                     self.hideHUDAfterDelay()
                     return
                 }
@@ -878,7 +895,6 @@ class AppController: NSObject, ObservableObject {
 
             await MainActor.run {
                 self.statusText = "Done!"
-                self.restoreModeIfNeeded()
             }
             
             await SoundPlayer.shared.playSound(named: "End")
@@ -887,22 +903,89 @@ class AppController: NSObject, ObservableObject {
         }
     }
     
-    private func pauseMultimedia(completion: @escaping () -> Void) {
-        print("🔊 [VolumeControl] Wyciszanie systemu...")
-        runAppleScript("set volume with output muted")
+    nonisolated private func isAudioActivelyPlayingPmset() -> Bool {
+        print("🔊 [AudioCheck] Sprawdzanie PMSET (10s delay)...")
+        let task = Process()
+        task.launchPath = "/usr/bin/pmset"
+        task.arguments = ["-g", "assertions"]
+        
+        let pipe = Pipe()
+        task.standardOutput = pipe
+        task.launch()
+        task.waitUntilExit()
+        
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        if let output = String(data: data, encoding: .utf8) {
+            let lines = output.components(separatedBy: .newlines)
+            for line in lines {
+                if line.contains("PreventUserIdleDisplaySleep") || line.contains("PreventUserIdleSystemSleep") {
+                    if line.contains("coreaudiod") || line.contains("powerd") || line.contains("WindowServer") || line.contains("Sonor") {
+                        continue
+                    }
+                    if line.contains("Audio Playback") || line.contains("WebKit Media Playback") || line.contains("Spotify") {
+                        print("🔊 [AudioCheck] Znalazłem asercję audio w pmset: \(line)")
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
+
+    private func postMediaKeyEvent(key: Int32) {
+        print("🔊 [VolumeControl] Wysyłanie zdarzenia klawiatury dla klawisza: \(key)")
+        func doKey(down: Bool) {
+            let flags = NSEvent.ModifierFlags.init(rawValue: (down ? 0xa00 : 0xb00))
+            let data1 = Int((key << 16) | (down ? 0xa00 : 0xb00))
+            
+            let ev = NSEvent.otherEvent(with: .systemDefined,
+                                        location: NSPoint(x: 0, y: 0),
+                                        modifierFlags: flags,
+                                        timestamp: 0,
+                                        windowNumber: 0,
+                                        context: nil,
+                                        subtype: 8,
+                                        data1: data1,
+                                        data2: -1)
+            
+            let cgEvent = ev?.cgEvent
+            cgEvent?.post(tap: .cghidEventTap)
+        }
+        doKey(down: true)
+        doKey(down: false)
+    }
+
+    private var activeAudioBehavior: AudioBehavior? = nil
+    
+    private func pauseMultimedia(behavior: AudioBehavior) {
+        self.activeAudioBehavior = behavior
         self.didPauseMusic = true
-        completion()
+        
+        if behavior == .pause {
+            print("🔊 [VolumeControl] Pauzowanie multimediów (System Media Key)...")
+            let NX_KEYTYPE_PLAY: Int32 = 16
+            postMediaKeyEvent(key: NX_KEYTYPE_PLAY)
+        } else if behavior == .mute {
+            print("🔊 [VolumeControl] Wyciszanie systemu (AppleScript)...")
+            runAppleScript("set volume with output muted")
+        }
     }
     
     private func resumeMultimedia() {
-        if !self.didPauseMusic {
-            return
-        }
-        
-        print("🔊 [VolumeControl] Przywracanie dźwięku...")
-        runAppleScript("set volume without output muted")
+        if !self.didPauseMusic { return }
         self.didPauseMusic = false
-        self.pausedApps = []
+        
+        let behavior = self.activeAudioBehavior ?? .mute
+        self.activeAudioBehavior = nil
+        
+        if behavior == .pause {
+            print("🔊 [VolumeControl] Wznawianie multimediów (System Media Key)...")
+            let NX_KEYTYPE_PLAY: Int32 = 16
+            postMediaKeyEvent(key: NX_KEYTYPE_PLAY)
+        } else if behavior == .mute {
+            print("🔊 [VolumeControl] Odtwarzanie systemu (Unmute AppleScript)...")
+            runAppleScript("set volume without output muted")
+        }
     }
     
     private func runAppleScript(_ source: String) {
@@ -913,6 +996,44 @@ class AppController: NSObject, ObservableObject {
                 print("⚠️ AppleScript error: \(error)")
             }
         }
+    }
+    
+    private func parseDynamicVariables(in text: String) -> String {
+        var result = text
+        
+        if result.contains("{{clipboard}}") {
+            let clipboardText = NSPasteboard.general.string(forType: .string) ?? ""
+            result = result.replacingOccurrences(of: "{{clipboard}}", with: clipboardText)
+        }
+        
+        if result.contains("{{date}}") {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .short
+            formatter.timeStyle = .none
+            result = result.replacingOccurrences(of: "{{date}}", with: formatter.string(from: Date()))
+        }
+        
+        if result.contains("{{time}}") {
+            let formatter = DateFormatter()
+            formatter.dateStyle = .none
+            formatter.timeStyle = .short
+            result = result.replacingOccurrences(of: "{{time}}", with: formatter.string(from: Date()))
+        }
+        
+        if result.contains("{{active_app}}") {
+            let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? ""
+            result = result.replacingOccurrences(of: "{{active_app}}", with: appName)
+        }
+        
+        if result.contains("{{day_of_week}}") {
+            let formatter = DateFormatter()
+            formatter.locale = Locale(identifier: LocalizationManager.shared.appLanguage)
+            formatter.dateFormat = "EEEE"
+            let dayName = formatter.string(from: Date())
+            result = result.replacingOccurrences(of: "{{day_of_week}}", with: dayName)
+        }
+        
+        return result
     }
     
     private func applyCorrections(to text: String) -> String {
@@ -930,7 +1051,8 @@ class AppController: NSObject, ObservableObject {
         // 2. Snippety (Skróty tekstowe)
         let snippets = UserDefaults.standard.dictionary(forKey: "snippetsEntries") as? [String: String] ?? [:]
         for (shortcut, expansion) in snippets {
-            processedText = processedText.replacingOccurrences(of: shortcut, with: expansion, options: .caseInsensitive)
+            let parsedExpansion = parseDynamicVariables(in: expansion)
+            processedText = processedText.replacingOccurrences(of: shortcut, with: parsedExpansion, options: .caseInsensitive)
         }
         
         return processedText
@@ -1179,3 +1301,94 @@ class SonorHUDPanel: NSPanel {
 }
 
 
+
+import ScreenCaptureKit
+import AVFoundation
+
+@available(macOS 12.3, *)
+class AudioCaptureManager: NSObject, SCStreamOutput {
+    static let shared = AudioCaptureManager()
+    
+    private var stream: SCStream?
+    private var isPlaying = false
+    private let queue = DispatchQueue(label: "com.sonor.AudioCaptureQueue")
+    
+    private override init() {
+        super.init()
+    }
+    
+    func checkIsAudioPlaying(timeout: TimeInterval = 0.5) async -> Bool {
+        guard CGPreflightScreenCaptureAccess() else {
+            print("🔊 [AudioCaptureManager] Brak dostępu do nagrywania ekranu.")
+            return false
+        }
+        
+        self.isPlaying = false
+        
+        do {
+            let content = try await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: false)
+            guard let display = content.displays.first else { return false }
+            
+            let filter = SCContentFilter(display: display, excludingApplications: [], exceptingWindows: [])
+            let configuration = SCStreamConfiguration()
+            configuration.capturesAudio = true
+            configuration.excludesCurrentProcessAudio = true
+            
+            let stream = SCStream(filter: filter, configuration: configuration, delegate: nil)
+            try stream.addStreamOutput(self, type: .audio, sampleHandlerQueue: queue)
+            
+            self.stream = stream
+            try await stream.startCapture()
+            
+            // Zamiast blokować wątek semaforem, usypiamy asynchronicznie task na `timeout`
+            let start = Date()
+            while Date().timeIntervalSince(start) < timeout {
+                if self.isPlaying {
+                    break
+                }
+                try await Task.sleep(nanoseconds: 50_000_000) // 50ms interval
+            }
+            
+            let result = self.isPlaying
+            
+            try? await stream.stopCapture()
+            self.stream = nil
+            
+            if result {
+                print("🔊 [AudioCaptureManager] Wykryto dźwięk!")
+                return true
+            } else {
+                print("🔊 [AudioCaptureManager] Cisza.")
+                return false
+            }
+        } catch {
+            print("🔊 [AudioCaptureManager] Błąd SCStream: \(error)")
+            self.stream = nil
+            return false
+        }
+    }
+    
+    func stream(_ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer, of type: SCStreamOutputType) {
+        guard type == .audio else { return }
+        
+        if isBufferActive(sampleBuffer) {
+            self.isPlaying = true
+        }
+    }
+    
+    private func isBufferActive(_ sampleBuffer: CMSampleBuffer) -> Bool {
+        guard let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) else { return false }
+        let length = CMBlockBufferGetDataLength(blockBuffer)
+        guard length > 0 else { return false }
+        
+        var bytes = [Int16](repeating: 0, count: length / MemoryLayout<Int16>.stride)
+        CMBlockBufferCopyDataBytes(blockBuffer, atOffset: 0, dataLength: length, destination: &bytes)
+        
+        for sample in bytes {
+            if abs(sample) > 50 {
+                return true
+            }
+        }
+        return false
+    }
+}

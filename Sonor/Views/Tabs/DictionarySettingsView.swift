@@ -217,7 +217,6 @@ struct DictionarySettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             headerView
-            
             if !AuthManager.shared.isLoggedIn {
                 PremiumLockView(showLoginSheet: $showLoginSheet)
             } else {
