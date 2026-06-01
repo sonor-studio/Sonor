@@ -108,7 +108,7 @@ struct RamHistoryExplanationView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(t("Local processing"))
                             .font(.system(size: 12, weight: .bold))
-                        Text(t("We do not store, send, or analyze your processed texts anywhere outside of your device."))
+                        Text(t("Sonor does not store, send, or analyze your processed texts anywhere outside of your device."))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .lineSpacing(2)

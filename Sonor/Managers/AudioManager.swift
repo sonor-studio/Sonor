@@ -120,7 +120,35 @@ class AudioManager: ObservableObject {
         }
         
         return samplesQueue.sync {
-            let samples = accumulatedSamples
+            var samples = accumulatedSamples
+            
+            // --- ZEROING END SILENCE ---
+            // Overwrite trailing noise/silence with pure zeroes to prevent Whisper hallucinations
+            let chunkSize = 800 // 50ms at 16kHz
+            let silenceThreshold: Float = 0.01
+            var i = samples.count
+            
+            while i >= chunkSize {
+                let start = i - chunkSize
+                let end = i
+                
+                var sumSq: Float = 0.0
+                for j in start..<end {
+                    let val = samples[j]
+                    sumSq += val * val
+                }
+                let rms = sqrt(sumSq / Float(chunkSize))
+                
+                if rms < silenceThreshold {
+                    for j in start..<end {
+                        samples[j] = 0.0
+                    }
+                    i -= chunkSize
+                } else {
+                    break
+                }
+            }
+            
             // Clear for next recording
             accumulatedSamples = []
             return samples

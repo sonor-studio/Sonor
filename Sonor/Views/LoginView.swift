@@ -22,6 +22,7 @@ struct LoginView: View {
     @State private var errorMessage: String? = nil
     @State private var isLoading = false
     @State private var acceptedPrivacyPolicy = false
+    @State private var acceptedMarketing = false
     @State private var showOTPVerification = false
     @State private var otpDigits: [String] = Array(repeating: "\u{200B}", count: 6)
     @State private var oldOtpDigits: [String] = Array(repeating: "\u{200B}", count: 6)
@@ -229,7 +230,7 @@ struct LoginView: View {
                 Text(isRegistering ? t("Join Sonor") : t("Welcome Back"))
                     .font(.system(size: 20, weight: .bold))
             
-            Text(t("Unlock advanced AI assistants, intelligent dictionaries, and custom snippets to turn every recording into polished text. Everything is 100% free and runs fully offline on your computer — your data is completely private, and we do not collect any information."))
+            Text(t("Unlock advanced AI assistants, intelligent dictionaries, and custom snippets to turn every recording into polished text. Everything is 100% free and runs fully offline on your computer — your data is completely private, and no information is collected."))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -324,6 +325,24 @@ struct LoginView: View {
                                     .font(.system(size: 13))
                             }
                         }
+                        Spacer()
+                    }
+                    .padding(.top, 4)
+                    
+                    HStack(alignment: .top, spacing: 8) {
+                        Toggle("", isOn: $acceptedMarketing)
+                            .labelsHidden()
+                            .toggleStyle(.checkbox)
+                            .accentColor(colorScheme == .dark ? .white : .black)
+                            .tint(colorScheme == .dark ? .white : .black)
+                            .padding(.top, 1)
+                        
+                        Text(t("I want to receive email updates about new products, upcoming changes, and other announcements."))
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                        
                         Spacer()
                     }
                     .padding(.top, 4)
@@ -428,7 +447,7 @@ struct LoginView: View {
                 } else {
                     resendCooldown = 0
                     // 2. Wywołaj rejestrację bezpośrednio tutaj, żeby sprawdzić unikalność w auth.users i wysłać email!
-                    try await authManager.register(email: email, password: password)
+                    try await authManager.register(email: email, password: password, marketingOptIn: acceptedMarketing)
                     
                     UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastRegisterOTPSentTime")
                     lastSentRegisterEmail = email

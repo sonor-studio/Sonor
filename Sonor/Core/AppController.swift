@@ -43,7 +43,9 @@ class AppController: NSObject, ObservableObject {
     private let audioManager = AudioManager()
     private var sonorContext: SonorContext?
     private var targetAppPID: pid_t = 0  // PID aplikacji gdzie wklejamy - zapisujemy przy starcie nagrywania
+    private var targetAXElement: AXUIElement? = nil
     private var targetAppBundleID: String? = nil
+    private var wasTextFieldFocusedAtStart: Bool = false
     private var didPauseMusic: Bool = false
     var hudWindow: NSPanel?
     private var currentTask: Task<Void, Never>?
@@ -133,6 +135,9 @@ class AppController: NSObject, ObservableObject {
         }
         HotkeyManager.shared.onAssistantKeyDown = { [weak self] in
             self?.selectNextMode()
+        }
+        HotkeyManager.shared.isSecondaryHotkeysEnabled = { [weak self] in
+            return self?.isRecording == true || self?.isPaused == true
         }
         HotkeyManager.shared.startListening()
     }
@@ -228,8 +233,9 @@ class AppController: NSObject, ObservableObject {
                frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
                 targetAppPID = frontApp.processIdentifier
                 targetAppBundleID = frontApp.bundleIdentifier
+                targetAXElement = PasteManager.shared.getFocusedAXElement(pid: targetAppPID)
+                wasTextFieldFocusedAtStart = PasteManager.shared.isElementTextField(targetAXElement)
                 print("📌 Zapamiętano docelową aplikację: \(frontApp.localizedName ?? "?") (PID: \(targetAppPID))")
-
             }
             
             // Określ tryb na starcie
@@ -238,22 +244,22 @@ class AppController: NSObject, ObservableObject {
                 selectedMode = VoiceMode.defaults.first!
                 self.currentMode = selectedMode
             } else {
-                if let bundleID = self.targetAppBundleID,
-                   let autoMode = availableModes.first(where: { $0.boundAppBundleIDs.contains(bundleID) }) {
-                    selectedMode = autoMode
-                    print("🤖 Automatycznie wybrano tryb dla aplikacji \(bundleID): \(selectedMode.name)")
-                } else {
-                    selectedMode = currentMode ?? availableModes.first ?? VoiceMode.defaults.first!
-                }
-                
+                selectedMode = currentMode ?? availableModes.first ?? VoiceMode.defaults.first!
                 if self.currentMode?.id != selectedMode.id {
-                    self.selectMode(selectedMode) // Aktualizuj UI i persist w UserDefaults
+                    self.selectMode(selectedMode)
                 }
             }
             
             // Pokaż HUD OD RAZU, zanim zacznie grać dźwięk
             self.isRecording = true
-            self.statusText = self.sonorContext == nil ? "Initializing" : "Listening..."
+            let behavior = selectedMode.audioBehavior ?? .keep
+            if self.sonorContext == nil {
+                self.statusText = "Initializing"
+            } else if behavior == .pause || behavior == .mute {
+                self.statusText = "Preparing..."
+            } else {
+                self.statusText = "Listening..."
+            }
             self.showHUD()
             self.forceFloatingWindow()
             
@@ -286,6 +292,14 @@ class AppController: NSObject, ObservableObject {
     
     private func startRecordingProcess(selectedMode: VoiceMode) {
         Task.detached {
+            // KLUCZOWE: Dajemy WindowServerowi ułamek sekundy (150ms) na fizyczne narysowanie okna HUD.
+            // Bez tego natychmiastowe wywołanie SCShareableContent spauzuje WindowServer przed wyrenderowaniem okna.
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            
+            // 1. Sprawdzenie zaraz po pierwszym opóźnieniu
+            let isStillRecording = await MainActor.run { return self.isRecording }
+            guard isStillRecording else { return }
+            
             let behavior = selectedMode.audioBehavior ?? .keep
             var shouldMuteOrPause = false
             
@@ -294,8 +308,13 @@ class AppController: NSObject, ObservableObject {
                     shouldMuteOrPause = await AudioCaptureManager.shared.checkIsAudioPlaying()
                 }
             } else if behavior == .mute {
-                shouldMuteOrPause = self.isAudioActivelyPlayingPmset()
+                // Musimy wejść na MainActor by wywołać synchroniczną metodę
+                shouldMuteOrPause = await MainActor.run { return self.isAudioActivelyPlayingPmset() }
             }
+            
+            // 2. Sprawdzenie przed wykonaniem efektów ubocznych (pauzowanie, dźwięk)
+            let isRecordingAfterCheck = await MainActor.run { return self.isRecording }
+            guard isRecordingAfterCheck else { return }
             
             await MainActor.run {
                 if behavior != .keep {
@@ -314,6 +333,7 @@ class AppController: NSObject, ObservableObject {
                 }
                 
                 Task {
+                    guard self.isRecording else { return }
                     // Odtwórz dźwięk w tle (fire-and-forget)
                     Task {
                         await SoundPlayer.shared.playSound(named: "Start")
@@ -738,7 +758,24 @@ class AppController: NSObject, ObservableObject {
             // Krok 2: czyszczenie przez LLM
             let selectedMode = self.currentMode ?? VoiceMode.defaults.first!
             
-            let pid = self.targetAppPID
+            var pid = self.targetAppPID
+            if selectedMode.pasteTiming == "end" {
+                await MainActor.run {
+                    if let frontApp = NSWorkspace.shared.frontmostApplication,
+                       frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
+                        pid = frontApp.processIdentifier
+                    }
+                }
+            }
+            
+            var willPaste = true
+            if selectedMode.fallbackToClipboard == true {
+                if selectedMode.pasteTiming == "start" {
+                    willPaste = self.wasTextFieldFocusedAtStart
+                } else {
+                    willPaste = PasteManager.shared.isTextFieldFocused(pid: pid)
+                }
+            }
 
             print("🎯 Wybrany tryb: \(selectedMode.name)")
 
@@ -754,11 +791,19 @@ class AppController: NSObject, ObservableObject {
                     MessageMemoryManager.shared.saveMessage(correctedText)
                 }
                 
-                DispatchQueue.global(qos: .userInteractive).async {
-                    PasteManager.shared.typeTextDirectly(text: correctedText, targetPID: pid)
-                    Task { @MainActor in
-                        self.startAutoLearnTracking(targetPID: pid, originalText: correctedText)
+                if willPaste {
+                    DispatchQueue.global(qos: .userInteractive).async {
+                        let forceFocusElement = (selectedMode.pasteTiming == "start") ? self.targetAXElement : nil
+                        PasteManager.shared.typeTextDirectly(text: correctedText, targetPID: pid, forceFocusElement: forceFocusElement)
+                        Task { @MainActor in
+                            self.startAutoLearnTracking(targetPID: pid, originalText: correctedText)
+                        }
                     }
+                } else {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(correctedText, forType: .string)
+                    print("📋 Skopiowano do schowka (brak pola tekstowego)")
+                    Task { await SoundPlayer.shared.playSound(named: "Error") }
                 }
             } else {
                 if Task.isCancelled {
@@ -862,6 +907,24 @@ class AppController: NSObject, ObservableObject {
                     self.hideHUDAfterDelay()
                     return
                 }
+                if willPaste {
+                    // Aktywacja i ustawienie focusu przed startem strumieniowania
+                    if let targetApp = NSRunningApplication(processIdentifier: pid) {
+                        targetApp.activate(options: .activateIgnoringOtherApps)
+                        
+                        var attempts = 0
+                        while !targetApp.isActive && attempts < 30 {
+                            try? await Task.sleep(nanoseconds: 50_000_000)
+                            attempts += 1
+                        }
+                        try? await Task.sleep(nanoseconds: 100_000_000)
+                    }
+                    if selectedMode.pasteTiming == "start", let element = self.targetAXElement {
+                        AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, true as CFTypeRef)
+                        try? await Task.sleep(nanoseconds: 50_000_000)
+                    }
+                }
+                
                 var didStartStreaming = false
                 var fullGeneratedText = ""
                 _ = await LLMManager.shared.cleanStream(text: correctedText, systemPrompt: systemPrompt) { token in
@@ -875,8 +938,10 @@ class AppController: NSObject, ObservableObject {
                         }
                     }
                     print(token, terminator: "")
-                    DispatchQueue.global(qos: .userInteractive).async {
-                        PasteManager.shared.typeTextToken(token: token, targetPID: pid)
+                    if willPaste {
+                        DispatchQueue.global(qos: .userInteractive).async {
+                            PasteManager.shared.typeTextToken(token: token, targetPID: pid)
+                        }
                     }
                 }
                 print("\n=== [LLM STREAMING FINISHED] ===")
@@ -886,10 +951,19 @@ class AppController: NSObject, ObservableObject {
                     return
                 }
                 
+                if !willPaste {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(fullGeneratedText, forType: .string)
+                    print("📋 Skopiowano do schowka z LLM (brak pola tekstowego)")
+                    Task { await SoundPlayer.shared.playSound(named: "Error") }
+                }
+                
                 // Zapisujemy do pamięci RAM na wątku głównym
                 await MainActor.run {
                     MessageMemoryManager.shared.saveMessage(fullGeneratedText)
-                    self.startAutoLearnTracking(targetPID: pid, originalText: fullGeneratedText)
+                    if willPaste {
+                        self.startAutoLearnTracking(targetPID: pid, originalText: fullGeneratedText)
+                    }
                 }
             }
 
@@ -897,7 +971,9 @@ class AppController: NSObject, ObservableObject {
                 self.statusText = "Done!"
             }
             
-            await SoundPlayer.shared.playSound(named: "End")
+            if willPaste {
+                await SoundPlayer.shared.playSound(named: "End")
+            }
             
             self.hideHUDAfterDelay()
         }

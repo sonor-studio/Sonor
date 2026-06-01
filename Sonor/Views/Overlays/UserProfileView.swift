@@ -19,6 +19,9 @@ struct UserProfileView: View {
     
     @State private var isCloseHovered = false
     @State private var showDeleteConfirmation = false
+    @State private var showUnsubscribeConfirmation = false
+    @State private var isUpdatingConsent = false
+    @State private var localMarketingOptIn = false
     @State private var isDeleting = false
     @State private var deleteError: String? = nil
     @State private var deletePassword = ""
@@ -142,7 +145,7 @@ struct UserProfileView: View {
                         .font(.system(size: 20, weight: .bold))
                         .padding(.top, 10)
                     
-                    Text(t("To continue, you need to confirm your email address. We will send a 6-digit code to your email."))
+                    Text(t("To continue, you need to confirm your email address. A 6-digit code will be sent to your email."))
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -551,6 +554,51 @@ struct UserProfileView: View {
                     }
                     .padding(.bottom, 30)
                     
+                    VStack(spacing: 12) {
+                        HStack(spacing: 10) {
+                            Image(systemName: "envelope.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.secondary)
+                            
+                            Toggle(t("Email Updates"), isOn: Binding(
+                                get: { localMarketingOptIn },
+                                set: { newValue in
+                                    if !newValue {
+                                        showUnsubscribeConfirmation = true
+                                    } else {
+                                        localMarketingOptIn = true
+                                        updateMarketingConsent(true)
+                                    }
+                                }
+                            ))
+                            .toggleStyle(.checkbox)
+                            .focusable(false)
+                            .accentColor(colorScheme == .dark ? .white : .black)
+                            .tint(colorScheme == .dark ? .white : .black)
+                            
+                            Spacer()
+                            
+                            if isUpdatingConsent {
+                                ProgressView()
+                                    .controlSize(.small)
+                            }
+                        }
+                        .padding(12)
+                        .background(colorScheme == .dark ? Color.white.opacity(0.04) : Color.black.opacity(0.03))
+                        .cornerRadius(8)
+                        .padding(.horizontal, 24)
+                    }
+                    .alert(t("Are you sure?"), isPresented: $showUnsubscribeConfirmation) {
+                        Button(t("Unsubscribe"), role: .destructive) {
+                            localMarketingOptIn = false
+                            updateMarketingConsent(false)
+                        }
+                        Button(t("Cancel"), role: .cancel) {}
+                    } message: {
+                        Text(t("Are you sure you want to unsubscribe from email updates about new products and upcoming changes?"))
+                    }
+                    .padding(.bottom, 10)
+                    
                     Spacer()
                     
                     // Log Out Button
@@ -686,6 +734,10 @@ struct UserProfileView: View {
         .task {
             authManager.accountDeletionError = nil
             await authManager.fetchUserDetails()
+            self.localMarketingOptIn = authManager.marketingOptIn
+        }
+        .onChange(of: authManager.marketingOptIn) { newValue in
+            self.localMarketingOptIn = newValue
         }
         .onDisappear {
             resendTimerTask?.cancel()
@@ -848,6 +900,32 @@ struct UserProfileView: View {
                 await MainActor.run {
                     isDeleting = false
                     deleteError = tError(error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    private func updateMarketingConsent(_ newValue: Bool) {
+        if !networkMonitor.isConnected {
+            deleteError = t("Please connect to the internet to perform this action.")
+            localMarketingOptIn = !newValue
+            return
+        }
+        
+        isUpdatingConsent = true
+        deleteError = nil
+        
+        Task {
+            do {
+                try await authManager.updateMarketingOptIn(newValue: newValue)
+                await MainActor.run {
+                    isUpdatingConsent = false
+                }
+            } catch {
+                await MainActor.run {
+                    isUpdatingConsent = false
+                    deleteError = tError(error.localizedDescription)
+                    localMarketingOptIn = !newValue
                 }
             }
         }

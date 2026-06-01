@@ -23,10 +23,17 @@ class PasteManager {
         }
 
         print("🎯 PasteManager: Aktywuję '\(targetApp.localizedName ?? "?")' (PID: \(targetPID))")
-        targetApp.activate()
+        targetApp.activate(options: .activateIgnoringOtherApps)
 
-        // Daj systemowi czas na przełączenie focusu
-        Thread.sleep(forTimeInterval: 0.15)
+        // Czekaj aż aplikacja faktycznie stanie się aktywna (max 1.5 sekundy)
+        var attempts = 0
+        while !targetApp.isActive && attempts < 30 {
+            Thread.sleep(forTimeInterval: 0.05)
+            attempts += 1
+        }
+        
+        // Dodatkowy czas na zakończenie ewentualnych animacji systemowych
+        Thread.sleep(forTimeInterval: 0.1)
 
         // 2. Spróbuj bezpośredniego zapisu przez AX API (nie używa schowka)
         if tryAXInsert(text: text, pid: targetPID) {
@@ -53,6 +60,148 @@ class PasteManager {
     }
 
 
+
+    // MARK: - Detect Text Field Focus
+    func getFocusedAXElement(pid: pid_t) -> AXUIElement? {
+        guard AXIsProcessTrusted() else {
+            print("⚠️ [AXDebug] System nie ufa tej aplikacji w kwestii Accessibility (AXIsProcessTrusted = false)")
+            return nil
+        }
+        
+        let appElement = AXUIElementCreateApplication(pid)
+        var focusedElement: AnyObject?
+        
+        // Próba 1: Pobierz bezpośrednio z aplikacji
+        var focusResult = AXUIElementCopyAttributeValue(appElement, kAXFocusedUIElementAttribute as CFString, &focusedElement)
+        
+        if focusResult == .success, let element = focusedElement as! AXUIElement? {
+            return element
+        }
+        
+        print("⚠️ [AXDebug] Próba 1 (App Element) nie powiodła się z kodem: \(focusResult.rawValue). Próbuję pobrać przez aktywne okno...")
+        
+        // Próba 2: Pobierz z zogniskowanego okna (kAXFocusedWindowAttribute)
+        var focusedWindow: AnyObject?
+        if AXUIElementCopyAttributeValue(appElement, kAXFocusedWindowAttribute as CFString, &focusedWindow) == .success,
+           let windowElement = focusedWindow as! AXUIElement? {
+            focusResult = AXUIElementCopyAttributeValue(windowElement, kAXFocusedUIElementAttribute as CFString, &focusedElement)
+            
+            if focusResult == .success, let element = focusedElement as! AXUIElement? {
+                print("✅ [AXDebug] Sukces! Pobrano sfokusowany element przez aktywne okno.")
+                return element
+            }
+        }
+        
+        // Próba 3: Pobierz pierwsze okno z listy kAXWindowsAttribute (przydatne dla Electrona)
+        print("⚠️ [AXDebug] Próba 2 (Focused Window) nie powiodła się. Próbuję przez listę wszystkich okien...")
+        var windowsList: AnyObject?
+        if AXUIElementCopyAttributeValue(appElement, kAXWindowsAttribute as CFString, &windowsList) == .success,
+           let windows = windowsList as? [AXUIElement], let firstWindow = windows.first {
+            focusResult = AXUIElementCopyAttributeValue(firstWindow, kAXFocusedUIElementAttribute as CFString, &focusedElement)
+            
+            if focusResult == .success, let element = focusedElement as! AXUIElement? {
+                print("✅ [AXDebug] Sukces! Pobrano sfokusowany element przez pierwsze okno z listy.")
+                return element
+            }
+        }
+        
+        print("❌ [AXDebug] Ostatecznie nie udało się pobrać sfokusowanego elementu. Ostatni kod błędu: \(focusResult.rawValue)")
+        return nil
+    }
+
+    func isElementTextField(_ axElement: AXUIElement?) -> Bool {
+        guard let element = axElement else { 
+            print("🔍 [AXDebug] Element AXUIElement jest NIL (brak sfokusowanego obiektu) -> Zakładam wklejanie na ślepo (zwracam true)")
+            return true 
+        }
+        
+        print("🔍 [AXDebug] --- Analizuję element AXUIElement ---")
+        
+        var role: String = "N/A"
+        var subrole: String = "N/A"
+        var roleDesc: String = "N/A"
+        var isEditable: Bool? = nil
+        var hasInsertionPoint: Bool = false
+        var valueType: String = "N/A"
+        var valueDescription: String = "N/A"
+        
+        var roleValue: AnyObject?
+        if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleValue) == .success {
+            role = (roleValue as? String) ?? "\(String(describing: roleValue))"
+        }
+        
+        var subroleValue: AnyObject?
+        if AXUIElementCopyAttributeValue(element, kAXSubroleAttribute as CFString, &subroleValue) == .success {
+            subrole = (subroleValue as? String) ?? "\(String(describing: subroleValue))"
+        }
+        
+        var roleDescValue: AnyObject?
+        if AXUIElementCopyAttributeValue(element, kAXRoleDescriptionAttribute as CFString, &roleDescValue) == .success {
+            roleDesc = (roleDescValue as? String) ?? "\(String(describing: roleDescValue))"
+        }
+        
+        var settable: DarwinBoolean = false
+        if AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable) == .success {
+            isEditable = settable.boolValue
+        }
+        
+        var insertionPoint: AnyObject?
+        if AXUIElementCopyAttributeValue(element, kAXInsertionPointLineNumberAttribute as CFString, &insertionPoint) == .success {
+            hasInsertionPoint = true
+        }
+        
+        var valueVal: AnyObject?
+        if AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &valueVal) == .success {
+            if let valStr = valueVal as? String {
+                valueType = "String"
+                valueDescription = "'\(valStr.prefix(100))' (długość: \(valStr.count))"
+            } else {
+                valueType = "\(type(of: valueVal))"
+                valueDescription = "\(String(describing: valueVal))"
+            }
+        }
+        
+        print("   🔹 Rola (Role): \(role)")
+        print("   🔹 Podrola (Subrole): \(subrole)")
+        print("   🔹 Opis roli (RoleDescription): \(roleDesc)")
+        print("   🔹 Edytowalne (Value Settable): \(isEditable != nil ? String(isEditable!) : "Nieznane")")
+        print("   🔹 Posiada kursor (InsertionPoint): \(hasInsertionPoint)")
+        print("   🔹 Typ wartości: \(valueType)")
+        print("   🔹 Podgląd wartości: \(valueDescription)")
+        
+        // List all attributes for deep inspection:
+        var attributeNames: CFArray?
+        if AXUIElementCopyAttributeNames(element, &attributeNames) == .success,
+           let names = attributeNames as? [String] {
+            print("   🔹 Wszystkie dostępne atrybuty (\(names.count)): \(names.joined(separator: ", "))")
+            // Print some additional potentially interesting attributes
+            for attr in ["AXPlaceholderValue", "AXSelectedTextRange", "AXNumberOfCharacters", "AXEnabled"] {
+                if names.contains(attr) {
+                    var val: AnyObject?
+                    if AXUIElementCopyAttributeValue(element, attr as CFString, &val) == .success {
+                        print("      🔸 \(attr): \(String(describing: val))")
+                    }
+                }
+            }
+        }
+        
+        // Zgodnie z decyzją użytkownika: jeśli pole WYRAŹNIE zgłasza, że NIE jest edytowalne,
+        // to używamy schowka (zwracamy false). W każdym innym przypadku (jest edytowalne, albo
+        // nie da się tego w ogóle ustalić), ryzykujemy i "wklejamy na ślepo" (zwracamy true).
+        if let editable = isEditable, editable == false {
+            print("❌ [AXDebug] Wynik: Fałsz (wyraźnie stwierdzono, że pole NIE jest edytowalne)")
+            return false
+        }
+        
+        print("✅ [AXDebug] Wynik: Prawda (pole edytowalne, lub nie można było jednoznacznie zaprzeczyć)")
+        return true
+    }
+
+    func isTextFieldFocused(pid: pid_t) -> Bool {
+        guard AXIsProcessTrusted() else { return true } // Fallback to true if no permissions
+        let element = getFocusedAXElement(pid: pid)
+        return isElementTextField(element)
+    }
 
     // MARK: - AX Insert (Primary)
 
@@ -155,7 +304,7 @@ class PasteManager {
     // MARK: - Method 1: Virtual Typing
 
     /// Wpisuje tekst płynnie (bezpośrednio ze znaków Unicode) bez ingerowania w schowek.
-    func typeTextDirectly(text: String, targetPID: pid_t) {
+    func typeTextDirectly(text: String, targetPID: pid_t, forceFocusElement: AXUIElement? = nil) {
         guard targetPID > 0 else {
             print("❌ PasteManager: Brak prawidłowego PID docelowej aplikacji")
             return
@@ -167,10 +316,22 @@ class PasteManager {
         }
 
         print("🎯 PasteManager: Aktywuję '\(targetApp.localizedName ?? "?")' (PID: \(targetPID)) dla pisania bezpośredniego")
-        targetApp.activate()
+        targetApp.activate(options: .activateIgnoringOtherApps)
 
-        // Daj systemowi czas na przełączenie focusu
-        Thread.sleep(forTimeInterval: 0.15)
+        // Czekaj aż aplikacja faktycznie stanie się aktywna (max 1.5 sekundy)
+        var attempts = 0
+        while !targetApp.isActive && attempts < 30 {
+            Thread.sleep(forTimeInterval: 0.05)
+            attempts += 1
+        }
+        
+        // Dodatkowy czas na zakończenie ewentualnych animacji systemowych
+        Thread.sleep(forTimeInterval: 0.1)
+        
+        if let element = forceFocusElement {
+            AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, true as CFTypeRef)
+            Thread.sleep(forTimeInterval: 0.05)
+        }
         
         // Funkcja CGEvent.keyboardSetUnicodeString to prawidłowa metoda uiszczania całego tekstu Unicode na evencie
         let source = CGEventSource(stateID: .combinedSessionState)

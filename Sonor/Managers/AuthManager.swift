@@ -13,9 +13,11 @@ class AuthManager: ObservableObject {
     @Published var currentUserProvider: String = "email"
     @Published var accountDeletionError: String? = nil
     @Published var accountTier: String = "premium"
+    @Published var marketingOptIn: Bool = false
     var pendingAccountDeletion: Bool = false
     
     private let tokenKey = "sonor.supabase.access_token"
+    private let refreshTokenKey = "sonor.supabase.refresh_token"
     private let emailKey = "sonor.supabase.user_email"
     
     private var supabaseUrl: String {
@@ -89,6 +91,98 @@ class AuthManager: ObservableObject {
         }
     }
     
+    private func isTokenExpired(_ token: String) -> Bool {
+        let parts = token.components(separatedBy: ".")
+        guard parts.count == 3 else { return true }
+        
+        let payloadPart = parts[1]
+        var base64 = payloadPart
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        
+        let length = base64.count
+        let requiredLength = Int(ceil(Double(length) / 4.0) * 4.0)
+        let padding = requiredLength - length
+        if padding > 0 {
+            base64 += String(repeating: "=", count: padding)
+        }
+        
+        guard let data = Data(base64Encoded: base64),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let exp = json["exp"] as? TimeInterval else {
+            return true
+        }
+        
+        let expiryDate = Date(timeIntervalSince1970: exp)
+        return expiryDate.compare(Date().addingTimeInterval(60)) == .orderedAscending
+    }
+    
+    func getValidAccessToken() async throws -> String {
+        guard let token = getFromKeychain(key: tokenKey), !token.isEmpty else {
+            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "Brak tokenu. Zaloguj się ponownie."])
+        }
+        
+        if isTokenExpired(token) {
+            print("[AuthManager] Wykryto wygaśnięcie tokenu JWT. Rozpoczynam odświeżanie sesji...")
+            return try await refreshSession()
+        }
+        
+        return token
+    }
+    
+    @discardableResult
+    func refreshSession() async throws -> String {
+        guard !supabaseUrl.isEmpty, !supabaseAnonKey.isEmpty else {
+            throw NSError(domain: "AuthError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Missing Supabase keys in .env file"])
+        }
+        
+        guard let refreshToken = getFromKeychain(key: refreshTokenKey), !refreshToken.isEmpty else {
+            await MainActor.run { logout() }
+            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "Brak tokenu odświeżania. Zaloguj się ponownie."])
+        }
+        
+        guard let url = URL(string: "\(supabaseUrl)/auth/v1/token?grant_type=refresh_token") else {
+            throw NSError(domain: "AuthError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid Supabase URL"])
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = ["refresh_token": refreshToken]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AuthError", code: 2, userInfo: [NSLocalizedDescriptionKey: "No valid response from server"])
+        }
+        
+        if (200...299).contains(httpResponse.statusCode) {
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let newAccessToken = json["access_token"] as? String,
+               let newRefreshToken = json["refresh_token"] as? String {
+                
+                await MainActor.run {
+                    self.saveToKeychain(key: self.tokenKey, value: newAccessToken)
+                    self.saveToKeychain(key: self.refreshTokenKey, value: newRefreshToken)
+                    self.isLoggedIn = true
+                }
+                print("✅ [AuthManager] Pomyślnie odświeżono sesję Supabase.")
+                return newAccessToken
+            } else {
+                throw NSError(domain: "AuthError", code: 3, userInfo: [NSLocalizedDescriptionKey: "Error parsing token response"])
+            }
+        } else {
+            let errorMsg = extractErrorMessage(from: data)
+            if httpResponse.statusCode == 400 || httpResponse.statusCode == 401 {
+                await MainActor.run { logout() }
+            }
+            throw NSError(domain: "AuthError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+        }
+    }
+    
     func login(email: String, password: String) async throws {
         guard !supabaseUrl.isEmpty, !supabaseAnonKey.isEmpty else {
             throw NSError(domain: "AuthError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Missing Supabase keys in .env file"])
@@ -118,6 +212,9 @@ class AuthManager: ObservableObject {
                 
                 // Zapisz do Keychain
                 saveToKeychain(key: tokenKey, value: accessToken)
+                if let refreshToken = json["refresh_token"] as? String {
+                    saveToKeychain(key: refreshTokenKey, value: refreshToken)
+                }
                 saveToKeychain(key: emailKey, value: email)
                 
                 self.isLoggedIn = true
@@ -134,7 +231,7 @@ class AuthManager: ObservableObject {
         }
     }
     
-    func register(email: String, password: String) async throws {
+    func register(email: String, password: String, marketingOptIn: Bool) async throws {
         guard !supabaseUrl.isEmpty, !supabaseAnonKey.isEmpty else {
             throw NSError(domain: "AuthError", code: 0, userInfo: [NSLocalizedDescriptionKey: "Missing Supabase keys in .env file"])
         }
@@ -148,7 +245,13 @@ class AuthManager: ObservableObject {
         request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         
-        let body: [String: Any] = ["email": email, "password": password]
+        let body: [String: Any] = [
+            "email": email,
+            "password": password,
+            "data": [
+                "marketing_opt_in": marketingOptIn
+            ]
+        ]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -241,6 +344,9 @@ class AuthManager: ObservableObject {
                 
                 // Zapisz do Keychain
                 saveToKeychain(key: tokenKey, value: accessToken)
+                if let refreshToken = json["refresh_token"] as? String {
+                    saveToKeychain(key: refreshTokenKey, value: refreshToken)
+                }
                 saveToKeychain(key: emailKey, value: email)
                 
                 self.isLoggedIn = true
@@ -344,6 +450,9 @@ class AuthManager: ObservableObject {
                 
                 // Save new recovery session
                 saveToKeychain(key: tokenKey, value: accessToken)
+                if let refreshToken = json["refresh_token"] as? String {
+                    saveToKeychain(key: refreshTokenKey, value: refreshToken)
+                }
                 saveToKeychain(key: emailKey, value: email)
                 
                 self.isLoggedIn = true
@@ -387,6 +496,8 @@ class AuthManager: ObservableObject {
         }
         
         if let accessToken = queryItems["access_token"] {
+            let refreshToken = queryItems["refresh_token"]
+            
             if self.pendingAccountDeletion {
                 self.pendingAccountDeletion = false
                 let oldEmailToVerify = self.currentUserEmail
@@ -404,6 +515,9 @@ class AuthManager: ObservableObject {
                         if newEmail.lowercased() == oldEmailToVerify?.lowercased() {
                             await MainActor.run {
                                 self.saveToKeychain(key: self.tokenKey, value: accessToken)
+                                if let refreshToken = refreshToken {
+                                    self.saveToKeychain(key: self.refreshTokenKey, value: refreshToken)
+                                }
                                 self.isLoggedIn = true
                                 self.accountDeletionError = nil
                             }
@@ -431,6 +545,9 @@ class AuthManager: ObservableObject {
                 }
             } else {
                 saveToKeychain(key: tokenKey, value: accessToken)
+                if let refreshToken = refreshToken {
+                    saveToKeychain(key: refreshTokenKey, value: refreshToken)
+                }
                 self.isLoggedIn = true
                 Task {
                     await fetchUserDetails()
@@ -442,20 +559,19 @@ class AuthManager: ObservableObject {
     func logout() {
         ModelManager.shared.pauseAllDownloads()
         deleteFromKeychain(key: tokenKey)
+        deleteFromKeychain(key: refreshTokenKey)
         deleteFromKeychain(key: emailKey)
         self.isLoggedIn = false
         self.currentUserEmail = nil
         self.currentUserCreatedAt = nil
+        self.marketingOptIn = false
     }
     
     func deleteAccount() async throws {
         ModelManager.shared.pauseAllDownloads()
         print("[AuthManager] Rozpoczęcie procesu usuwania konta...")
         
-        let token = getFromKeychain(key: tokenKey)
-        guard let token = token, !token.isEmpty else {
-            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "Brak tokenu."])
-        }
+        let token = try await getValidAccessToken()
         
         // 1. Pobierz ID uzytkownika zeby usunac profil
         guard let userUrl = URL(string: "\(supabaseUrl)/auth/v1/user") else { throw NSError(domain: "AuthError", code: 400, userInfo: [NSLocalizedDescriptionKey: "Błąd URL."]) }
@@ -515,10 +631,7 @@ class AuthManager: ObservableObject {
     func updatePassword(oldPassword: String, newPassword: String) async throws {
         print("[AuthManager] Rozpoczęcie zmiany hasła...")
         
-        let token = getFromKeychain(key: tokenKey)
-        guard let token = token, !token.isEmpty else {
-            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "Brak tokenu. Zaloguj się ponownie."])
-        }
+        let token = try await getValidAccessToken()
         
         guard let url = URL(string: "\(supabaseUrl)/auth/v1/user") else {
             throw NSError(domain: "AuthError", code: 400, userInfo: [NSLocalizedDescriptionKey: "Błąd URL."])
@@ -547,6 +660,83 @@ class AuthManager: ObservableObject {
         }
     }
     
+    func updateMarketingOptIn(newValue: Bool) async throws {
+        print("[AuthManager] Zmiana marketing_opt_in na: \(newValue)")
+        
+        let token = try await getValidAccessToken()
+        
+        // 1. Pobierz ID uzytkownika z tokenu
+        guard let userUrl = URL(string: "\(supabaseUrl)/auth/v1/user") else {
+            throw NSError(domain: "AuthError", code: 400, userInfo: [NSLocalizedDescriptionKey: "Błąd URL."])
+        }
+        var userReq = URLRequest(url: userUrl)
+        userReq.httpMethod = "GET"
+        userReq.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        userReq.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        
+        let (uData, uResp) = try await URLSession.shared.data(for: userReq)
+        guard let uHttp = uResp as? HTTPURLResponse, uHttp.statusCode == 200,
+           let uJson = try? JSONSerialization.jsonObject(with: uData) as? [String: Any],
+           let userId = uJson["id"] as? String else {
+            throw NSError(domain: "AuthError", code: 500, userInfo: [NSLocalizedDescriptionKey: "Błąd pobierania ID użytkownika."])
+        }
+        
+        // 2. Wyślij PATCH do /rest/v1/profiles
+        guard let profUrl = URL(string: "\(supabaseUrl)/rest/v1/profiles?id=eq.\(userId)") else {
+            throw NSError(domain: "AuthError", code: 400, userInfo: [NSLocalizedDescriptionKey: "Błąd URL dla profiles."])
+        }
+        
+        var pReq = URLRequest(url: profUrl)
+        pReq.httpMethod = "PATCH"
+        pReq.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        pReq.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        pReq.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        
+        let body: [String: Any] = ["marketing_opt_in": newValue]
+        pReq.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (pData, pResp) = try await URLSession.shared.data(for: pReq)
+        guard let pHttp = pResp as? HTTPURLResponse else {
+            throw NSError(domain: "AuthError", code: 500, userInfo: [NSLocalizedDescriptionKey: "Brak odpowiedzi od serwera."])
+        }
+        
+        print("[AuthManager] Status odpowiedzi PATCH profiles: \(pHttp.statusCode)")
+        
+        if (200...299).contains(pHttp.statusCode) {
+            await MainActor.run {
+                self.marketingOptIn = newValue
+            }
+        } else {
+            // Spróbujmy z wielką literą Profiles w razie czego
+            guard let altProfUrl = URL(string: "\(supabaseUrl)/rest/v1/Profiles?id=eq.\(userId)") else {
+                let errorMsg = extractErrorMessage(from: pData)
+                throw NSError(domain: "AuthError", code: pHttp.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+            }
+            
+            var altReq = URLRequest(url: altProfUrl)
+            altReq.httpMethod = "PATCH"
+            altReq.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+            altReq.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            altReq.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            altReq.httpBody = pReq.httpBody
+            
+            let (altData, altResp) = try await URLSession.shared.data(for: altReq)
+            guard let altHttp = altResp as? HTTPURLResponse else {
+                throw NSError(domain: "AuthError", code: 500, userInfo: [NSLocalizedDescriptionKey: "Brak odpowiedzi od serwera dla Profiles."])
+            }
+            
+            print("[AuthManager] Status odpowiedzi PATCH Profiles (wielką): \(altHttp.statusCode)")
+            if (200...299).contains(altHttp.statusCode) {
+                await MainActor.run {
+                    self.marketingOptIn = newValue
+                }
+            } else {
+                let errorMsg = extractErrorMessage(from: altData)
+                throw NSError(domain: "AuthError", code: altHttp.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+            }
+        }
+    }
+    
     func fetchUserDetails() async {
         print("[AuthManager] fetchUserDetails() rozpoczęte...")
         
@@ -554,12 +744,12 @@ class AuthManager: ObservableObject {
             currentUserCreatedAt = loadProfileCache(email: email)
         }
         
-        let token = getFromKeychain(key: tokenKey)
-        print("[AuthManager] Status tokenu: \(token != nil ? "obecny (długość: \(token!.count))" : "BRAK")")
-        
-        guard let token = token, !token.isEmpty else {
-            print("[AuthManager] Przerwano: Brak tokenu w Keychain.")
-            return 
+        let token: String
+        do {
+            token = try await getValidAccessToken()
+        } catch {
+            print("[AuthManager] Przerwano fetchUserDetails: Brak ważnego tokenu lub nie udało się go odświeżyć: \(error.localizedDescription)")
+            return
         }
         
         print("[AuthManager] supabaseUrl: '\(supabaseUrl)', anonKey pusta: \(supabaseAnonKey.isEmpty)")
@@ -669,6 +859,18 @@ class AuthManager: ObservableObject {
                     // Parsing account_tier
                     if let tier = profile["account_tier"] as? String {
                         await MainActor.run { self.accountTier = tier }
+                    }
+                    
+                    if let optInVal = profile["marketing_opt_in"] {
+                        var optIn = false
+                        if let b = optInVal as? Bool {
+                            optIn = b
+                        } else if let num = optInVal as? NSNumber {
+                            optIn = num.boolValue
+                        } else if let s = optInVal as? String {
+                            optIn = (s.lowercased() == "true" || s == "1")
+                        }
+                        await MainActor.run { self.marketingOptIn = optIn }
                     }
                     
                     // Szukamy klucza created_at

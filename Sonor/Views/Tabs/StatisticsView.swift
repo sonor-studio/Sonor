@@ -10,6 +10,7 @@ struct StatisticsView: View {
     @State private var isShowingIncognitoExplanation = false
     @State private var isShowingExplanationFromInfoButton = false
     @State private var pendingIncognitoAnimation = false
+    @State private var localIncognitoMode = false
     
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
@@ -45,7 +46,11 @@ struct StatisticsView: View {
                 .preferredColorScheme(colorScheme)
         }
         .onAppear {
+            localIncognitoMode = isIncognitoMode
             loadStats()
+        }
+        .onChange(of: isIncognitoMode) { newValue in
+            localIncognitoMode = newValue
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("UsageStatsUpdated"))) { _ in
             loadStats()
@@ -85,25 +90,26 @@ struct StatisticsView: View {
                 .help(t("Learn more about incognito mode"))
                 
                 Toggle(t("Incognito Mode"), isOn: Binding(
-                    get: { isIncognitoMode },
+                    get: { localIncognitoMode },
                     set: { newValue in
-                        isIncognitoMode = newValue
-                        if newValue {
-                            if !UserDefaults.standard.bool(forKey: "skipIncognitoExplanation") {
-                                pendingIncognitoAnimation = true
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.01) {
+                        localIncognitoMode = newValue
+                        
+                        // Defer heavy AppStorage write and sheet presentation to allow smooth animation
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            isIncognitoMode = newValue
+                            
+                            if newValue {
+                                if !UserDefaults.standard.bool(forKey: "skipIncognitoExplanation") {
+                                    pendingIncognitoAnimation = true
                                     isShowingExplanationFromInfoButton = false
                                     isShowingIncognitoExplanation = true
-                                }
-                            } else {
-                                // No explanation, play animation directly
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                } else {
                                     NotificationCenter.default.post(name: NSNotification.Name("PlayIncognitoAnimation"), object: NSNumber(value: true))
                                 }
+                            } else {
+                                pendingIncognitoAnimation = false
+                                NotificationCenter.default.post(name: NSNotification.Name("PlayIncognitoAnimation"), object: NSNumber(value: false))
                             }
-                        } else {
-                            pendingIncognitoAnimation = false
-                            NotificationCenter.default.post(name: NSNotification.Name("PlayIncognitoAnimation"), object: NSNumber(value: false))
                         }
                     }
                 ))

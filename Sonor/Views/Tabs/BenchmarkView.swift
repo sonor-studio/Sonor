@@ -208,7 +208,7 @@ struct BenchmarkView: View {
                 Image(systemName: "gauge.with.needle.fill")
                     .font(.system(size: 28))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
-                Text(t("Don't just take our word for it."))
+                Text(t("See for yourself."))
                     .font(.system(size: 22, weight: .black))
             }
             

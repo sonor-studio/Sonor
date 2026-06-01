@@ -325,7 +325,7 @@ struct GeneralSettingsView: View {
                         .font(.system(size: 12))
                         .fixedSize()
                     
-                    Toggle(t("Error / Not recognized"), isOn: $playSound_Error)
+                    Toggle(t("Error / Not recognized / No text field"), isOn: $playSound_Error)
                         .toggleStyle(CustomToggleStyle())
                         .font(.system(size: 12))
                         .fixedSize()

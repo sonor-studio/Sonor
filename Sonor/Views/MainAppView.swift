@@ -134,7 +134,7 @@ struct MainAppView: View {
                 
                 // Discord Button
                 Button(action: {
-                    if let url = URL(string: "https://discord.gg/aHAJvAPKf4") {
+                    if let url = URL(string: "https://discord.gg/26vtCxw5H3") {
                         NSWorkspace.shared.open(url)
                     }
                 }) {
@@ -447,6 +447,8 @@ struct MainAppView: View {
                                             return t("Automatically transforms loose thoughts into professional, elegant, and official business correspondence. Ideal for writing emails quickly.")
                                         case "Structured Note", "Ustrukturyzowana notatka":
                                             return t("Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).")
+                                        case "Edit & Create", "Edycja i tworzenie":
+                                            return t("Acts as an expert editor. It perfectly executes your spoken instructions to edit, rewrite, or generate brand new texts. Ideal for creating custom content on the fly.")
                                         default:
                                             return t("Built-in system assistant.")
                                         }
@@ -537,32 +539,110 @@ struct MainAppView: View {
                                 }
                             }
                             
-                            Picker(t("Audio behavior"), selection: Binding(
-                                get: { modeBinding.wrappedValue.audioBehavior ?? .keep },
-                                set: { newValue in
-                                    let oldValue = modeBinding.wrappedValue.audioBehavior ?? .keep
-                                    modeBinding.wrappedValue.audioBehavior = newValue
-                                    
-                                    if newValue == .pause {
-                                        if !CGPreflightScreenCaptureAccess() {
-                                            self.previousAudioBehavior = oldValue
-                                            self.currentModeIDForAudioPermission = modeBinding.wrappedValue.id
-                                            self.showAudioPermissionModal = true
+                            HStack {
+                                Picker(t("Audio behavior"), selection: Binding(
+                                    get: { modeBinding.wrappedValue.audioBehavior ?? .keep },
+                                    set: { newValue in
+                                        let oldValue = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                        modeBinding.wrappedValue.audioBehavior = newValue
+                                        
+                                        if newValue == .pause {
+                                            if !CGPreflightScreenCaptureAccess() {
+                                                self.previousAudioBehavior = oldValue
+                                                self.currentModeIDForAudioPermission = modeBinding.wrappedValue.id
+                                                self.showAudioPermissionModal = true
+                                            } else {
+                                                saveModes()
+                                            }
                                         } else {
                                             saveModes()
                                         }
-                                    } else {
+                                    }
+                                )) {
+                                    Text(t("Keep sound")).tag(AudioBehavior.keep)
+                                    Text(t("Mute system")).tag(AudioBehavior.mute)
+                                    Text(t("Pause media")).tag(AudioBehavior.pause)
+                                }
+                                .pickerStyle(MenuPickerStyle())
+                                .font(.system(size: 12))
+                                
+                                Button(action: {
+                                    let newVal = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                    for i in modes.indices {
+                                        modes[i].audioBehavior = newVal
+                                    }
+                                    saveModes()
+                                }) {
+                                    Image(systemName: "rectangle.stack")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .padding(4)
+                                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.1)))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .help(t("Apply to all assistants"))
+                            }
+                                
+                            HStack {
+                                Picker(t("Paste target"), selection: Binding(
+                                    get: { modeBinding.wrappedValue.pasteTiming ?? "start" },
+                                    set: { 
+                                        modeBinding.wrappedValue.pasteTiming = $0
                                         saveModes()
                                     }
+                                )) {
+                                    Text(t("Window focused at start")).tag("start")
+                                    Text(t("Window focused at end")).tag("end")
                                 }
-                            )) {
-                                Text(t("Keep sound")).tag(AudioBehavior.keep)
-                                Text(t("Mute system")).tag(AudioBehavior.mute)
-                                Text(t("Pause media")).tag(AudioBehavior.pause)
-                            }
-                            .pickerStyle(MenuPickerStyle())
-                            .font(.system(size: 12))
+                                .pickerStyle(MenuPickerStyle())
+                                .font(.system(size: 12))
                                 
+                                Button(action: {
+                                    let newVal = modeBinding.wrappedValue.pasteTiming ?? "start"
+                                    for i in modes.indices {
+                                        modes[i].pasteTiming = newVal
+                                    }
+                                    saveModes()
+                                }) {
+                                    Image(systemName: "rectangle.stack")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .padding(4)
+                                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.1)))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .help(t("Apply to all assistants"))
+                            }
+                            
+                            HStack {
+                                Toggle(t("Copy to clipboard if no text field is detected"), isOn: Binding(
+                                    get: { modeBinding.wrappedValue.fallbackToClipboard ?? false },
+                                    set: { 
+                                        modeBinding.wrappedValue.fallbackToClipboard = $0
+                                        saveModes()
+                                    }
+                                ))
+                                .toggleStyle(CustomToggleStyle())
+                                .font(.system(size: 12))
+                                
+                                Spacer()
+                                
+                                Button(action: {
+                                    let newVal = modeBinding.wrappedValue.fallbackToClipboard ?? false
+                                    for i in modes.indices {
+                                        modes[i].fallbackToClipboard = newVal
+                                    }
+                                    saveModes()
+                                }) {
+                                    Image(systemName: "rectangle.stack")
+                                        .font(.system(size: 12, weight: .bold))
+                                        .padding(4)
+                                        .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.1)))
+                                        .contentShape(Rectangle())
+                                }
+                                .buttonStyle(.plain)
+                                .help(t("Apply to all assistants"))
+                            }
 
                             }
                             

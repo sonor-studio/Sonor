@@ -360,25 +360,21 @@ struct CapsuleHUDView: View {
                     showPauseButton = controller.activeHotkeyMode == .click
                     width = targetWidth
                     height = 40
-                    isProcessing = controller.statusText == "Initializing"
+                    isProcessing = controller.statusText != "Listening..."
                 }
             }
         }
         .onChange(of: controller.statusText) { status in
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
                 width = targetWidth
-                if status == "Initializing" {
-                    isProcessing = true
-                } else if status == "Listening..." {
-                    isProcessing = false
-                }
+                isProcessing = status != "Listening..."
             }
             if isFinalState {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                     opacity = 0.0
                 }
                 showList = false
-            } else if status == "Listening..." || status == "Model not downloaded" || status == "Initializing" {
+            } else {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                     opacity = 1.0
                 }

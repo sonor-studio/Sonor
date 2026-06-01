@@ -63,7 +63,7 @@ struct OnboardingView: View {
                     onboardingSlide(
                         title: t("Absolute Privacy"),
                         icon: "lock.shield.fill",
-                        description: t("Your data is completely yours. We have created an architecture where every piece of information stays on your device. No cloud, no telemetry, no compromises."),
+                        description: t("Your data is completely yours. Sonor uses an architecture where every piece of information stays on your device. No cloud, no telemetry, no compromises."),
                         features: [
                             (icon: "network.slash", title: t("100% Offline Processing"), description: t("Voice recognition and AI tasks are performed locally, entirely without internet access.")),
                             (icon: "memorychip", title: t("Volatile Memory"), description: t("Your voice is processed in volatile memory and destroyed immediately after the operation completes."))
@@ -74,7 +74,7 @@ struct OnboardingView: View {
                     onboardingSlide(
                         title: t("Full Transparency"),
                         icon: "chevron.left.forwardslash.chevron.right",
-                        description: t("Trust is built on transparency. Sonor is fully open-source, allowing you and the community to audit every line of code to ensure our privacy promises are absolutely certain."),
+                        description: t("Trust is built on transparency. Sonor is fully open-source, allowing you and the community to audit every line of code to ensure the privacy promises are absolutely certain."),
                         features: [
                             (icon: "doc.text.magnifyingglass", title: t("Auditable Code"), description: t("Every algorithmic decision and data flow is public. You can thoroughly verify how it works under the hood.")),
                             (icon: "building.columns.fill", title: t("Community Driven"), description: t("Developed with the highest engineering standards and the support of independent experts."))

@@ -39,6 +39,8 @@ struct ModeCard: View {
                 return t("Automatically transforms loose thoughts into professional, elegant, and official business correspondence. Ideal for writing emails quickly.")
             case "Structured Note", "Ustrukturyzowana notatka":
                 return t("Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).")
+            case "Edit & Create", "Edycja i tworzenie":
+                return t("Acts as an expert editor. It perfectly executes your spoken instructions to edit, rewrite, or generate brand new texts. Ideal for creating custom content on the fly.")
             default:
                 return t("Built-in system assistant.")
             }

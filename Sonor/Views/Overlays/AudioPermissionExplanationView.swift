@@ -78,7 +78,7 @@ struct AudioPermissionExplanationView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(t("100% Privacy"))
                             .font(.system(size: 12, weight: .bold))
-                        Text(t("We are an open-source project. You can always check the code yourself on our GitHub to see exactly how this works."))
+                        Text(t("Sonor is an open-source project. You can always check the code yourself on GitHub to see exactly how this works."))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .lineSpacing(2)
