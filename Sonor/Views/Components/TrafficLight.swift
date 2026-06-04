@@ -5,7 +5,6 @@ struct TrafficLight: View {
     let icon: String
     let isHovered: Bool
     let action: () -> Void
-    
     var body: some View {
         Circle()
             .fill(color)

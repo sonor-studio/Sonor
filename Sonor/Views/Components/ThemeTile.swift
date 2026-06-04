@@ -4,10 +4,8 @@ struct ThemeTile: View {
     let title: String
     let theme: String
     @Binding var currentTheme: String
-    
     var body: some View {
         let isSelected = currentTheme == theme
-        
         Button(action: {
             currentTheme = theme
         }) {
@@ -15,13 +13,10 @@ struct ThemeTile: View {
                 Text(title)
                     .font(.system(size: 14, weight: .bold))
                     .foregroundColor(.primary)
-                
                 ZStack {
                     RoundedRectangle(cornerRadius: 8)
                         .fill(previewBgColor)
-                    
                     HStack(spacing: 0) {
-                        // Sidebar
                         Rectangle()
                             .fill(previewSidebarColor)
                             .frame(width: 40)
@@ -34,8 +29,6 @@ struct ThemeTile: View {
                                 }
                                 .padding(6)
                             )
-                        
-                        // Content
                         VStack(alignment: .leading, spacing: 10) {
                             RoundedRectangle(cornerRadius: 4)
                                 .fill(previewTextColor.opacity(0.1))
@@ -67,7 +60,6 @@ struct ThemeTile: View {
         }
         .buttonStyle(.plain)
     }
-    
     private var previewBgColor: Color {
         switch theme {
         case "light": return .white
@@ -78,7 +70,6 @@ struct ThemeTile: View {
         default: return .white
         }
     }
-    
     private var previewSidebarColor: Color {
         switch theme {
         case "light": return Color(red: 0.9, green: 0.9, blue: 0.9)
@@ -89,7 +80,6 @@ struct ThemeTile: View {
         default: return Color(red: 0.9, green: 0.9, blue: 0.9)
         }
     }
-    
     private var previewTextColor: Color {
         switch theme {
         case "light": return .black

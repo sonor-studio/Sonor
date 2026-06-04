@@ -5,7 +5,6 @@ struct IncognitoAnimationOverlay: View {
     @State private var showBanner = false
     @State private var isActiveMode = true
     @ObservedObject private var localizer = LocalizationManager.shared
-    
     var body: some View {
         VStack {
             if showBanner {
@@ -13,7 +12,6 @@ struct IncognitoAnimationOverlay: View {
                     Image(systemName: isActiveMode ? "eye.slash.fill" : "eye.fill")
                         .foregroundColor(colorScheme == .dark ? .black : .white)
                         .font(.system(size: 14))
-                    
                     Text(isActiveMode ? t("Incognito Mode Active") : t("Incognito Mode Inactive"))
                         .font(.system(size: 13, weight: .bold))
                         .foregroundColor(colorScheme == .dark ? .black : .white)
@@ -37,11 +35,9 @@ struct IncognitoAnimationOverlay: View {
             } else {
                 isActiveMode = true
             }
-            
             withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                 showBanner = true
             }
-            
             DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
                 withAnimation(.easeIn(duration: 0.3)) {
                     showBanner = false

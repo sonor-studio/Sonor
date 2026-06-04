@@ -5,9 +5,7 @@ struct SupportView: View {
     @AppStorage("appTheme") private var appTheme = "system"
     @ObservedObject var localizer = LocalizationManager.shared
     var onClose: () -> Void
-    
     @State private var showQRCode = false
-    
     var effectiveColorScheme: ColorScheme {
         if appTheme == "dark" {
             return .dark
@@ -18,30 +16,21 @@ struct SupportView: View {
             return appleInterfaceStyle == "Dark" ? .dark : .light
         }
     }
-    
     var body: some View {
         VStack(spacing: 0) {
-            // Górny odstęp
             Spacer()
                 .frame(height: 25)
-            
             if showQRCode {
-                // Widok Kodu QR (po kliknięciu Zeskanuj QR)
                 VStack(spacing: 16) {
-                    // Ikona i Tytuł
                     VStack(spacing: 12) {
                         Image(systemName: "qrcode")
                             .font(.system(size: 38))
                             .foregroundColor(effectiveColorScheme == .dark ? .white : .black)
-                        
                         Text(t("Scan QR Code"))
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.primary)
                     }
-                    
                     Spacer()
-                    
-                    // Bezpieczne wczytywanie obrazka QR z lokalnych zasobów
                     if let image = NSImage(contentsOfFile: "/Users/macbook/Desktop/Dev/Sonor/Sonor/Resources/qr-code.png") {
                         Image(nsImage: image)
                             .resizable()
@@ -64,19 +53,14 @@ struct SupportView: View {
                             .frame(width: 160, height: 160)
                             .foregroundColor(.secondary)
                     }
-                    
                     Spacer()
-                    
                     Text(t("Scan the code with your phone to buy me a coffee on Buy Me a Coffee."))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 20)
-                    
                     Spacer()
-                    
-                    // Przycisk wstecz
                     Button(action: {
                         withAnimation {
                             showQRCode = false
@@ -97,21 +81,16 @@ struct SupportView: View {
                 .padding(.bottom, 32)
                 .transition(.asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity), removal: .move(edge: .leading).combined(with: .opacity)))
             } else {
-                // Główny widok wsparcia
                 VStack(spacing: 0) {
-                    // Ikona i Tytuł
                     VStack(spacing: 12) {
                         Image(systemName: "cup.and.saucer.fill")
                             .font(.system(size: 38))
                             .foregroundColor(effectiveColorScheme == .dark ? .white : .black)
-                        
                         Text(t("Do you like Sonor?"))
                             .font(.system(size: 20, weight: .bold))
                             .foregroundColor(.primary)
                     }
                     .padding(.bottom, 24)
-                    
-                    // Treść strukturalna (3 czytelne punkty)
                     VStack(alignment: .leading, spacing: 18) {
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "lock.shield.fill")
@@ -128,7 +107,6 @@ struct SupportView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
-                        
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "key.fill")
                                 .font(.system(size: 14, weight: .semibold))
@@ -144,7 +122,6 @@ struct SupportView: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
-                        
                         HStack(alignment: .top, spacing: 12) {
                             Image(systemName: "heart.fill")
                                 .font(.system(size: 14, weight: .semibold))
@@ -162,12 +139,8 @@ struct SupportView: View {
                         }
                     }
                     .padding(.horizontal, 24)
-                    
                     Spacer()
-                    
-                    // Przyciski akcji (Minimalistyczny motyw Black & White)
                     VStack(spacing: 8) {
-                        // Kup kawę (Przycisk Główny z nowym linkiem)
                         Button(action: {
                             if let url = URL(string: "https://buymeacoffee.com/sonorstudio") {
                                 NSWorkspace.shared.open(url)
@@ -183,8 +156,6 @@ struct SupportView: View {
                         }
                         .buttonStyle(.plain)
                         .focusable(false)
-                        
-                        // Zeskanuj QR (Przycisk wtórny z obramowaniem)
                         Button(action: {
                             withAnimation {
                                 showQRCode = true

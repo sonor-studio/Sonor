@@ -2,24 +2,11 @@ import SwiftUI
 
 struct AudioPermissionExplanationView: View {
     @Environment(\.dismiss) var dismiss
-    @AppStorage("appTheme") private var appTheme = "system"
-    var colorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
-    
+    @Environment(\.colorScheme) var colorScheme
     var onAccept: () -> Void
     var onCancel: () -> Void
-    
     var body: some View {
         VStack(spacing: 0) {
-            // Close Button
             HStack {
                 Spacer()
                 Button(action: {
@@ -34,27 +21,21 @@ struct AudioPermissionExplanationView: View {
                 .focusable(false)
                 .padding([.top, .trailing], 16)
             }
-            
-            // Icon & Title
             VStack(spacing: 12) {
                 Image(systemName: "pause.rectangle.fill")
                     .font(.system(size: 40))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
-                
                 Text(t("Smart Pause (Experimental)"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
             }
             .padding(.bottom, 24)
             .padding(.top, -10)
-            
-            // Content
             VStack(alignment: .leading, spacing: 20) {
                 Text(t("For Sonor to automatically pause media (e.g. YouTube, Netflix), it needs Screen Recording access (ScreenCaptureKit)."))
                     .font(.system(size: 13))
                     .foregroundColor(.primary)
                     .lineSpacing(2)
-                
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "questionmark.video.fill")
                         .font(.system(size: 14, weight: .semibold))
@@ -69,7 +50,6 @@ struct AudioPermissionExplanationView: View {
                             .lineSpacing(2)
                     }
                 }
-                
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "lock.shield.fill")
                         .font(.system(size: 14, weight: .semibold))
@@ -86,10 +66,7 @@ struct AudioPermissionExplanationView: View {
                 }
             }
             .padding(.horizontal, 24)
-            
             Spacer()
-            
-            // Accept Button (Rozumiem)
             Button(action: {
                 onAccept()
                 dismiss()

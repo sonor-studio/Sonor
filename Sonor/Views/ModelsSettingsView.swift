@@ -4,16 +4,13 @@ struct ModelsSettingsView: View {
     @ObservedObject var manager = ModelManager.shared
     @Environment(\.colorScheme) var colorScheme
     @ObservedObject private var authManager = AuthManager.shared
-    
     @State private var showUninstallConfirmation = false
     @State private var modelToUninstall: ModelType? = nil
     @State private var showLoginSheet = false
-    
     enum ModelType {
         case whisper
         case gemma
     }
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
@@ -23,12 +20,10 @@ struct ModelsSettingsView: View {
                 Text(t("Models"))
                     .font(.system(size: 28, weight: .bold))
             }
-            
             Text(t("Manage the AI models used by Sonor for transcription and text processing."))
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
                 .padding(.bottom, 10)
-            
             VStack(spacing: 20) {
                 ModelCard(
                     title: "Whisper (Speech-to-Text)",
@@ -41,7 +36,6 @@ struct ModelsSettingsView: View {
                         self.showUninstallConfirmation = true
                     }
                 )
-                
                 ModelCard(
                     title: "Gemma (Text Correction)",
                     description: t("Required for advanced text rewriting and smart corrections. Approx. 3 GB."),
@@ -114,9 +108,7 @@ struct ModelCard: View {
     var onPause: (() -> Void)? = nil
     let onCancel: () -> Void
     let onUninstall: () -> Void
-    
     @Environment(\.colorScheme) var colorScheme
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -128,9 +120,7 @@ struct ModelCard: View {
                         .foregroundColor(.secondary)
                         .lineLimit(2)
                 }
-                
                 Spacer()
-                
                 switch state {
                 case .notDownloaded:
                     if requiresLogin {
@@ -158,18 +148,15 @@ struct ModelCard: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    
                 case .downloading(let progress):
                     HStack(spacing: 12) {
                         ProgressView(value: progress)
                             .progressViewStyle(.linear)
                             .tint(colorScheme == .dark ? .white : .black)
                             .frame(width: 100)
-                        
                         Text("\(Int(progress * 100))%")
                             .font(.system(size: 12, weight: .medium).monospacedDigit())
                             .foregroundColor(.secondary)
-                        
                         if let onPause = onPause {
                             Button(action: onPause) {
                                 Image(systemName: "pause.circle.fill")
@@ -178,7 +165,6 @@ struct ModelCard: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        
                         Button(action: onCancel) {
                             Image(systemName: "xmark.circle.fill")
                                 .font(.system(size: 16))
@@ -186,7 +172,6 @@ struct ModelCard: View {
                         }
                         .buttonStyle(.plain)
                     }
-                    
                 case .paused(let progress):
                     HStack(spacing: 12) {
                         ProgressView(value: progress)
@@ -194,11 +179,9 @@ struct ModelCard: View {
                             .tint(.secondary)
                             .frame(width: 100)
                             .opacity(0.6)
-                        
                         Text("\(Int(progress * 100))%")
                             .font(.system(size: 12, weight: .medium).monospacedDigit())
                             .foregroundColor(.secondary)
-                        
                         if requiresLogin {
                             Button(action: onCancel) {
                                 Image(systemName: "xmark.circle.fill")
@@ -206,7 +189,6 @@ struct ModelCard: View {
                                     .foregroundColor(.secondary)
                             }
                             .buttonStyle(.plain)
-                            
                             if NetworkMonitor.shared.isConnected {
                                 Button(action: { onLogin?() }) {
                                     Text(t("Log In"))
@@ -226,7 +208,6 @@ struct ModelCard: View {
                                     .foregroundColor(colorScheme == .dark ? .white : .black)
                             }
                             .buttonStyle(.plain)
-                            
                             Button(action: onCancel) {
                                 Image(systemName: "xmark.circle.fill")
                                     .font(.system(size: 16))
@@ -235,7 +216,6 @@ struct ModelCard: View {
                             .buttonStyle(.plain)
                         }
                     }
-                    
                 case .downloaded:
                     HStack(spacing: 12) {
                         Button(action: onUninstall) {

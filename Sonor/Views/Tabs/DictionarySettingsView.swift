@@ -10,11 +10,9 @@ struct DictionarySettingsView: View {
     @State private var isHoveringAdd = false
     @State private var hoveredKey: String? = nil
     @State private var isShowingInfo = false
-    
     private var sortedKeys: [String] {
         entries.keys.sorted()
     }
-    
     private var headerView: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
@@ -23,7 +21,6 @@ struct DictionarySettingsView: View {
                     .foregroundColor(.primary)
                 Text(t("Dictionary"))
                     .font(.system(size: 28, weight: .bold))
-                
                 Button(action: {
                     isShowingInfo = true
                 }) {
@@ -37,7 +34,6 @@ struct DictionarySettingsView: View {
         }
         .padding(.bottom, 8)
     }
-    
     private var wrongInputView: some View {
         TextField(t("e.g. Superbase"), text: $newWrong)
             .textFieldStyle(.plain)
@@ -52,7 +48,6 @@ struct DictionarySettingsView: View {
                     .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
             )
     }
-    
     private var correctInputView: some View {
         TextField(t("e.g. Supabase"), text: $newCorrect)
             .textFieldStyle(.plain)
@@ -67,11 +62,9 @@ struct DictionarySettingsView: View {
                     .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
             )
     }
-    
     private var isAddButtonActive: Bool {
         !newWrong.isEmpty && !newCorrect.isEmpty
     }
-    
     private var addButtonColor: Color {
         if isAddButtonActive {
             return colorScheme == .dark ? .white : .black
@@ -79,7 +72,6 @@ struct DictionarySettingsView: View {
             return Color.primary.opacity(0.1)
         }
     }
-    
     private var addButtonView: some View {
         Button(action: addEntry) {
             Image(systemName: "plus")
@@ -97,45 +89,34 @@ struct DictionarySettingsView: View {
             isHoveringAdd = hovering
         }
     }
-    
     private var addFormView: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(t("ADD NEW CORRECTION"))
                 .font(.system(size: 10, weight: .bold))
                 .foregroundColor(.secondary)
                 .tracking(1)
-            
             VStack(alignment: .leading, spacing: 6) {
-                // Header labels row
                 HStack(spacing: 16) {
                     Text(t("When it hears"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    
                     Spacer()
                         .frame(width: 20)
-                    
                     Text(t("Replace with"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    
                     Spacer()
                         .frame(width: 38)
                 }
-                
-                // Inputs row
                 HStack(spacing: 16) {
                     wrongInputView
-                    
                     Image(systemName: "arrow.right.circle.fill")
                         .font(.system(size: 20))
                         .foregroundColor(.secondary)
                         .frame(width: 20, height: 38)
-                    
                     correctInputView
-                    
                     addButtonView
                 }
             }
@@ -150,10 +131,8 @@ struct DictionarySettingsView: View {
                 .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
-    
     private func rowView(key: String, value: String) -> some View {
         HStack(spacing: 20) {
-            // Usłyszane
             VStack(alignment: .leading, spacing: 4) {
                 Text(t("When it hears"))
                     .font(.system(size: 9, weight: .bold))
@@ -163,12 +142,9 @@ struct DictionarySettingsView: View {
                     .foregroundColor(.primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            
             Image(systemName: "arrow.right")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(.secondary)
-            
-            // Poprawne
             VStack(alignment: .leading, spacing: 4) {
                 Text(t("Replace with (list)"))
                     .font(.system(size: 9, weight: .bold))
@@ -178,14 +154,11 @@ struct DictionarySettingsView: View {
                     .foregroundColor(.primary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            
-            // Delete button
             Button(action: { removeEntry(key: key) }) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
                         .fill(hoveredKey == key ? Color.red.opacity(0.1) : Color.clear)
                         .frame(width: 32, height: 32)
-                    
                     Image(systemName: "trash")
                         .font(.system(size: 14))
                         .foregroundColor(hoveredKey == key ? .red : .secondary)
@@ -213,7 +186,6 @@ struct DictionarySettingsView: View {
                 .stroke(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06), lineWidth: 1)
         )
     }
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             headerView
@@ -221,8 +193,6 @@ struct DictionarySettingsView: View {
                 PremiumLockView(showLoginSheet: $showLoginSheet)
             } else {
                 addFormView
-                
-                // List Header
                 HStack {
                     Text(String(format: t("SAVED CORRECTIONS (%d)"), entries.count))
                         .font(.system(size: 10, weight: .bold))
@@ -231,10 +201,7 @@ struct DictionarySettingsView: View {
                     Spacer()
                 }
                 .padding(.top, 8)
-                
-                // Entries List
                 if entries.isEmpty {
-                    // Empty state
                     VStack(spacing: 16) {
                         Image(systemName: "book.closed")
                             .font(.system(size: 40))
@@ -273,18 +240,15 @@ struct DictionarySettingsView: View {
             loadEntries()
         }
     }
-    
     func loadEntries() {
         entries = UserDefaults.standard.dictionary(forKey: "dictionaryEntries") as? [String: String] ?? [:]
     }
-    
     func addEntry() {
         entries[newWrong] = newCorrect
         UserDefaults.standard.set(entries, forKey: "dictionaryEntries")
         newWrong = ""
         newCorrect = ""
     }
-    
     func removeEntry(key: String) {
         withAnimation {
             entries.removeValue(forKey: key)

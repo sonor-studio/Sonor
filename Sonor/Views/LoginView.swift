@@ -1,17 +1,7 @@
 import SwiftUI
 
 struct LoginView: View {
-    @AppStorage("appTheme") private var appTheme = "system"
-    var colorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
+    @Environment(\.colorScheme) var colorScheme
     @Environment(\.presentationMode) var presentationMode
     @ObservedObject var authManager = AuthManager.shared
     @ObservedObject var localizer = LocalizationManager.shared
@@ -30,7 +20,6 @@ struct LoginView: View {
     @State private var resendCooldown: Int = UserDefaults.standard.integer(forKey: "resendCooldown")
     @State private var resendTimerTask: Task<Void, Never>? = nil
     @State private var lastSentRegisterEmail = ""
-    
     private func updateCooldown() {
         let lastSent = UserDefaults.standard.double(forKey: "lastRegisterOTPSentTime")
         let elapsed = Date().timeIntervalSince1970 - lastSent
@@ -41,7 +30,6 @@ struct LoginView: View {
             resendTimerTask?.cancel()
         }
     }
-    
     private func startResendTimer() {
         updateCooldown()
         resendTimerTask?.cancel()
@@ -56,8 +44,6 @@ struct LoginView: View {
             }
         }
     }
-    
-    
     private var otpToken: String {
         otpDigits.joined().filter { $0.isNumber }
     }
@@ -68,18 +54,15 @@ struct LoginView: View {
                 .scaledToFit()
                 .frame(width: 48, height: 48)
                 .foregroundColor(.primary)
-            
             if showOTPVerification {
                 Text(t("Confirm Email"))
                     .font(.system(size: 20, weight: .bold))
-                
                 Text(t("Please enter the 6-character confirmation code sent to your email."))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
                     .padding(.bottom, 4)
-                
                 if let error = errorMessage {
                     Text(error)
                         .foregroundColor(.red)
@@ -90,7 +73,6 @@ struct LoginView: View {
                         .cornerRadius(8)
                         .padding(.horizontal, 40)
                 }
-                
                 HStack(spacing: 8) {
                     ForEach(0..<6, id: \.self) { index in
                         TextField("", text: $otpDigits[index])
@@ -105,30 +87,24 @@ struct LoginView: View {
                                     .stroke(focusedField == index ? Color.blue : Color.clear, lineWidth: 2)
                             )
                             .focused($focusedField, equals: index)
-                            .onChange(of: otpDigits[index]) { newValue in
+                            .onChange(of: otpDigits[index]) {
+                                let newValue = otpDigits[index]
                                 let oldVal = oldOtpDigits[index]
                                 let filtered = newValue.filter { $0.isNumber }
-                                
                                 if filtered.isEmpty {
                                     if newValue == "" {
-                                        // USER PRESSED BACKSPACE
                                         otpDigits[index] = "\u{200B}"
                                         oldOtpDigits[index] = "\u{200B}"
                                         if index > 0 {
                                             focusedField = index - 1
                                         }
                                     } else if newValue == "\u{200B}" {
-                                        // Recursive call after setting "\u{200B}"
                                         oldOtpDigits[index] = "\u{200B}"
                                     } else {
-                                        // WPISANO LITERĘ
-                                        // Odrzucamy literę, wracamy do poprzedniej wartości bez zmiany fokusu
                                         otpDigits[index] = oldVal
                                     }
                                     return
                                 }
-                                
-                                // Wpisano lub wklejono więcej cyfr
                                 if filtered.count > 1 {
                                     let chars = Array(filtered.prefix(6))
                                     for i in 0..<chars.count {
@@ -138,10 +114,9 @@ struct LoginView: View {
                                         }
                                     }
                                     focusedField = min(index + chars.count, 5)
-                                } else { // filtered.count == 1
+                                } else { 
                                     otpDigits[index] = filtered
                                     oldOtpDigits[index] = filtered
-                                    
                                     if oldVal != filtered {
                                         if index < 5 {
                                             focusedField = index + 1
@@ -152,8 +127,8 @@ struct LoginView: View {
                     }
                 }
                 .padding(.vertical, 8)
-                .onChange(of: focusedField) { newValue in
-                    if let newIndex = newValue {
+                .onChange(of: focusedField) {
+                    if let newIndex = focusedField {
                         let firstEmpty = otpDigits.firstIndex(where: { $0 == "\u{200B}" || $0.isEmpty }) ?? 5
                         if newIndex > firstEmpty {
                             focusedField = firstEmpty
@@ -165,7 +140,6 @@ struct LoginView: View {
                     updateCooldown()
                     startResendTimer()
                 }
-                
                 Button(action: {
                     Task {
                         await handleOTPVerification()
@@ -189,7 +163,6 @@ struct LoginView: View {
                 .padding(.horizontal, 40)
                 .disabled(isLoading || otpToken.count < 6)
                 .keyboardShortcut(.defaultAction)
-                
                 Button(action: {
                     Task {
                         isLoading = true
@@ -211,7 +184,6 @@ struct LoginView: View {
                 .buttonStyle(.plain)
                 .padding(.top, 8)
                 .disabled(resendCooldown > 0 || isLoading)
-                
                 Button(action: {
                     withAnimation {
                         showOTPVerification = false
@@ -229,7 +201,6 @@ struct LoginView: View {
             } else {
                 Text(isRegistering ? t("Join Sonor") : t("Welcome Back"))
                     .font(.system(size: 20, weight: .bold))
-            
             Text(t("Unlock advanced AI assistants, intelligent dictionaries, and custom snippets to turn every recording into polished text. Everything is 100% free and runs fully offline on your computer — your data is completely private, and no information is collected."))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
@@ -237,7 +208,6 @@ struct LoginView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, 40)
                 .padding(.bottom, 4)
-            
             if let error = errorMessage {
                 Text(error)
                     .foregroundColor(.red)
@@ -248,41 +218,35 @@ struct LoginView: View {
                     .cornerRadius(8)
                     .padding(.horizontal, 40)
             }
-            
             VStack(spacing: 10) {
                 TextField(t("Email address"), text: $email)
                     .textFieldStyle(.plain)
                     .padding(10)
                     .background(Color.primary.opacity(0.05))
                     .cornerRadius(8)
-                
                 SecureField(t("Password"), text: $password)
                     .textFieldStyle(.plain)
                     .padding(10)
                     .background(Color.primary.opacity(0.05))
                     .cornerRadius(8)
-                    
                 if isRegistering {
                     SecureField(t("Repeat password"), text: $confirmPassword)
                         .textFieldStyle(.plain)
                         .padding(10)
                         .background(Color.primary.opacity(0.05))
                         .cornerRadius(8)
-                        
                     HStack(spacing: 8) {
                         Toggle("", isOn: $acceptedPrivacyPolicy)
                             .labelsHidden()
                             .toggleStyle(.checkbox)
                             .accentColor(colorScheme == .dark ? .white : .black)
                             .tint(colorScheme == .dark ? .white : .black)
-                        
                         HStack(spacing: 4) {
                             let prefix = t("I accept the")
                             if !prefix.isEmpty {
                                 Text(prefix)
                                     .font(.system(size: 13))
                             }
-                            
                             Button(action: {
                                 openPrivacyPolicy()
                             }) {
@@ -299,10 +263,8 @@ struct LoginView: View {
                                     NSCursor.pop()
                                 }
                             }
-                            
                             Text(t("and"))
                                 .font(.system(size: 13))
-                            
                             Button(action: {
                                 openTermsOfService()
                             }) {
@@ -319,7 +281,6 @@ struct LoginView: View {
                                     NSCursor.pop()
                                 }
                             }
-                            
                             if localizer.appLanguage == "ja" {
                                 Text(t("to agree"))
                                     .font(.system(size: 13))
@@ -328,7 +289,6 @@ struct LoginView: View {
                         Spacer()
                     }
                     .padding(.top, 4)
-                    
                     HStack(alignment: .top, spacing: 8) {
                         Toggle("", isOn: $acceptedMarketing)
                             .labelsHidden()
@@ -336,20 +296,17 @@ struct LoginView: View {
                             .accentColor(colorScheme == .dark ? .white : .black)
                             .tint(colorScheme == .dark ? .white : .black)
                             .padding(.top, 1)
-                        
                         Text(t("I want to receive email updates about new products, upcoming changes, and other announcements."))
                             .font(.system(size: 13))
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
-                        
                         Spacer()
                     }
                     .padding(.top, 4)
                 }
             }
             .padding(.horizontal, 40)
-            
             Button(action: {
                 if !validateInputs() { return }
                 Task {
@@ -374,7 +331,6 @@ struct LoginView: View {
             .padding(.horizontal, 40)
             .disabled(isLoading)
             .keyboardShortcut(.defaultAction)
-            
             Button(action: {
                 authManager.loginWithGoogle()
             }) {
@@ -395,7 +351,6 @@ struct LoginView: View {
             .buttonStyle(.plain)
             .padding(.horizontal, 40)
             .disabled(isLoading)
-            
             Button(action: {
                 withAnimation {
                     isRegistering.toggle()
@@ -409,35 +364,29 @@ struct LoginView: View {
             }
             .buttonStyle(.plain)
             .padding(.top, 4)
-            
             }
-            
         }
         .padding(.vertical, 30)
         .frame(maxWidth: .infinity)
-        .onChange(of: authManager.isLoggedIn) { loggedIn in
-            if loggedIn {
+        .onChange(of: authManager.isLoggedIn) {
+            if authManager.isLoggedIn {
                 presentationMode.wrappedValue.dismiss()
             }
         }
     }
-    
+    @MainActor
     private func handleAuth() async {
         isLoading = true
         errorMessage = nil
         do {
             if isRegistering {
-                // 1. Sprawdź bezpośrednio w bazie danych, czy e-mail istnieje
                 let exists = await authManager.checkEmailExists(email: email)
                 if exists {
                     throw NSError(domain: "AuthError", code: 400, userInfo: [NSLocalizedDescriptionKey: "User already registered"])
                 }
-                
                 let lastSent = UserDefaults.standard.double(forKey: "lastRegisterOTPSentTime")
                 let elapsed = Date().timeIntervalSince1970 - lastSent
-                
                 let isSameEmail = (email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == lastSentRegisterEmail.trimmingCharacters(in: .whitespacesAndNewlines).lowercased())
-                
                 if elapsed < 60 && isSameEmail {
                     resendCooldown = Int(60 - elapsed)
                     withAnimation {
@@ -446,13 +395,10 @@ struct LoginView: View {
                     startResendTimer()
                 } else {
                     resendCooldown = 0
-                    // 2. Wywołaj rejestrację bezpośrednio tutaj, żeby sprawdzić unikalność w auth.users i wysłać email!
                     try await authManager.register(email: email, password: password, marketingOptIn: acceptedMarketing)
-                    
                     UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastRegisterOTPSentTime")
                     lastSentRegisterEmail = email
                     startResendTimer()
-                    
                     withAnimation {
                         showOTPVerification = true
                     }
@@ -474,7 +420,7 @@ struct LoginView: View {
         }
         isLoading = false
     }
-    
+    @MainActor
     private func handleOTPVerification() async {
         isLoading = true
         errorMessage = nil
@@ -496,98 +442,79 @@ struct LoginView: View {
         }
         isLoading = false
     }
-    
     private func validateInputs() -> Bool {
         errorMessage = nil
-        
         let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmedEmail.isEmpty {
             errorMessage = t("Please enter your email address.")
             return false
         }
-        
         let emailRegEx = "[A-Z0-9a-z._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,64}"
         let emailPred = NSPredicate(format:"SELF MATCHES %@", emailRegEx)
         if !emailPred.evaluate(with: trimmedEmail) {
             errorMessage = t("Please enter a valid email address.")
             return false
         }
-        
         if password.isEmpty {
             errorMessage = t("Please enter your password.")
             return false
         }
-        
         if isRegistering {
             if password.count < 6 {
                 errorMessage = t("Password must be at least 6 characters long.")
                 return false
             }
-            
             if password.rangeOfCharacter(from: .uppercaseLetters) == nil {
                 errorMessage = t("Password must contain at least one uppercase letter.")
                 return false
             }
-            
             if password.rangeOfCharacter(from: .lowercaseLetters) == nil {
                 errorMessage = t("Password must contain at least one lowercase letter.")
                 return false
             }
-            
             if password.rangeOfCharacter(from: .decimalDigits) == nil {
                 errorMessage = t("Password must contain at least one number.")
                 return false
             }
-            
             if confirmPassword.isEmpty {
                 errorMessage = t("Please repeat your password.")
                 return false
             }
-            
             if password != confirmPassword {
                 errorMessage = t("Passwords do not match.")
                 return false
             }
-            
             if !acceptedPrivacyPolicy {
                 errorMessage = t("Please accept the Privacy Policy and Terms of Service to create an account.")
                 return false
             }
         }
-        
         return true
     }
-    
     private func openPrivacyPolicy() {
         let lang = localizer.appLanguage.uppercased()
         let suffix = "(\(lang)).pdf"
-        
         let bundleUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: nil) ?? []
         let politicsUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: "Politics") ?? []
         let allUrls = bundleUrls + politicsUrls
-        
         if let matched = allUrls.first(where: { $0.lastPathComponent.contains(suffix) }) {
             NSWorkspace.shared.open(matched)
         } else if let fallback = allUrls.first(where: { $0.lastPathComponent.contains("(EN).pdf") }) {
             NSWorkspace.shared.open(fallback)
         }
     }
-    
     private func openTermsOfService() {
         let lang = localizer.appLanguage.uppercased()
         let suffix = "(\(lang)).pdf"
-        
         let bundleUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: nil) ?? []
         let termsUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: "Terms") ?? []
         let allUrls = bundleUrls + termsUrls
-        
         if lang == "EN" {
             if let matched = allUrls.first(where: { $0.lastPathComponent.contains("(Updated).pdf") }) {
                 NSWorkspace.shared.open(matched)
                 return
             }
         }
-        
         if let matched = allUrls.first(where: { $0.lastPathComponent.contains(suffix) }) {
             NSWorkspace.shared.open(matched)
         } else if let fallback = allUrls.first(where: { $0.lastPathComponent.contains("(Updated).pdf") }) {

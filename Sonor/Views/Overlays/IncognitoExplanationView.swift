@@ -2,41 +2,23 @@ import SwiftUI
 
 struct IncognitoExplanationView: View {
     @Environment(\.dismiss) var dismiss
-    @AppStorage("appTheme") private var appTheme = "system"
-    var colorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
-    
+    @Environment(\.colorScheme) var colorScheme
     let isFromInfo: Bool
     @AppStorage("skipIncognitoExplanation") private var skipIncognitoExplanation = false
     @ObservedObject private var localizer = LocalizationManager.shared
-    
     var body: some View {
         VStack(spacing: 0) {
-            // Upper padding spacer instead of X close button
             Spacer()
                 .frame(height: 30)
-            
-            // Icon & Title
             VStack(spacing: 12) {
                 Image(systemName: "eye.slash.fill")
                     .font(.system(size: 40))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
-                
                 Text(t("Incognito Mode"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
             }
             .padding(.bottom, 24)
-            
-            // Content
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "chart.bar.xaxis")
@@ -52,7 +34,6 @@ struct IncognitoExplanationView: View {
                             .lineSpacing(2)
                     }
                 }
-                
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "memorychip")
                         .font(.system(size: 14, weight: .semibold))
@@ -67,7 +48,6 @@ struct IncognitoExplanationView: View {
                             .lineSpacing(2)
                     }
                 }
-                
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "trash.fill")
                         .font(.system(size: 14, weight: .semibold))
@@ -84,10 +64,7 @@ struct IncognitoExplanationView: View {
                 }
             }
             .padding(.horizontal, 24)
-            
             Spacer()
-            
-            // Checkbox (only if not opened from info button, or if opened from info button and is already checked so they can reset it)
             if !isFromInfo || skipIncognitoExplanation {
                 Toggle(isOn: $skipIncognitoExplanation) {
                     Text(t("Do not show this notification again"))
@@ -99,8 +76,6 @@ struct IncognitoExplanationView: View {
                 .focusable(false)
                 .padding(.bottom, 16)
             }
-            
-            // Accept Button (Zrozumiałem)
             Button(action: {
                 dismiss()
             }) {

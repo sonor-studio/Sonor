@@ -10,14 +10,10 @@ struct ModesSettingsView: View {
     @ObservedObject private var localizer = LocalizationManager.shared
     @State private var isShowingInfo = false
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
-    
-    // Grid layout
     let columns = [
         GridItem(.adaptive(minimum: 160))
     ]
-    
     @State private var isHoveringPlus = false
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack {
@@ -27,7 +23,6 @@ struct ModesSettingsView: View {
                         .foregroundColor(.primary)
                     Text(t("Assistants"))
                         .font(.system(size: 28, weight: .bold))
-                    
                     Button(action: {
                         isShowingInfo = true
                     }) {
@@ -39,7 +34,6 @@ struct ModesSettingsView: View {
                     .help(t("Learn more about Assistants"))
                 }
                 Spacer()
-                
                 if isPremium {
                     Button(action: {
                         addNewMode()
@@ -64,7 +58,6 @@ struct ModesSettingsView: View {
                     .buttonStyle(.plain)
                 }
             }
-            
             ScrollView {
                 VStack(spacing: 15) {
                     if let rawOutput = modes.first(where: { $0.name == "Raw Output" }) ?? modes.first(where: { $0.name == "Zwykły output" }) {
@@ -83,21 +76,18 @@ struct ModesSettingsView: View {
                         }
                         .frame(maxWidth: .infinity)
                     }
-                    
                     if !isPremium && networkMonitor.isConnected {
                         VStack(spacing: 14) {
                             VStack(spacing: 6) {
                                 Text(t("Unlock new assistants after logging in"))
                                     .font(.system(size: 15, weight: .bold))
                                     .foregroundColor(.primary)
-                                
                                 Text(t("Get access to advanced AI assistants (speech smoothing, professional emails, notes). Everything is 100% free, runs fully offline on your computer, and collects no data."))
                                     .font(.system(size: 12))
                                     .foregroundColor(.secondary)
                                     .multilineTextAlignment(.center)
                                     .padding(.horizontal, 20)
                             }
-                            
                             Button(action: {
                                 showLoginSheet = true
                             }) {
@@ -153,7 +143,6 @@ struct ModesSettingsView: View {
             AssistantsExplanationView()
         }
     }
-    
     private func addNewMode() {
         let newMode = VoiceMode(name: "New Assistant", prompt: "Enter your prompt here...", assistantType: "dictation")
         modes.append(newMode)

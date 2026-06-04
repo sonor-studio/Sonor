@@ -4,9 +4,7 @@ import Combine
 struct CapsuleHUDView: View {
     @ObservedObject var controller: AppController
     @ObservedObject var modelManager = ModelManager.shared
-    
     @AppStorage("appTheme") private var appTheme = "system"
-    
     var effectiveColorScheme: ColorScheme {
         if appTheme == "dark" {
             return .dark
@@ -17,16 +15,13 @@ struct CapsuleHUDView: View {
             return appleInterfaceStyle == "Dark" ? .dark : .light
         }
     }
-    
     private var isInitializing: Bool {
         return controller.statusText == "Initializing"
     }
-    
     private var isFinalState: Bool {
         let text = controller.statusText
         return text == "Cancelled" || text == "Done!" || text == "No text recognized." || text == "Error: Missing model" || text == "No microphone permission" || text == "Microphone error"
     }
-    
     private var targetWidth: CGFloat {
         if isInitializing || isFinalState {
             return 284.0
@@ -36,34 +31,31 @@ struct CapsuleHUDView: View {
             return 232.0
         }
     }
-    
-    // Stan animacji
     @State private var showPauseButton = false
     @State private var width: CGFloat = 180
     @State private var height: CGFloat = 40
     @State private var isProcessing = false
     @State private var opacity: Double = 0
-    
-    // Stan listy asystentów
     @State private var showList = false
     @State private var hoveredModeID: UUID? = nil
-    
-    // Stan przeciągania
     @State private var dragTracker = WindowDragTracker()
-    
-    // Timer i czas trwania nagrywania
     @State private var recordingDuration: TimeInterval = 0
     private let recordingTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
-    
-    // Podwidoki do odciążenia kompilatora i zapobieżenia timeoutom type-checkingu
     private var assistantSelector: some View {
         Button(action: {
             if !dragTracker.isDragging { withAnimation { showList.toggle() } }
         }) {
             HStack {
-                Text(t(controller.currentMode?.name ?? "Wybierz tryb"))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundColor(.primary)
+                ZStack(alignment: .leading) {
+                    Text(t(controller.currentMode?.name ?? "Wybierz tryb"))
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.primary)
+                        .id(controller.currentMode?.id ?? UUID())
+                        .transition(.asymmetric(
+                            insertion: .move(edge: .bottom).combined(with: .opacity),
+                            removal: .move(edge: .top).combined(with: .opacity)
+                        ))
+                }
                 Spacer()
                 Image(systemName: showList ? "chevron.up" : "chevron.down")
                     .font(.system(size: 10, weight: .bold))
@@ -78,35 +70,29 @@ struct CapsuleHUDView: View {
         .focusable(false)
         .simultaneousGesture(dragGesture)
     }
-    
     private func formatDuration(_ duration: TimeInterval) -> String {
         let minutes = Int(duration) / 60
         let seconds = Int(duration) % 60
         return String(format: "%02d:%02d", minutes, seconds)
     }
-    
     private var audioWavesView: some View {
         let barCount = width > 200 ? 31 : 21
         let levels = Array(controller.audioLevels.suffix(barCount))
         return HStack(spacing: 0) {
             Spacer()
                 .frame(width: 14)
-            
             HStack(spacing: 2) {
                 ForEach(0..<levels.count, id: \.self) { index in
                     let level = levels[index]
                     let barHeight = CGFloat(2 + (level * 350))
-                    
                     RoundedRectangle(cornerRadius: 1.5)
                         .fill(controller.isPaused ? Color.primary.opacity(0.4) : Color.primary)
                         .frame(width: 3, height: min(barHeight, 28))
                         .animation(.spring(response: 0.1, dampingFraction: 0.5), value: level)
                 }
             }
-            
             Spacer()
                 .frame(width: 14)
-            
             if controller.isRecording {
                 Text(formatDuration(recordingDuration))
                     .font(.system(size: 11, weight: .bold, design: .monospaced))
@@ -114,14 +100,12 @@ struct CapsuleHUDView: View {
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
             }
-            
             Spacer()
                 .frame(width: 12)
         }
         .frame(width: width, height: 40)
         .clipShape(Capsule())
     }
-    
     private var loaderView: some View {
         HStack(spacing: 8) {
             Text(t(controller.statusText))
@@ -134,9 +118,7 @@ struct CapsuleHUDView: View {
                     insertion: .move(edge: .top).combined(with: .opacity),
                     removal: .move(edge: .bottom).combined(with: .opacity)
                 ))
-            
             Spacer()
-            
             TimelineView(.animation) { timeline in
                 let time = timeline.date.timeIntervalSinceReferenceDate
                 let angle = time.truncatingRemainder(dividingBy: 1.0) * 360.0
@@ -153,7 +135,6 @@ struct CapsuleHUDView: View {
         .padding(.horizontal, 14)
         .frame(width: width, height: 40)
     }
-    
     private var dropdownListView: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 2) {
@@ -203,25 +184,20 @@ struct CapsuleHUDView: View {
             removal: .opacity
         ))
     }
-    
     private var dictionaryNotificationView: some View {
         guard let notification = controller.activeDictionaryNotification else { return AnyView(EmptyView()) }
-        
         return AnyView(
             HStack(spacing: 8) {
                 Image(systemName: "book.closed.fill")
                     .font(.system(size: 13))
                     .foregroundColor(.primary.opacity(0.8))
                     .padding(.leading, 12)
-                
                 Text("\"\(notification.wrong)\" ➔ \"\(notification.correct)\"")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
-                
                 Spacer()
-                
                 Button(action: {
                     withAnimation {
                         controller.undoDictionaryEntry()
@@ -247,20 +223,15 @@ struct CapsuleHUDView: View {
             ))
         )
     }
-    
     var body: some View {
         VStack(spacing: 8) {
-            // Lista asystentów
             if showList {
                 dropdownListView
             }
-            
-            // Główna zawartość (Dół)
             VStack(spacing: 8) {
                 if let _ = controller.activeDictionaryNotification {
                     dictionaryNotificationView
                 } else {
-                    // Pole wyboru asystenta
                     if AuthManager.shared.isLoggedIn && modelManager.gemmaState == .downloaded {
                         if !isInitializing && !isFinalState && controller.isRecording {
                             assistantSelector
@@ -268,11 +239,8 @@ struct CapsuleHUDView: View {
                                 .zIndex(0)
                         }
                     }
-                    
-                    // Dolny pasek: Fale/Loader + Przycisk Pauza + Przycisk X
                     HStack(spacing: (isInitializing || isFinalState) ? -40 : 12) {
                         Button(action: {
-                            // Puste, żeby przechwycić zdarzenia i nie przerywać dragGesture przez animację
                         }) {
                             ZStack {
                                 if !isProcessing && controller.statusText != "Initializing" {
@@ -293,8 +261,6 @@ struct CapsuleHUDView: View {
                         .focusable(false)
                         .simultaneousGesture(dragGesture)
                         .zIndex(1)
-                        
-                        // Przycisk Pauza / Wznów
                         if showPauseButton && !isInitializing && !isFinalState {
                             Button(action: {
                                 if !dragTracker.isDragging { controller.togglePause() }
@@ -312,8 +278,6 @@ struct CapsuleHUDView: View {
                             .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
                             .zIndex(0)
                         }
-                        
-                        // Przycisk X (Anuluj)
                         if !isInitializing && !isFinalState {
                             Button(action: {
                                 if !dragTracker.isDragging { controller.cancelRecording() }
@@ -346,8 +310,8 @@ struct CapsuleHUDView: View {
                 opacity = 1.0
             }
         }
-        .onChange(of: controller.isRecording) { isRecording in
-            if !isRecording {
+        .onChange(of: controller.isRecording) {
+            if !controller.isRecording {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
                     showPauseButton = false
                     width = targetWidth
@@ -364,10 +328,10 @@ struct CapsuleHUDView: View {
                 }
             }
         }
-        .onChange(of: controller.statusText) { status in
+        .onChange(of: controller.statusText) {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
                 width = targetWidth
-                isProcessing = status != "Listening..."
+                isProcessing = controller.statusText != "Listening..."
             }
             if isFinalState {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
@@ -381,8 +345,8 @@ struct CapsuleHUDView: View {
                 showList = false
             }
         }
-        .onChange(of: controller.activeDictionaryNotification) { notification in
-            if notification == nil && !controller.isRecording {
+        .onChange(of: controller.activeDictionaryNotification) {
+            if controller.activeDictionaryNotification == nil && !controller.isRecording {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                     opacity = 0.0
                 }
@@ -399,55 +363,38 @@ struct CapsuleHUDView: View {
             }
         }
     }
-    
-    // Gest przeciągania
     var dragGesture: some Gesture {
         DragGesture(minimumDistance: 3)
             .onChanged { value in
                 let currentMouse = NSEvent.mouseLocation
-                guard let window = controller.hudWindow else { return }
-                
+                guard let window = WindowManager.shared.hudWindow else { return }
                 if dragTracker.startMouseLocation == nil {
                     dragTracker.startMouseLocation = currentMouse
                     dragTracker.startWindowOrigin = window.frame.origin
                     dragTracker.isDragging = true
                 }
-                
                 guard let startMouse = dragTracker.startMouseLocation,
                       let startOrigin = dragTracker.startWindowOrigin else { return }
-                
                 let deltaX = currentMouse.x - startMouse.x
                 let deltaY = currentMouse.y - startMouse.y
-                
                 var newX = startOrigin.x + deltaX
                 var newY = startOrigin.y + deltaY
-                
                 if let screen = window.screen ?? NSScreen.main {
-                    // Używamy visibleFrame, aby respektować pozycję Docka oraz Paska Menu
                     let screenFrame = screen.visibleFrame
-                    
-                    // Nakładka ma szerokość 350, ale widoczne elementy mają 284 i są wyśrodkowane.
-                    // Przez to z lewej i prawej strony mamy po 33 punkty przezroczystego marginesu.
                     let leftMargin: CGFloat = 33
-                    let rightMargin: CGFloat = 350 - leftMargin // 317
-                    
+                    let rightMargin: CGFloat = 350 - leftMargin 
                     let minXBound = screenFrame.minX - leftMargin
                     let maxXBound = screenFrame.maxX - rightMargin
-                    
-                    // Widoczna wysokość zależy od tego, czy lista asystentów jest otwarta
                     let visibleHeight = showList ? CGFloat(296) : CGFloat(88)
                     let minYBound = screenFrame.minY
                     let maxYBound = screenFrame.maxY - visibleHeight
-                    
-                    // Blokada wyjścia poza ekran
                     newX = max(minXBound, min(newX, maxXBound))
                     newY = max(minYBound, min(newY, maxYBound))
                 }
-                
                 window.setFrameOrigin(NSPoint(x: newX, y: newY))
             }
             .onEnded { _ in
-                if let window = controller.hudWindow {
+                if let window = WindowManager.shared.hudWindow {
                     let origin = window.frame.origin
                     UserDefaults.standard.set(origin.x, forKey: "hudWindowX")
                     UserDefaults.standard.set(origin.y, forKey: "hudWindowY")
@@ -465,7 +412,6 @@ struct GlassModifier: ViewModifier {
     var cornerRadius: CGFloat
     var opacity: Double = 0.5
     var colorScheme: ColorScheme
-    
     func body(content: Content) -> some View {
         let isDark = colorScheme == .dark
         content

@@ -3,33 +3,19 @@ import SwiftUI
 struct ModelDownloadErrorView: View {
     let error: String
     @Environment(\.dismiss) var dismiss
-    @AppStorage("appTheme") private var appTheme = "system"
-    var colorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
-    
+    @Environment(\.colorScheme) var colorScheme
     var body: some View {
         VStack(spacing: 0) {
             Spacer().frame(height: 30)
-            
             VStack(spacing: 12) {
                 Image(systemName: "exclamationmark.triangle.fill")
                     .font(.system(size: 40))
                     .foregroundColor(.red)
-                
                 Text(t("Download Interrupted"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
             }
             .padding(.bottom, 24)
-            
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "wifi.exclamationmark")
@@ -45,7 +31,6 @@ struct ModelDownloadErrorView: View {
                             .lineSpacing(2)
                     }
                 }
-                
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "arrow.clockwise.icloud.fill")
                         .font(.system(size: 14, weight: .semibold))
@@ -62,9 +47,7 @@ struct ModelDownloadErrorView: View {
                 }
             }
             .padding(.horizontal, 24)
-            
             Spacer()
-            
             Button(action: { dismiss() }) {
                 Text(t("I understand"))
                     .font(.system(size: 13, weight: .bold))

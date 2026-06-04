@@ -7,15 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		20AD0982A184F56E02F13629 /* libggml-blas.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 078E4201C255A0EEA854DC37 /* libggml-blas.a */; };
 		34AC90E36DE79EEDDC3A0381 /* MLXHuggingFace in Frameworks */ = {isa = PBXBuildFile; productRef = A443AD55CB178B6FA2B4E2F3 /* MLXHuggingFace */; };
 		4586A2E16FE5CEBBC5899C24 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = 1E178648712FE46F9D04CBE4 /* MLXLMCommon */; };
 		482F589EE138F7AEFCCE8E21 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = 1092FF3974AADB49E848C373 /* MLXLLM */; };
+		62FDD38207C55F4EDC46CAC1 /* libcommon.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E0E7886FB9FD6910C0275599 /* libcommon.a */; };
+		66A007DAC5E714C7E96D4F3D /* libsonor.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 2DB97A1F4E8F6964374F581A /* libsonor.a */; };
+		8D7DC2017BA3ED6F2241D376 /* libggml-cpu.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 70A66B13DBED0B3A9B364DB1 /* libggml-cpu.a */; };
+		9892EA6D96893814CFA17626 /* libggml.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E1EA5827898EEA79140E2A01 /* libggml.a */; };
 		A9BA8F21F7C1CA9EE1AB39F3 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = 5D07F192FC57C79E0DC9C62B /* MLX */; };
 		AA7327738145899B260A7DF8 /* ggml-metal.metal in Resources */ = {isa = PBXBuildFile; fileRef = BB1AA0FCF32E5D0BEB429EDB /* ggml-metal.metal */; };
+		C0559876D8BD50DD812A8D0F /* libggml-base.a in Frameworks */ = {isa = PBXBuildFile; fileRef = F77AABFA07EF2A44DBC5E6C2 /* libggml-base.a */; };
 		D6534C6F29F8B7E2B6DA47D2 /* Hub in Frameworks */ = {isa = PBXBuildFile; productRef = AF07F2F8533D00DF95F0205C /* Hub */; };
+		D9C0161012AA64376FF682C3 /* libggml-metal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ECDC90A23855A924F67A28E5 /* libggml-metal.a */; };
 		DA1A18BC76D9C0AAE959D6C7 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 8B63F6402F23B2F22D0DAB23 /* Tokenizers */; };
-		FADDD9F62FBBB00D00B0B7D5 /* libsonor.1.8.4.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = FADDD9F52FBBB00D00B0B7D5 /* libsonor.1.8.4.dylib */; };
-		FADDD9F72FBBB00D00B0B7D5 /* libsonor.1.8.4.dylib in Embed Libraries */ = {isa = PBXBuildFile; fileRef = FADDD9F52FBBB00D00B0B7D5 /* libsonor.1.8.4.dylib */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -42,7 +47,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
-				FADDD9F72FBBB00D00B0B7D5 /* libsonor.1.8.4.dylib in Embed Libraries */,
 			);
 			name = "Embed Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -51,14 +55,50 @@
 
 /* Begin PBXFileReference section */
 		02D5AB1B3F762EEC3D9971A5 /* Hub.framework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Hub.framework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		078E4201C255A0EEA854DC37 /* libggml-blas.a */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = archive.ar; name = "libggml-blas.a"; path = "sonor.cpp/build/ggml/src/ggml-blas/libggml-blas.a"; sourceTree = "<group>"; };
+		2DB97A1F4E8F6964374F581A /* libsonor.a */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = archive.ar; name = libsonor.a; path = sonor.cpp/build/src/libsonor.a; sourceTree = "<group>"; };
 		583E0A7E4A1AC3D2E8D1507E /* Tokenizers.framework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Tokenizers.framework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		70A66B13DBED0B3A9B364DB1 /* libggml-cpu.a */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = archive.ar; name = "libggml-cpu.a"; path = "sonor.cpp/build/ggml/src/libggml-cpu.a"; sourceTree = "<group>"; };
 		732C02653E6EC2CA525AA5D3 /* Hub.framework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Hub.framework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		A6DE841373F71179C261389B /* Tokenizers.framework.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Tokenizers.framework.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		BB1AA0FCF32E5D0BEB429EDB /* ggml-metal.metal */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.metal; name = "ggml-metal.metal"; path = "sonor.cpp/ggml/src/ggml-metal/ggml-metal.metal"; sourceTree = "<group>"; };
+		E0E7886FB9FD6910C0275599 /* libcommon.a */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = archive.ar; name = libcommon.a; path = sonor.cpp/build/examples/libcommon.a; sourceTree = "<group>"; };
+		E1EA5827898EEA79140E2A01 /* libggml.a */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = archive.ar; name = libggml.a; path = sonor.cpp/build/ggml/src/libggml.a; sourceTree = "<group>"; };
+		ECDC90A23855A924F67A28E5 /* libggml-metal.a */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = archive.ar; name = "libggml-metal.a"; path = "sonor.cpp/build/ggml/src/ggml-metal/libggml-metal.a"; sourceTree = "<group>"; };
+		F77AABFA07EF2A44DBC5E6C2 /* libggml-base.a */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = archive.ar; name = "libggml-base.a"; path = "sonor.cpp/build/ggml/src/libggml-base.a"; sourceTree = "<group>"; };
+		FA0179772FCE56BB004F75D9 /* build.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = build.make; sourceTree = "<group>"; };
+		FA0179782FCE56BB004F75D9 /* cmake_clean.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = cmake_clean.cmake; sourceTree = "<group>"; };
+		FA0179792FCE56BB004F75D9 /* compiler_depend.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = compiler_depend.make; sourceTree = "<group>"; };
+		FA01797A2FCE56BB004F75D9 /* compiler_depend.ts */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.typescript; path = compiler_depend.ts; sourceTree = "<group>"; };
+		FA01797B2FCE56BB004F75D9 /* depend.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = depend.make; sourceTree = "<group>"; };
+		FA01797C2FCE56BB004F75D9 /* DependInfo.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = DependInfo.cmake; sourceTree = "<group>"; };
+		FA01797D2FCE56BB004F75D9 /* flags.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = flags.make; sourceTree = "<group>"; };
+		FA01797E2FCE56BB004F75D9 /* link.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = link.txt; sourceTree = "<group>"; };
+		FA01797F2FCE56BB004F75D9 /* progress.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = progress.make; sourceTree = "<group>"; };
+		FA0179802FCE56BB004F75D9 /* sonor.cpp.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = sonor.cpp.o; sourceTree = "<group>"; };
+		FA0179812FCE56BB004F75D9 /* sonor.cpp.o.d */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.dtrace; path = sonor.cpp.o.d; sourceTree = "<group>"; };
+		FA0179832FCE56BB004F75D9 /* CMakeDirectoryInformation.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeDirectoryInformation.cmake; sourceTree = "<group>"; };
+		FA0179842FCE56BB004F75D9 /* progress.marks */ = {isa = PBXFileReference; lastKnownFileType = text; path = progress.marks; sourceTree = "<group>"; };
+		FA0179862FCE56BB004F75D9 /* cmake_install.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = cmake_install.cmake; sourceTree = "<group>"; };
+		FA0179892FCE56BB004F75D9 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
+		FA01798B2FCE56CC004F75D9 /* build.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = build.make; sourceTree = "<group>"; };
+		FA01798C2FCE56CC004F75D9 /* cmake_clean.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = cmake_clean.cmake; sourceTree = "<group>"; };
+		FA01798D2FCE56CC004F75D9 /* compiler_depend.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = compiler_depend.make; sourceTree = "<group>"; };
+		FA01798E2FCE56CC004F75D9 /* compiler_depend.ts */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.typescript; path = compiler_depend.ts; sourceTree = "<group>"; };
+		FA01798F2FCE56CC004F75D9 /* depend.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = depend.make; sourceTree = "<group>"; };
+		FA0179902FCE56CC004F75D9 /* DependInfo.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = DependInfo.cmake; sourceTree = "<group>"; };
+		FA0179912FCE56CC004F75D9 /* flags.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = flags.make; sourceTree = "<group>"; };
+		FA0179922FCE56CC004F75D9 /* link.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = link.txt; sourceTree = "<group>"; };
+		FA0179932FCE56CC004F75D9 /* progress.make */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = progress.make; sourceTree = "<group>"; };
+		FA0179942FCE56CC004F75D9 /* sonor.cpp.o */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.objfile"; path = sonor.cpp.o; sourceTree = "<group>"; };
+		FA0179952FCE56CC004F75D9 /* sonor.cpp.o.d */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.dtrace; path = sonor.cpp.o.d; sourceTree = "<group>"; };
+		FA0179972FCE56CC004F75D9 /* CMakeDirectoryInformation.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = CMakeDirectoryInformation.cmake; sourceTree = "<group>"; };
+		FA0179982FCE56CC004F75D9 /* progress.marks */ = {isa = PBXFileReference; lastKnownFileType = text; path = progress.marks; sourceTree = "<group>"; };
+		FA01799A2FCE56CC004F75D9 /* cmake_install.cmake */ = {isa = PBXFileReference; lastKnownFileType = text; path = cmake_install.cmake; sourceTree = "<group>"; };
+		FA01799D2FCE56CC004F75D9 /* Makefile */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.make; path = Makefile; sourceTree = "<group>"; };
 		FA21F5512FA973670030EE83 /* Sonor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Sonor.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA21F55E2FA973680030EE83 /* SonorTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SonorTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA21F5682FA973680030EE83 /* SonorUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SonorUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		FADDD9F52FBBB00D00B0B7D5 /* libsonor.1.8.4.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libsonor.1.8.4.dylib; path = sonor.cpp/build/src/libsonor.1.8.4.dylib; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -107,9 +147,15 @@
 				482F589EE138F7AEFCCE8E21 /* MLXLLM in Frameworks */,
 				4586A2E16FE5CEBBC5899C24 /* MLXLMCommon in Frameworks */,
 				34AC90E36DE79EEDDC3A0381 /* MLXHuggingFace in Frameworks */,
-				FADDD9F62FBBB00D00B0B7D5 /* libsonor.1.8.4.dylib in Frameworks */,
 				D6534C6F29F8B7E2B6DA47D2 /* Hub in Frameworks */,
 				DA1A18BC76D9C0AAE959D6C7 /* Tokenizers in Frameworks */,
+				62FDD38207C55F4EDC46CAC1 /* libcommon.a in Frameworks */,
+				20AD0982A184F56E02F13629 /* libggml-blas.a in Frameworks */,
+				D9C0161012AA64376FF682C3 /* libggml-metal.a in Frameworks */,
+				C0559876D8BD50DD812A8D0F /* libggml-base.a in Frameworks */,
+				8D7DC2017BA3ED6F2241D376 /* libggml-cpu.a in Frameworks */,
+				9892EA6D96893814CFA17626 /* libggml.a in Frameworks */,
+				66A007DAC5E714C7E96D4F3D /* libsonor.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,16 +176,109 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0A1FB2BD597FAAD0B9FBA2F3 /* Libraries */ = {
+			isa = PBXGroup;
+			children = (
+				E0E7886FB9FD6910C0275599 /* libcommon.a */,
+				078E4201C255A0EEA854DC37 /* libggml-blas.a */,
+				ECDC90A23855A924F67A28E5 /* libggml-metal.a */,
+				F77AABFA07EF2A44DBC5E6C2 /* libggml-base.a */,
+				70A66B13DBED0B3A9B364DB1 /* libggml-cpu.a */,
+				E1EA5827898EEA79140E2A01 /* libggml.a */,
+				2DB97A1F4E8F6964374F581A /* libsonor.a */,
+			);
+			name = Libraries;
+			sourceTree = "<group>";
+		};
 		6A27AAE65150B7B058EBE621 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				FADDD9F52FBBB00D00B0B7D5 /* libsonor.1.8.4.dylib */,
+				FA01798A2FCE56BB004F75D9 /* src */,
+				FA01799E2FCE56CC004F75D9 /* src */,
 				02D5AB1B3F762EEC3D9971A5 /* Hub.framework.framework */,
 				A6DE841373F71179C261389B /* Tokenizers.framework.framework */,
 				732C02653E6EC2CA525AA5D3 /* Hub.framework.framework */,
 				583E0A7E4A1AC3D2E8D1507E /* Tokenizers.framework.framework */,
 			);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		FA0179822FCE56BB004F75D9 /* sonor.dir */ = {
+			isa = PBXGroup;
+			children = (
+				FA0179772FCE56BB004F75D9 /* build.make */,
+				FA0179782FCE56BB004F75D9 /* cmake_clean.cmake */,
+				FA0179792FCE56BB004F75D9 /* compiler_depend.make */,
+				FA01797A2FCE56BB004F75D9 /* compiler_depend.ts */,
+				FA01797B2FCE56BB004F75D9 /* depend.make */,
+				FA01797C2FCE56BB004F75D9 /* DependInfo.cmake */,
+				FA01797D2FCE56BB004F75D9 /* flags.make */,
+				FA01797E2FCE56BB004F75D9 /* link.txt */,
+				FA01797F2FCE56BB004F75D9 /* progress.make */,
+				FA0179802FCE56BB004F75D9 /* sonor.cpp.o */,
+				FA0179812FCE56BB004F75D9 /* sonor.cpp.o.d */,
+			);
+			path = sonor.dir;
+			sourceTree = "<group>";
+		};
+		FA0179852FCE56BB004F75D9 /* CMakeFiles */ = {
+			isa = PBXGroup;
+			children = (
+				FA0179822FCE56BB004F75D9 /* sonor.dir */,
+				FA0179832FCE56BB004F75D9 /* CMakeDirectoryInformation.cmake */,
+				FA0179842FCE56BB004F75D9 /* progress.marks */,
+			);
+			path = CMakeFiles;
+			sourceTree = "<group>";
+		};
+		FA01798A2FCE56BB004F75D9 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				FA0179852FCE56BB004F75D9 /* CMakeFiles */,
+				FA0179862FCE56BB004F75D9 /* cmake_install.cmake */,
+				FA0179892FCE56BB004F75D9 /* Makefile */,
+			);
+			name = src;
+			path = sonor.cpp/build/src;
+			sourceTree = "<group>";
+		};
+		FA0179962FCE56CC004F75D9 /* sonor.dir */ = {
+			isa = PBXGroup;
+			children = (
+				FA01798B2FCE56CC004F75D9 /* build.make */,
+				FA01798C2FCE56CC004F75D9 /* cmake_clean.cmake */,
+				FA01798D2FCE56CC004F75D9 /* compiler_depend.make */,
+				FA01798E2FCE56CC004F75D9 /* compiler_depend.ts */,
+				FA01798F2FCE56CC004F75D9 /* depend.make */,
+				FA0179902FCE56CC004F75D9 /* DependInfo.cmake */,
+				FA0179912FCE56CC004F75D9 /* flags.make */,
+				FA0179922FCE56CC004F75D9 /* link.txt */,
+				FA0179932FCE56CC004F75D9 /* progress.make */,
+				FA0179942FCE56CC004F75D9 /* sonor.cpp.o */,
+				FA0179952FCE56CC004F75D9 /* sonor.cpp.o.d */,
+			);
+			path = sonor.dir;
+			sourceTree = "<group>";
+		};
+		FA0179992FCE56CC004F75D9 /* CMakeFiles */ = {
+			isa = PBXGroup;
+			children = (
+				FA0179962FCE56CC004F75D9 /* sonor.dir */,
+				FA0179972FCE56CC004F75D9 /* CMakeDirectoryInformation.cmake */,
+				FA0179982FCE56CC004F75D9 /* progress.marks */,
+			);
+			path = CMakeFiles;
+			sourceTree = "<group>";
+		};
+		FA01799E2FCE56CC004F75D9 /* src */ = {
+			isa = PBXGroup;
+			children = (
+				FA0179992FCE56CC004F75D9 /* CMakeFiles */,
+				FA01799A2FCE56CC004F75D9 /* cmake_install.cmake */,
+				FA01799D2FCE56CC004F75D9 /* Makefile */,
+			);
+			name = src;
+			path = sonor.cpp/build/src;
 			sourceTree = "<group>";
 		};
 		FA21F5482FA973670030EE83 = {
@@ -151,6 +290,7 @@
 				FA21F5522FA973670030EE83 /* Products */,
 				6A27AAE65150B7B058EBE621 /* Frameworks */,
 				BB1AA0FCF32E5D0BEB429EDB /* ggml-metal.metal */,
+				0A1FB2BD597FAAD0B9FBA2F3 /* Libraries */,
 			);
 			sourceTree = "<group>";
 		};
@@ -354,6 +494,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -418,6 +559,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -516,18 +658,17 @@
 					/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/ggml/src,
 					"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/ggml/src/ggml-metal",
 					"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/ggml/src/ggml-blas",
+					"$(PROJECT_DIR)/sonor.cpp/build/ggml/src",
+					"$(PROJECT_DIR)/sonor.cpp/build/src",
+					"\"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/examples\"",
+					"\"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/ggml/src/ggml-cpu\"",
 				);
+				MACH_O_TYPE = mh_execute;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				MTL_HEADER_SEARCH_PATHS = "$(inherited) /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src/ggml-metal";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-lsonor",
-					"-lggml",
-					"-lggml-base",
-					"-lggml-cpu",
-					"-lggml-metal",
-					"-lggml-blas",
 					"-framework",
 					Accelerate,
 					"-framework",
@@ -594,18 +735,17 @@
 					/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/ggml/src,
 					"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/ggml/src/ggml-metal",
 					"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/ggml/src/ggml-blas",
+					"$(PROJECT_DIR)/sonor.cpp/build/ggml/src",
+					"$(PROJECT_DIR)/sonor.cpp/build/src",
+					"\"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/examples\"",
+					"\"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/ggml/src/ggml-cpu\"",
 				);
+				MACH_O_TYPE = mh_execute;
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 1.0;
 				MTL_HEADER_SEARCH_PATHS = "$(inherited) /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src/ggml-metal";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
-					"-lsonor",
-					"-lggml",
-					"-lggml-base",
-					"-lggml-cpu",
-					"-lggml-metal",
-					"-lggml-blas",
 					"-framework",
 					Accelerate,
 					"-framework",
@@ -640,6 +780,7 @@
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Aplikacja potrzebuje uprawnień do Automatyzacji, aby móc używać schowka i wklejać tekst.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
+				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "Aplikacja wymaga dostępu do nagrywania ekranu, aby móc wyłapać dźwięk systemowy i wstrzymywać odtwarzane multimedia.";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.SonorTests;
@@ -667,6 +808,7 @@
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Aplikacja potrzebuje uprawnień do Automatyzacji, aby móc używać schowka i wklejać tekst.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
+				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "Aplikacja wymaga dostępu do nagrywania ekranu, aby móc wyłapać dźwięk systemowy i wstrzymywać odtwarzane multimedia.";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.SonorTests;
@@ -693,6 +835,7 @@
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Aplikacja potrzebuje uprawnień do Automatyzacji, aby móc używać schowka i wklejać tekst.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
+				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "Aplikacja wymaga dostępu do nagrywania ekranu, aby móc wyłapać dźwięk systemowy i wstrzymywać odtwarzane multimedia.";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.SonorUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -718,6 +861,7 @@
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
 				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Aplikacja potrzebuje uprawnień do Automatyzacji, aby móc używać schowka i wklejać tekst.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
+				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "Aplikacja wymaga dostępu do nagrywania ekranu, aby móc wyłapać dźwięk systemowy i wstrzymywać odtwarzane multimedia.";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = dev.SonorUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

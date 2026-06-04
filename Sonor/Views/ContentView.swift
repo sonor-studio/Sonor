@@ -3,34 +3,20 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var controller: AppController
     @ObservedObject var localizer = LocalizationManager.shared
-    @AppStorage("appTheme") private var appTheme = "system"
-    
-    var effectiveColorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
-    
+    @Environment(\.colorScheme) var colorScheme
     var body: some View {
         VStack(spacing: 20) {
-            // Nagłówek
             HStack {
                 HStack(spacing: 6) {
                     Text("Sonor")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundColor(.primary)
-                    
-                    Text("Beta")
+                    Text(t("Beta"))
                         .font(.system(size: 9, weight: .bold))
-                        .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
-                        .background(effectiveColorScheme == .dark ? Color.white : Color.black)
+                        .background(colorScheme == .dark ? Color.white : Color.black)
                         .cornerRadius(4)
                 }
                 Spacer()
@@ -39,19 +25,14 @@ struct ContentView: View {
                     .foregroundColor(controller.isRecording ? .red : .primary)
             }
             .padding(.horizontal, 4)
-            
-            // Wizualizator ChatGPT-style
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.gray.opacity(0.05))
                     .frame(height: 80)
-                
                 HStack(spacing: 3) {
                     ForEach(0..<controller.audioLevels.count, id: \.self) { index in
                         let level = controller.audioLevels[index]
-                        // Skalowanie wysokości: min 4 (kropka), max 60
                         let barHeight = CGFloat(4 + (level * 150))
-                        
                         RoundedRectangle(cornerRadius: 2)
                             .fill(LinearGradient(
                                 colors: controller.isRecording ? [.red, .orange] : [.blue, .cyan],
@@ -59,7 +40,7 @@ struct ContentView: View {
                                 endPoint: .bottom
                             ))
                             .frame(width: 3, height: min(barHeight, 60))
-                            .opacity(Double(index) / Double(controller.audioLevels.count)) // Efekt zanikania z lewej
+                            .opacity(Double(index) / Double(controller.audioLevels.count)) 
                             .animation(.spring(response: 0.2, dampingFraction: 0.5), value: level)
                     }
                 }
@@ -67,7 +48,6 @@ struct ContentView: View {
             .onTapGesture {
                 controller.toggleRecording()
             }
-            
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Cmd + Shift + `")
@@ -77,10 +57,8 @@ struct ContentView: View {
                         .font(.system(size: 9))
                         .foregroundColor(.secondary.opacity(0.7))
                 }
-                
                 Spacer()
-                
-                Button(action: { controller.openSettings() }) {
+                Button(action: { WindowManager.shared.openSettings() }) {
                     Image(systemName: "gearshape")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.secondary)
@@ -88,7 +66,6 @@ struct ContentView: View {
                         .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.1)))
                 }
                 .buttonStyle(.plain)
-                
                 Button(action: { controller.quitApp() }) {
                     Image(systemName: "power")
                         .font(.system(size: 12, weight: .bold))
@@ -105,7 +82,7 @@ struct ContentView: View {
     }
 }
 
-// Pomocniczy widok dla efektu szklanego tła
+
 struct VisualEffectView: NSViewRepresentable {
     var material: NSVisualEffectView.Material
     var blendingMode: NSVisualEffectView.BlendingMode

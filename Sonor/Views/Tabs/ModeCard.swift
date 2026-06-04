@@ -7,11 +7,9 @@ struct ModeCard: View {
     let isRawOutput: Bool
     let onSelect: () -> Void
     let onSettings: () -> Void
-    
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
     @ObservedObject private var localizer = LocalizationManager.shared
-    
     private var tagBgColor: Color {
         if isSelected {
             return colorScheme == .dark ? Color.black : Color.white
@@ -19,7 +17,6 @@ struct ModeCard: View {
             return colorScheme == .dark ? Color.white : Color.black
         }
     }
-    
     private var tagFgColor: Color {
         if isSelected {
             return colorScheme == .dark ? Color.white : Color.black
@@ -27,7 +24,6 @@ struct ModeCard: View {
             return colorScheme == .dark ? Color.black : Color.white
         }
     }
-    
     private var descriptionText: String {
         if mode.isBuiltInMode {
             switch mode.name {
@@ -48,17 +44,14 @@ struct ModeCard: View {
             return mode.prompt.isEmpty ? t("Plain recording without a prompt.") : mode.prompt
         }
     }
-    
     var body: some View {
         ZStack {
-            // Main Card Content
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text(t(mode.name))
                         .font(.system(size: 14, weight: .bold))
                         .foregroundColor(isSelected ? (colorScheme == .dark ? .black : .white) : .primary)
                     Spacer()
-                    
                     if isRawOutput {
                         Text(t("Main Assistant"))
                             .font(.system(size: 10, weight: .semibold))
@@ -69,21 +62,17 @@ struct ModeCard: View {
                             .cornerRadius(6)
                     }
                 }
-                
                 Text(descriptionText)
                     .font(.system(size: 12))
                     .foregroundColor(isSelected ? (colorScheme == .dark ? .black.opacity(0.7) : .white.opacity(0.7)) : .secondary)
                     .lineLimit(isRawOutput ? 2 : 4)
-                
                 Spacer()
-                
                 HStack {
                     Image(systemName: mode.assistantType == "dictation" ? "pencil" : "wand.and.stars")
                         .font(.system(size: 12))
                     Text(mode.assistantType == "dictation" ? t("Dictation") : t("Editing"))
                         .font(.system(size: 10, weight: .semibold))
                     Spacer()
-                    
                     if mode.audioBehavior == .mute || mode.audioBehavior == .pause {
                         Image(systemName: "speaker.slash.fill")
                             .font(.system(size: 12))
@@ -93,8 +82,6 @@ struct ModeCard: View {
             }
             .padding(15)
             .blur(radius: isPremium || isRawOutput ? 0 : 3.5)
-            
-            // Premium Lock Overlay
             if !isPremium && !isRawOutput {
                 Color.black.opacity(0.2)
                     .cornerRadius(16)
@@ -130,7 +117,6 @@ struct ModeCard: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onSelect)
     }
-    
     @ViewBuilder
     private var cardBackground: some View {
         if isSelected {

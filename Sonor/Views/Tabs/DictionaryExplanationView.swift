@@ -2,36 +2,21 @@ import SwiftUI
 
 struct DictionaryExplanationView: View {
     @Environment(\.dismiss) var dismiss
-    @AppStorage("appTheme") private var appTheme = "system"
-    var colorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject private var localizer = LocalizationManager.shared
-    
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
                 .frame(height: 30)
-            
             VStack(spacing: 12) {
                 Image(systemName: "book.closed.fill")
                     .font(.system(size: 40))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
-                
                 Text(t("Intelligent Dictionary"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
             }
             .padding(.bottom, 24)
-            
             VStack(alignment: .leading, spacing: 16) {
                 InfoBulletRow(
                     icon: "pencil.and.outline",
@@ -39,14 +24,12 @@ struct DictionaryExplanationView: View {
                     description: t("Teach Sonor how to correctly write words it often mishears, such as specific names, technical jargon, or uncommon terms."),
                     colorScheme: colorScheme
                 )
-                
                 InfoBulletRow(
                     icon: "arrow.right.arrow.left",
                     title: t("Automatic Replacement"),
                     description: t("Define rules to automatically replace specific phrases. For example, change 'superbase' to 'Supabase' instantly upon transcription."),
                     colorScheme: colorScheme
                 )
-                
                 InfoBulletRow(
                     icon: "checkmark.circle.fill",
                     title: t("Enhanced Accuracy"),
@@ -55,9 +38,7 @@ struct DictionaryExplanationView: View {
                 )
             }
             .padding(.horizontal, 24)
-            
             Spacer()
-            
             Button(action: {
                 dismiss()
             }) {

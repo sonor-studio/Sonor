@@ -2,40 +2,23 @@ import SwiftUI
 
 struct BenchmarkView: View {
     @Environment(\.dismiss) var dismiss
-    @AppStorage("appTheme") private var appTheme = "system"
-    var colorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
+    @Environment(\.colorScheme) var colorScheme
     @StateObject private var audioManager = AudioManager()
     @ObservedObject private var localizer = LocalizationManager.shared
-    
-    @State private var step: Int = 0 // 0: Intro, 1: Writing, 2: Speaking, 3: Summary
+    @State private var step: Int = 0 
     @State private var currentText: String = ""
     @State private var lastTextIndex: Int = -1
-    
-    // Writing test
     @State private var typedText: String = ""
     @State private var writingTimer: Timer?
     @State private var writingElapsed: Double = 0.0
     @State private var isWritingStarted: Bool = false
     @State private var isWritingFinished: Bool = false
-    
-    // Speaking test
     @State private var speakingTimer: Timer?
     @State private var speakingElapsed: Double = 0.0
     @State private var isSpeakingStarted: Bool = false
     @State private var isSpeakingFinished: Bool = false
     @State private var waveLevels: [CGFloat] = Array(repeating: 0.01, count: 36)
-    
     @State private var isCloseHovered = false
-    
     var presets: [String] {
         let lang = localizer.appLanguage
         switch lang {
@@ -105,10 +88,8 @@ struct BenchmarkView: View {
             ]
         }
     }
-    
     var body: some View {
         VStack(spacing: 0) {
-            // Header
             HStack {
                 Text(t("Typing vs Speaking Speed Test"))
                     .font(.system(size: 16, weight: .bold))
@@ -127,10 +108,7 @@ struct BenchmarkView: View {
             }
             .padding(.horizontal, 24)
             .padding(.vertical, 16)
-            
             Divider()
-            
-            // Scrollable Content
             ScrollViewReader { proxy in
                 ScrollView {
                     VStack(spacing: 0) {
@@ -149,8 +127,8 @@ struct BenchmarkView: View {
                     .padding(.top, 24)
                     .padding(.bottom, 12)
                 }
-                .onChange(of: isWritingFinished) { finished in
-                    if finished {
+                .onChange(of: isWritingFinished) {
+                    if isWritingFinished {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                             withAnimation {
                                 proxy.scrollTo("writingTimeLabel", anchor: .bottom)
@@ -158,12 +136,10 @@ struct BenchmarkView: View {
                         }
                     }
                 }
-                .onChange(of: step) { _ in
+                .onChange(of: step) {
                     proxy.scrollTo("topOfScrollContent", anchor: .top)
                 }
             }
-            
-            // Fixed Bottom Action Buttons (Sticky)
             VStack(spacing: 0) {
                 Divider()
                 bottomButtonsView
@@ -180,7 +156,6 @@ struct BenchmarkView: View {
             stopAllTimers()
         }
     }
-    
     private func selectRandomText() {
         var nextIndex = Int.random(in: 0..<presets.count)
         if presets.count > 1 {
@@ -191,7 +166,6 @@ struct BenchmarkView: View {
         lastTextIndex = nextIndex
         currentText = presets[nextIndex]
     }
-    
     private func stopAllTimers() {
         writingTimer?.invalidate()
         writingTimer = nil
@@ -199,9 +173,6 @@ struct BenchmarkView: View {
         speakingTimer = nil
         _ = audioManager.stopRecording()
     }
-    
-    // MARK: - Content Views
-    
     private var introContentView: some View {
         VStack(alignment: .leading, spacing: 20) {
             HStack(spacing: 12) {
@@ -211,16 +182,13 @@ struct BenchmarkView: View {
                 Text(t("See for yourself."))
                     .font(.system(size: 22, weight: .black))
             }
-            
             Text(t("Voice typing is on average 3.5x faster than keyboard typing. Run a quick test and prove it to yourself. See how much faster you can get your thoughts onto the screen."))
                 .font(.system(size: 14))
                 .foregroundColor(.secondary)
                 .lineSpacing(4)
-            
             VStack(alignment: .leading, spacing: 12) {
                 Text(t("Test instructions:"))
                     .font(.system(size: 14, weight: .bold))
-                
                 HStack(alignment: .top, spacing: 10) {
                     Text("1.")
                         .font(.system(size: 13, weight: .bold))
@@ -228,7 +196,6 @@ struct BenchmarkView: View {
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
-                
                 HStack(alignment: .top, spacing: 10) {
                     Text("2.")
                         .font(.system(size: 13, weight: .bold))
@@ -236,7 +203,6 @@ struct BenchmarkView: View {
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
                 }
-                
                 HStack(alignment: .top, spacing: 10) {
                     Text("3.")
                         .font(.system(size: 13, weight: .bold))
@@ -256,7 +222,6 @@ struct BenchmarkView: View {
             )
         }
     }
-    
     private var writingContentView: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -268,10 +233,8 @@ struct BenchmarkView: View {
                 Text(String(format: t("Timer: %.1fs"), writingElapsed))
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
             }
-            
             Text(t("Retype the text below as fast as you can:"))
                 .font(.system(size: 14, weight: .bold))
-            
             Text(currentText)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.primary)
@@ -285,7 +248,6 @@ struct BenchmarkView: View {
                                 .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
                         )
                 )
-            
             TextEditor(text: $typedText)
                 .font(.system(size: 14))
                 .scrollContentBackground(.hidden)
@@ -297,12 +259,11 @@ struct BenchmarkView: View {
                         .stroke(Color.primary.opacity(0.15), lineWidth: 1)
                 )
                 .disabled(isWritingFinished)
-                .onChange(of: typedText) { newValue in
-                    if !isWritingStarted && !newValue.isEmpty {
+                .onChange(of: typedText) {
+                    if !isWritingStarted && !typedText.isEmpty {
                         startWritingTimer()
                     }
                 }
-            
             if isWritingFinished {
                 HStack(spacing: 8) {
                     Spacer()
@@ -337,7 +298,6 @@ struct BenchmarkView: View {
             }
         }
     }
-    
     private var speakingContentView: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
@@ -349,10 +309,8 @@ struct BenchmarkView: View {
                 Text(String(format: t("Timer: %.1fs"), speakingElapsed))
                     .font(.system(size: 13, weight: .bold, design: .monospaced))
             }
-            
             Text(t("Read the same text aloud:"))
                 .font(.system(size: 14, weight: .bold))
-            
             Text(currentText)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundColor(.primary)
@@ -366,18 +324,14 @@ struct BenchmarkView: View {
                                 .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
                         )
                 )
-            
             VStack {
                 Spacer()
-                
                 if isSpeakingStarted && !isSpeakingFinished {
-                    // Waveform visualization
                     HStack(spacing: 2) {
                         Spacer()
                         ForEach(0..<waveLevels.count, id: \.self) { index in
                             let level = waveLevels[index]
                             let barHeight = CGFloat(2 + (level * 350))
-                            
                             RoundedRectangle(cornerRadius: 1.5)
                                 .fill(colorScheme == .dark ? Color.white : Color.black)
                                 .frame(width: 3, height: min(barHeight, 40))
@@ -406,13 +360,11 @@ struct BenchmarkView: View {
                         Spacer()
                     }
                 }
-                
                 Spacer()
             }
             .frame(minHeight: 150)
         }
     }
-    
     private var summaryContentView: some View {
         VStack(spacing: 24) {
             VStack(spacing: 8) {
@@ -421,7 +373,6 @@ struct BenchmarkView: View {
                     .foregroundColor(colorScheme == .dark ? .white : .black)
                 Text(t("Your test result"))
                     .font(.system(size: 20, weight: .black))
-                
                 if speakingElapsed < writingElapsed {
                     Text(String(format: t("Speaking was %.1fx faster than typing!"), speedFactor))
                         .font(.system(size: 16, weight: .bold))
@@ -437,18 +388,14 @@ struct BenchmarkView: View {
                         .foregroundColor(.secondary)
                 }
             }
-            
             HStack(spacing: 16) {
-                // Writing box
                 let isWritingWinner = writingElapsed <= speakingElapsed
                 VStack(spacing: 8) {
                     Text(t("CLASSIC TYPING"))
                         .font(.system(size: 9, weight: .bold))
                         .foregroundColor(.secondary)
-                    
                     Text(String(format: "%.1fs", writingElapsed))
                         .font(.system(size: 22, weight: .bold, design: .monospaced))
-                    
                     Text(String(format: t("%.0f words/min"), Double(wpmWriting)))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
@@ -466,17 +413,13 @@ struct BenchmarkView: View {
                                 )
                         )
                 )
-                
-                // Speaking box
                 let isSpeakingWinner = speakingElapsed < writingElapsed
                 VStack(spacing: 8) {
                     Text(t("VOICE TYPING"))
                         .font(.system(size: 9, weight: .bold))
                         .foregroundColor(.primary)
-                    
                     Text(String(format: "%.1fs", speakingElapsed))
                         .font(.system(size: 22, weight: .bold, design: .monospaced))
-                    
                     Text(String(format: t("%.0f words/min"), Double(wpmSpeaking)))
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
@@ -495,7 +438,6 @@ struct BenchmarkView: View {
                         )
                 )
             }
-            
             VStack(alignment: .leading, spacing: 8) {
                 if speakingElapsed < writingElapsed {
                     Text(String(format: t("You saved %.1f seconds on just one short sentence!"), timeDifference))
@@ -526,9 +468,6 @@ struct BenchmarkView: View {
             )
         }
     }
-    
-    // MARK: - Fixed Bottom Buttons View
-    
     private var bottomButtonsView: some View {
         Group {
             if step == 0 {
@@ -542,7 +481,6 @@ struct BenchmarkView: View {
             }
         }
     }
-    
     private var introBottomButtons: some View {
         Button(action: {
             step = 1
@@ -558,7 +496,6 @@ struct BenchmarkView: View {
         .buttonStyle(.plain)
         .focusable(false)
     }
-    
     private var writingBottomButtons: some View {
         Group {
             if !isWritingFinished {
@@ -593,7 +530,6 @@ struct BenchmarkView: View {
             }
         }
     }
-    
     private var speakingBottomButtons: some View {
         Group {
             if !isSpeakingStarted {
@@ -647,7 +583,6 @@ struct BenchmarkView: View {
             }
         }
     }
-    
     private var summaryBottomButtons: some View {
         HStack(spacing: 12) {
             Button(action: {
@@ -666,7 +601,6 @@ struct BenchmarkView: View {
             }
             .buttonStyle(.plain)
             .focusable(false)
-            
             Button(action: {
                 stopAllTimers()
                 dismiss()
@@ -684,33 +618,26 @@ struct BenchmarkView: View {
             .keyboardShortcut(.defaultAction)
         }
     }
-    
-    // MARK: - Logic
-    
     private func startWritingTimer() {
         isWritingStarted = true
         writingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
             writingElapsed += 0.1
         }
     }
-    
     private func finishWriting() {
         writingTimer?.invalidate()
         writingTimer = nil
         isWritingFinished = true
     }
-    
     private func startSpeaking() {
         isSpeakingStarted = true
         waveLevels = (0..<36).map { _ in CGFloat.random(in: 0.01...0.03) }
         try? audioManager.startRecording()
         speakingTimer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { _ in
             speakingElapsed += 0.05
-            
             withAnimation(.spring(response: 0.08, dampingFraction: 0.6)) {
                 let micLevel = CGFloat(audioManager.audioLevel)
                 let time = Date().timeIntervalSinceReferenceDate
-                
                 waveLevels = (0..<36).map { i in
                     let amp = max(0.01, micLevel * 1.8)
                     let sine = sin(time * 10 + Double(i) * 0.25)
@@ -721,14 +648,12 @@ struct BenchmarkView: View {
             }
         }
     }
-    
     private func finishSpeaking() {
         speakingTimer?.invalidate()
         speakingTimer = nil
         isSpeakingFinished = true
         _ = audioManager.stopRecording()
     }
-    
     private func resetTest() {
         stopAllTimers()
         step = 1
@@ -742,27 +667,21 @@ struct BenchmarkView: View {
         waveLevels = Array(repeating: 0.01, count: 36)
         selectRandomText()
     }
-    
-    // Stats calculations
     private var wordCount: Int {
         currentText.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count
     }
-    
     private var wpmWriting: Double {
         guard writingElapsed > 0 else { return 0 }
         return Double(wordCount) / (writingElapsed / 60.0)
     }
-    
     private var wpmSpeaking: Double {
         guard speakingElapsed > 0 else { return 0 }
         return Double(wordCount) / (speakingElapsed / 60.0)
     }
-    
     private var speedFactor: Double {
         guard speakingElapsed > 0 else { return 1.0 }
         return writingElapsed / speakingElapsed
     }
-    
     private var timeDifference: Double {
         max(0, writingElapsed - speakingElapsed)
     }

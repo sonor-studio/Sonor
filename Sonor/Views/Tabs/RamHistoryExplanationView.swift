@@ -2,41 +2,23 @@ import SwiftUI
 
 struct RamHistoryExplanationView: View {
     @Environment(\.dismiss) var dismiss
-    @AppStorage("appTheme") private var appTheme = "system"
-    var colorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject private var localizer = LocalizationManager.shared
     @ObservedObject private var memoryManager = MessageMemoryManager.shared
-    
     var body: some View {
         let isRAM = memoryManager.historyStorageType == "RAM"
-        
         VStack(spacing: 0) {
-            // Upper padding spacer instead of X close button
             Spacer()
                 .frame(height: 30)
-            
-            // Icon & Title
             VStack(spacing: 12) {
                 Image(systemName: isRAM ? "clock.arrow.circlepath" : "doc.text.fill")
                     .font(.system(size: 40))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
-                
                 Text(t(isRAM ? "Text History Privacy" : "Persistent History Privacy"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
             }
             .padding(.bottom, 24)
-            
-            // Content
             VStack(alignment: .leading, spacing: 16) {
                 if isRAM {
                     HStack(alignment: .top, spacing: 10) {
@@ -53,7 +35,6 @@ struct RamHistoryExplanationView: View {
                                 .lineSpacing(2)
                         }
                     }
-                    
                     HStack(alignment: .top, spacing: 10) {
                         Image(systemName: "hourglass")
                             .font(.system(size: 14, weight: .semibold))
@@ -83,7 +64,6 @@ struct RamHistoryExplanationView: View {
                                 .lineSpacing(2)
                         }
                     }
-                    
                     HStack(alignment: .top, spacing: 10) {
                         Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 14, weight: .semibold))
@@ -99,7 +79,6 @@ struct RamHistoryExplanationView: View {
                         }
                     }
                 }
-                
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "lock.shield.fill")
                         .font(.system(size: 14, weight: .semibold))
@@ -116,9 +95,7 @@ struct RamHistoryExplanationView: View {
                 }
             }
             .padding(.horizontal, 24)
-            
             Spacer()
-            
             Button(action: {
                 dismiss()
             }) {

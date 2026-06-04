@@ -5,16 +5,13 @@ import AppKit
 @MainActor
 class SoundPlayer: NSObject, NSSoundDelegate {
     static let shared = SoundPlayer()
-    
     private var activeSounds: [NSSound] = []
     private var continuations: [NSSound: CheckedContinuation<Void, Never>] = [:]
     private var cachedSounds: [String: NSSound] = [:]
-    
     private override init() {
         super.init()
         preloadSounds()
     }
-    
     private func preloadSounds() {
         let soundsToPreload = ["Start", "End", "Error"]
         for name in soundsToPreload {
@@ -32,14 +29,11 @@ class SoundPlayer: NSObject, NSSoundDelegate {
             }
         }
     }
-    
     func playSound(named name: String) async {
         let defaults = UserDefaults.standard
         let playAnySound = defaults.object(forKey: "playAnySound") == nil ? true : defaults.bool(forKey: "playAnySound")
         let playSpecificSound = defaults.object(forKey: "playSound_\(name)") == nil ? true : defaults.bool(forKey: "playSound_\(name)")
-        
         guard playAnySound && playSpecificSound else { return }
-        
         return await withCheckedContinuation { continuation in
             if let prototype = cachedSounds[name], let sound = prototype.copy() as? NSSound {
                 sound.delegate = self
@@ -47,12 +41,10 @@ class SoundPlayer: NSObject, NSSoundDelegate {
                 continuations[sound] = continuation
                 sound.play()
             } else {
-                print("❌ SoundPlayer: Nie udało się odtworzyć dźwięku \(name)")
                 continuation.resume()
             }
         }
     }
-    
     nonisolated func sound(_ sound: NSSound, didFinishPlaying flag: Bool) {
         Task { @MainActor in
             if let continuation = continuations[sound] {

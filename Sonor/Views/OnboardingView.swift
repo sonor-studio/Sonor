@@ -6,17 +6,13 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     let onComplete: () -> Void
     var onLoginRequest: (() -> Void)? = nil
-    
-    // Configuration states
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
     @AppStorage("hotkeyString") private var hotkeyString = "Cmd + Shift + `"
     @State private var isRecordingHotkey = false
     @State private var eventMonitor: Any? = nil
     @State private var lastModifierPressed: UInt16? = nil
-    
     var body: some View {
         VStack(spacing: 0) {
-            // Invisible button for Enter key navigation
             Button(action: {
                 if !isRecordingHotkey {
                     withAnimation {
@@ -37,13 +33,10 @@ struct OnboardingView: View {
             .keyboardShortcut(.defaultAction)
             .frame(width: 0, height: 0)
             .opacity(0)
-            
             Spacer()
                 .frame(height: 20)
-            
             ZStack {
                 if currentPage == 0 {
-                    // Screen 1: Welcome (Updated)
                     onboardingSlideCustomIcon(
                         title: t("Welcome to Sonor"),
                         iconView: AnyView(
@@ -59,7 +52,6 @@ struct OnboardingView: View {
                         ]
                     ).transition(.opacity)
                 } else if currentPage == 1 {
-                    // Screen 2: Privacy (Updated)
                     onboardingSlide(
                         title: t("Absolute Privacy"),
                         icon: "lock.shield.fill",
@@ -70,7 +62,6 @@ struct OnboardingView: View {
                         ]
                     ).transition(.opacity)
                 } else if currentPage == 2 {
-                    // Screen 3: Open Source
                     onboardingSlide(
                         title: t("Full Transparency"),
                         icon: "chevron.left.forwardslash.chevron.right",
@@ -81,19 +72,15 @@ struct OnboardingView: View {
                         ]
                     ).transition(.opacity)
                 } else if currentPage == 3 {
-                    // Screen 4: Configuration
                     configurationSlide()
                         .transition(.opacity)
                 } else if currentPage == 4 {
-                    // Screen 5: Login & Finish
                     loginSlide()
                         .transition(.opacity)
                 }
             }
             .animation(.easeInOut, value: currentPage)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            
-            // Custom Navigation
             HStack(spacing: 16) {
                 if currentPage > 0 {
                     Button(action: {
@@ -114,10 +101,7 @@ struct OnboardingView: View {
                 } else {
                     Spacer().frame(width: 110)
                 }
-                
                 Spacer()
-                
-                // Page Indicators
                 HStack(spacing: 10) {
                     ForEach(0..<5, id: \.self) { index in
                         Circle()
@@ -131,9 +115,7 @@ struct OnboardingView: View {
                             }
                     }
                 }
-                
                 Spacer()
-                
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         if currentPage < 4 {
@@ -165,7 +147,6 @@ struct OnboardingView: View {
             removeEventMonitor()
         }
     }
-    
     @ViewBuilder
     private func onboardingSlide(title: String, icon: String, description: String, features: [(icon: String, title: String, description: String)]) -> some View {
         onboardingSlideCustomIcon(
@@ -183,18 +164,14 @@ struct OnboardingView: View {
     @ViewBuilder
     private func onboardingSlideCustomIcon(title: String, iconView: AnyView, description: String, features: [(icon: String, title: String, description: String)]) -> some View {
         VStack(spacing: 0) {
-            // Icon & Title
             VStack(spacing: 14) {
                 iconView
-                
                 Text(title)
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
             }
             .padding(.bottom, 16)
-            
-            // Description
             Text(description)
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
@@ -203,8 +180,6 @@ struct OnboardingView: View {
                 .padding(.horizontal, 32)
                 .padding(.bottom, 24)
                 .fixedSize(horizontal: false, vertical: true)
-            
-            // Features list
             VStack(alignment: .leading, spacing: 20) {
                 ForEach(features, id: \.title) { feature in
                     HStack(alignment: .top, spacing: 14) {
@@ -212,12 +187,10 @@ struct OnboardingView: View {
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(colorScheme == .dark ? .white : .black)
                             .frame(width: 24)
-                        
                         VStack(alignment: .leading, spacing: 4) {
                             Text(feature.title)
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(.primary)
-                            
                             Text(feature.description)
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
@@ -228,12 +201,10 @@ struct OnboardingView: View {
                 }
             }
             .padding(.horizontal, 40)
-            
             Spacer()
         }
         .padding(.top, 10)
     }
-    
     @ViewBuilder
     private func configurationSlide() -> some View {
         VStack(spacing: 0) {
@@ -241,13 +212,11 @@ struct OnboardingView: View {
                 Image(systemName: "slider.horizontal.3")
                     .font(.system(size: 40))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
-                
                 Text(t("Configure Sonor"))
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.primary)
             }
             .padding(.bottom, 16)
-            
             Text(t("Choose how you want to use the assistant. You can always change this later in settings."))
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
@@ -256,13 +225,10 @@ struct OnboardingView: View {
                 .padding(.horizontal, 32)
                 .padding(.bottom, 32)
                 .fixedSize(horizontal: false, vertical: true)
-            
             VStack(alignment: .leading, spacing: 24) {
-                // Mode Selection
                 VStack(alignment: .leading, spacing: 12) {
                     Text(t("Operation mode"))
                         .font(.system(size: 14, weight: .bold))
-                    
                     HStack(spacing: 15) {
                         Button(action: {
                             withAnimation(.spring()) {
@@ -287,7 +253,6 @@ struct OnboardingView: View {
                         }
                         .buttonStyle(.plain)
                         .focusable(false)
-                        
                         Button(action: {
                             withAnimation(.spring()) {
                                 hotkeyMode = .hold
@@ -313,12 +278,9 @@ struct OnboardingView: View {
                         .focusable(false)
                     }
                 }
-                
-                // Hotkey Setup
                 VStack(alignment: .leading, spacing: 12) {
                     Text(t("Main shortcut (Start/Stop)"))
                         .font(.system(size: 14, weight: .bold))
-                    
                     Button(action: {
                         if isRecordingHotkey {
                             isRecordingHotkey = false
@@ -353,29 +315,23 @@ struct OnboardingView: View {
                 }
             }
             .padding(.horizontal, 40)
-            
             Spacer()
         }
         .padding(.top, 10)
     }
-    
     @ViewBuilder
     private func loginSlide() -> some View {
         VStack(spacing: 0) {
-            // Icon & Title
             VStack(spacing: 10) {
                 Image(systemName: "person.crop.circle.fill.badge.plus")
                     .font(.system(size: 40))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
-                
                 Text(t("Unlock full potential"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
             }
             .padding(.bottom, 12)
-            
-            // Description
             Text(t("Creating a free account unlocks access to advanced assistant features. You can always do this later in settings."))
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
@@ -384,8 +340,6 @@ struct OnboardingView: View {
                 .padding(.horizontal, 32)
                 .padding(.bottom, 20)
                 .fixedSize(horizontal: false, vertical: true)
-            
-            // Features list
             VStack(alignment: .leading, spacing: 16) {
                 let features = [
                     (icon: "brain.head.profile", title: t("Zaawansowane modele LLM"), description: t("Intelligent formatting, analysis, and processing of your notes and commands.")),
@@ -398,12 +352,10 @@ struct OnboardingView: View {
                             .font(.system(size: 18, weight: .semibold))
                             .foregroundColor(colorScheme == .dark ? .white : .black)
                             .frame(width: 24)
-                        
                         VStack(alignment: .leading, spacing: 2) {
                             Text(feature.title)
                                 .font(.system(size: 14, weight: .bold))
                                 .foregroundColor(.primary)
-                            
                             Text(feature.description)
                                 .font(.system(size: 12))
                                 .foregroundColor(.secondary)
@@ -415,7 +367,6 @@ struct OnboardingView: View {
             }
             .padding(.horizontal, 40)
             .padding(.bottom, 24)
-            
             Button(action: {
                 if let login = onLoginRequest {
                     login()
@@ -437,27 +388,20 @@ struct OnboardingView: View {
             .buttonStyle(.plain)
             .focusable(false)
             .padding(.horizontal, 60)
-            
             Spacer()
         }
         .padding(.top, 10)
     }
-    
-    // MARK: - Hotkey Logic
-    
     private func setupEventMonitor() {
         removeEventMonitor()
-        
         self.eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
             if isRecordingHotkey {
                 if event.type == .flagsChanged {
                     let keyCode = event.keyCode
                     let modifierKeyCodes: Set<UInt16> = [54, 55, 56, 57, 58, 59, 60, 61, 62, 63]
-                    
                     if modifierKeyCodes.contains(keyCode) {
                         let modifiers = event.modifierFlags
                         var isPressed = false
-                        
                         switch keyCode {
                         case 54, 55: isPressed = modifiers.contains(.command)
                         case 56, 60: isPressed = modifiers.contains(.shift)
@@ -466,7 +410,6 @@ struct OnboardingView: View {
                         case 63: isPressed = modifiers.contains(.function)
                         default: break
                         }
-                        
                         if isPressed {
                             lastModifierPressed = keyCode
                         } else {
@@ -480,16 +423,13 @@ struct OnboardingView: View {
                                 case 63: str = "Fn"
                                 default: break
                                 }
-                                
                                 UserDefaults.standard.set(Int(keyCode), forKey: "hotkeyCode")
                                 UserDefaults.standard.set(0, forKey: "hotkeyModifiers")
                                 UserDefaults.standard.set(str, forKey: "hotkeyString")
                                 hotkeyString = str
-                                
                                 isRecordingHotkey = false
                                 removeEventMonitor()
                                 HotkeyManager.shared.startListening()
-                                
                                 lastModifierPressed = nil
                                 return nil
                             }
@@ -498,54 +438,41 @@ struct OnboardingView: View {
                     }
                     return event
                 }
-                
                 if event.type == .keyDown {
                     lastModifierPressed = nil
-                    
                     let keyCode = event.keyCode
-                    
-                    if keyCode == 53 { // Esc
+                    if keyCode == 53 { 
                         isRecordingHotkey = false
                         removeEventMonitor()
                         HotkeyManager.shared.startListening()
                         return nil
                     }
-                    
                     let modifiers = event.modifierFlags
-                    
                     let hasModifiers = modifiers.contains(.command) || modifiers.contains(.shift) || modifiers.contains(.option) || modifiers.contains(.control)
                     let functionKeyCodes: Set<UInt16> = [53, 122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111, 105, 107, 113, 123, 124, 125, 126, 49]
                     let isFunctionKey = functionKeyCodes.contains(keyCode)
-                    
                     if !hasModifiers && !isFunctionKey {
                         return event
                     }
-                    
                     var carbonModifiers: UInt32 = 0
                     if modifiers.contains(.command) { carbonModifiers |= UInt32(cmdKey) }
                     if modifiers.contains(.shift) { carbonModifiers |= UInt32(shiftKey) }
                     if modifiers.contains(.option) { carbonModifiers |= UInt32(optionKey) }
                     if modifiers.contains(.control) { carbonModifiers |= UInt32(controlKey) }
-                    
                     UserDefaults.standard.set(Int(keyCode), forKey: "hotkeyCode")
                     UserDefaults.standard.set(Int(carbonModifiers), forKey: "hotkeyModifiers")
-                    
                     var str = ""
                     if modifiers.contains(.command) { str += "Cmd + " }
                     if modifiers.contains(.shift) { str += "Shift + " }
                     if modifiers.contains(.option) { str += "Opt + " }
                     if modifiers.contains(.control) { str += "Ctrl + " }
-                    
                     let keyChar = event.charactersIgnoringModifiers?.first ?? "`"
                     str += String(keyChar).uppercased()
-                    
                     UserDefaults.standard.set(str, forKey: "hotkeyString")
                     hotkeyString = str
-                    
                     isRecordingHotkey = false
                     removeEventMonitor()
                     HotkeyManager.shared.startListening()
-                    
                     return nil
                 }
                 return event
@@ -553,7 +480,6 @@ struct OnboardingView: View {
             return event
         }
     }
-    
     private func removeEventMonitor() {
         if let monitor = eventMonitor {
             NSEvent.removeMonitor(monitor)

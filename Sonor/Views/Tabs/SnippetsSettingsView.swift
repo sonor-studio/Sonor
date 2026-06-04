@@ -10,11 +10,9 @@ struct SnippetsSettingsView: View {
     @State private var isHoveringAdd = false
     @State private var hoveredKey: String? = nil
     @State private var isShowingInfo = false
-    
     private var sortedKeys: [String] {
         entries.keys.sorted()
     }
-    
     private var headerView: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
@@ -23,7 +21,6 @@ struct SnippetsSettingsView: View {
                     .foregroundColor(.primary)
                 Text(t("Snippets"))
                     .font(.system(size: 28, weight: .bold))
-                
                 Button(action: {
                     isShowingInfo = true
                 }) {
@@ -37,7 +34,6 @@ struct SnippetsSettingsView: View {
         }
         .padding(.bottom, 8)
     }
-    
     private var shortcutInputView: some View {
         TextField(t("e.g. youtube link"), text: $newShortcut)
             .textFieldStyle(.plain)
@@ -52,7 +48,6 @@ struct SnippetsSettingsView: View {
                     .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
             )
     }
-    
     private var expansionInputView: some View {
         TextField(t("e.g. https://youtube.com/c/SonorApp"), text: $newExpansion)
             .textFieldStyle(.plain)
@@ -67,11 +62,9 @@ struct SnippetsSettingsView: View {
                     .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
             )
     }
-    
     private var isAddButtonActive: Bool {
         !newShortcut.isEmpty && !newExpansion.isEmpty
     }
-    
     private var addButtonColor: Color {
         if isAddButtonActive {
             return colorScheme == .dark ? .white : .black
@@ -79,7 +72,6 @@ struct SnippetsSettingsView: View {
             return Color.primary.opacity(0.1)
         }
     }
-    
     private var addButtonView: some View {
         Button(action: addEntry) {
             Image(systemName: "plus")
@@ -97,48 +89,36 @@ struct SnippetsSettingsView: View {
             isHoveringAdd = hovering
         }
     }
-    
     private var addFormView: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text(t("ADD NEW SNIPPET"))
                 .font(.system(size: 10, weight: .bold))
                 .foregroundColor(.secondary)
                 .tracking(1)
-            
             VStack(alignment: .leading, spacing: 6) {
-                // Header labels row
                 HStack(spacing: 16) {
                     Text(t("Word shortcut"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    
                     Spacer()
                         .frame(width: 20)
-                    
                     Text(t("Expand to text"))
                         .font(.system(size: 11, weight: .medium))
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    
                     Spacer()
                         .frame(width: 38)
                 }
-                
-                // Inputs row
                 HStack(spacing: 16) {
                     shortcutInputView
-                    
                     Image(systemName: "arrow.right.circle.fill")
                         .font(.system(size: 20))
                         .foregroundColor(.secondary)
                         .frame(width: 20, height: 38)
-                    
                     expansionInputView
-                    
                     addButtonView
                 }
-                
                 dynamicVariablesHelperView
             }
         }
@@ -152,14 +132,12 @@ struct SnippetsSettingsView: View {
                 .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
-    
     private var dynamicVariablesHelperView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 Text(t("Dynamic variables:"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
-                    
                 dynamicVariableButton(title: "Clipboard", tag: "{{clipboard}}", icon: "doc.on.clipboard")
                 dynamicVariableButton(title: "Date", tag: "{{date}}", icon: "calendar")
                 dynamicVariableButton(title: "Time", tag: "{{time}}", icon: "clock")
@@ -169,7 +147,6 @@ struct SnippetsSettingsView: View {
         }
         .padding(.top, 4)
     }
-    
     private func dynamicVariableButton(title: String, tag: String, icon: String) -> some View {
         Button(action: {
             newExpansion.append(tag)
@@ -194,10 +171,8 @@ struct SnippetsSettingsView: View {
         }
         .buttonStyle(.plain)
     }
-    
     private func rowView(key: String, value: String) -> some View {
         HStack(spacing: 20) {
-            // Skrót
             VStack(alignment: .leading, spacing: 4) {
                 Text(t("Word shortcut"))
                     .font(.system(size: 9, weight: .bold))
@@ -207,12 +182,9 @@ struct SnippetsSettingsView: View {
                     .foregroundColor(.primary)
             }
             .frame(maxWidth: 160, alignment: .leading)
-            
             Image(systemName: "arrow.right")
                 .font(.system(size: 12, weight: .bold))
                 .foregroundColor(.secondary)
-            
-            // Rozszerzenie
             VStack(alignment: .leading, spacing: 4) {
                 Text(t("Target text"))
                     .font(.system(size: 9, weight: .bold))
@@ -224,14 +196,11 @@ struct SnippetsSettingsView: View {
                     .truncationMode(.tail)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            
-            // Delete button
             Button(action: { removeEntry(key: key) }) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 6)
                         .fill(hoveredKey == key ? Color.red.opacity(0.1) : Color.clear)
                         .frame(width: 32, height: 32)
-                    
                     Image(systemName: "trash")
                         .font(.system(size: 14))
                         .foregroundColor(hoveredKey == key ? .red : .secondary)
@@ -259,7 +228,6 @@ struct SnippetsSettingsView: View {
                 .stroke(colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.06), lineWidth: 1)
         )
     }
-    
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             headerView
@@ -267,8 +235,6 @@ struct SnippetsSettingsView: View {
                 PremiumLockView(showLoginSheet: $showLoginSheet)
             } else {
                 addFormView
-                
-                // List Header
                 HStack {
                     Text(String(format: t("SAVED SNIPPETS (%d)"), entries.count))
                         .font(.system(size: 10, weight: .bold))
@@ -277,10 +243,7 @@ struct SnippetsSettingsView: View {
                     Spacer()
                 }
                 .padding(.top, 8)
-                
-                // Entries List
                 if entries.isEmpty {
-                    // Empty state
                     VStack(spacing: 16) {
                         Image(systemName: "scissors")
                             .font(.system(size: 40))
@@ -316,18 +279,15 @@ struct SnippetsSettingsView: View {
         }
         .onAppear(perform: loadEntries)
     }
-    
     func loadEntries() {
         entries = UserDefaults.standard.dictionary(forKey: "snippetsEntries") as? [String: String] ?? [:]
     }
-    
     func addEntry() {
         entries[newShortcut] = newExpansion
         UserDefaults.standard.set(entries, forKey: "snippetsEntries")
         newShortcut = ""
         newExpansion = ""
     }
-    
     func removeEntry(key: String) {
         entries.removeValue(forKey: key)
         UserDefaults.standard.set(entries, forKey: "snippetsEntries")

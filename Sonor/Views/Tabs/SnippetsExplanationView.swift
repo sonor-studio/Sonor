@@ -2,36 +2,21 @@ import SwiftUI
 
 struct SnippetsExplanationView: View {
     @Environment(\.dismiss) var dismiss
-    @AppStorage("appTheme") private var appTheme = "system"
-    var colorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject private var localizer = LocalizationManager.shared
-    
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
                 .frame(height: 30)
-            
             VStack(spacing: 12) {
                 Image(systemName: "scissors")
                     .font(.system(size: 40))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
-                
                 Text(t("Custom Snippets"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
             }
             .padding(.bottom, 24)
-            
             VStack(alignment: .leading, spacing: 16) {
                 InfoBulletRow(
                     icon: "scissors",
@@ -39,14 +24,12 @@ struct SnippetsExplanationView: View {
                     description: t("Create voice-activated macros. Speak a short keyword, and Sonor will expand it into a pre-defined text block."),
                     colorScheme: colorScheme
                 )
-                
                 InfoBulletRow(
                     icon: "doc.text.fill",
                     title: t("Message Templates"),
                     description: t("Perfect for long email templates, standard responses, links, or code blocks that you speak frequently."),
                     colorScheme: colorScheme
                 )
-                
                 InfoBulletRow(
                     icon: "keyboard",
                     title: t("Instant Injection"),
@@ -55,9 +38,7 @@ struct SnippetsExplanationView: View {
                 )
             }
             .padding(.horizontal, 24)
-            
             Spacer()
-            
             Button(action: {
                 dismiss()
             }) {

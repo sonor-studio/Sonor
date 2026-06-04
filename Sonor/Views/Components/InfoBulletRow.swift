@@ -5,7 +5,6 @@ struct InfoBulletRow: View {
     let title: String
     let description: String
     let colorScheme: ColorScheme
-    
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)

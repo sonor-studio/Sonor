@@ -2,36 +2,21 @@ import SwiftUI
 
 struct AssistantsExplanationView: View {
     @Environment(\.dismiss) var dismiss
-    @AppStorage("appTheme") private var appTheme = "system"
-    var colorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
-    
+    @Environment(\.colorScheme) var colorScheme
     @ObservedObject private var localizer = LocalizationManager.shared
-    
     var body: some View {
         VStack(spacing: 0) {
             Spacer()
                 .frame(height: 30)
-            
             VStack(spacing: 12) {
                 Image(systemName: "square.grid.2x2.fill")
                     .font(.system(size: 40))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
-                
                 Text(t("AI Assistants"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
             }
             .padding(.bottom, 24)
-            
             VStack(alignment: .leading, spacing: 16) {
                 InfoBulletRow(
                     icon: "sparkles",
@@ -39,14 +24,12 @@ struct AssistantsExplanationView: View {
                     description: t("Assistants process your transcription using customizable prompts. You can format transcripts into emails, notes, lists, or clean prose automatically."),
                     colorScheme: colorScheme
                 )
-                
                 InfoBulletRow(
                     icon: "slider.horizontal.3",
                     title: t("Infinite Customization"),
                     description: t("Create as many specialized assistants as you need, defining specific instructions, tone of voice, and formatting styles."),
                     colorScheme: colorScheme
                 )
-                
                 InfoBulletRow(
                     icon: "wand.and.stars",
                     title: t("Smart Presets"),
@@ -55,9 +38,7 @@ struct AssistantsExplanationView: View {
                 )
             }
             .padding(.horizontal, 24)
-            
             Spacer()
-            
             Button(action: {
                 dismiss()
             }) {

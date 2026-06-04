@@ -7,13 +7,16 @@ import Hub
 import Tokenizers
 
 struct NativeHubDownloader: MLXLMCommon.Downloader {
-    let api = HubApi(downloadBase: ModelManager.shared.modelsDirectory, cache: nil)
+    let api: HubApi
+    init(downloadBase: URL) {
+        self.api = HubApi(downloadBase: downloadBase, cache: nil)
+    }
     func download(id: String, revision: String?, matching patterns: [String], useLatest: Bool, progressHandler: @Sendable @escaping (Progress) -> Void) async throws -> URL {
         return try await api.snapshot(from: id, revision: revision ?? "main", matching: patterns, progressHandler: progressHandler)
     }
 }
 
-// Obejście problemu z brakiem Sendable na ChatSession w nowym Swift
+
 extension ChatSession: @unchecked @retroactive Sendable {}
 
 @MainActor
@@ -38,15 +41,10 @@ final class LLMManager {
             await session.clear()
             let raw = try await session.respond(to: prompt)
             let cleaned = extractResult(from: raw)
-            print("🤖 LLM (NATIVE) cleaned text: \(cleaned)")
-            
-            // Clear the memory cache completely to prevent memory leaks over time since we don't need history
             await session.clear()
             MLX.Memory.clearCache()
-            
             return cleaned
         } catch {
-            print("⚠️ Natywne MLX zawiodło: \(error.localizedDescription)")
             return text
         }
     }
@@ -61,24 +59,17 @@ final class LLMManager {
         do {
             let session = try await getSession()
             await session.clear()
-            
-            // Streaming results token by token
             for try await token in session.streamResponse(to: prompt) {
                 if Task.isCancelled {
-                    print("🛑 [LLMManager] cleanStream task cancelled! Stopping stream.")
                     break
                 }
                 fullText += token
                 onToken(token)
             }
-            
             await session.clear()
             MLX.Memory.clearCache()
-            
-            print("🤖 LLM Output: \(fullText)")
             return fullText
         } catch {
-            print("⚠️ Streaming LLM error: \(error.localizedDescription)")
             return text
         }
     }
@@ -88,10 +79,9 @@ final class LLMManager {
         do {
             let session = try await getSession()
             await session.clear()
-            let _ = try await session.respond(to: "Powiedz \"hello\" i zwróć {\"result\": \"ok\"}")
+            let _ = try await session.respond(to: "Say \"hello\" and return {\"result\": \"ok\"}")
             isReady = true
         } catch {
-            print("⚠️ Warm failed: \(error.localizedDescription)")
         }
     }
 
@@ -100,7 +90,6 @@ final class LLMManager {
         self.modelContainer = nil
         self.isReady = false
         MLX.Memory.clearCache()
-        print("🧹 [LLMManager] Released Gemma model and cleared MLX cache from memory.")
     }
 
     private func getSession() async throws -> ChatSession {
@@ -108,10 +97,9 @@ final class LLMManager {
         if let task = generationTask { return try await task.value }
 
         let task = Task {
-            // Use Gemma-3 4B QAT as requested
             let config = ModelConfiguration(id: "mlx-community/gemma-3-4b-it-qat-4bit")
             let container = try await LLMModelFactory.shared.loadContainer(
-                from: NativeHubDownloader(),
+                from: NativeHubDownloader(downloadBase: ModelManager.shared.modelsDirectory),
                 using: #huggingFaceTokenizerLoader(),
                 configuration: config
             )

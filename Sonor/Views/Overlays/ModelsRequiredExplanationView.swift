@@ -2,33 +2,19 @@ import SwiftUI
 
 struct ModelsRequiredExplanationView: View {
     @Environment(\.dismiss) var dismiss
-    @AppStorage("appTheme") private var appTheme = "system"
-    var colorScheme: ColorScheme {
-        if appTheme == "dark" {
-            return .dark
-        } else if appTheme == "light" {
-            return .light
-        } else {
-            let appleInterfaceStyle = UserDefaults.standard.string(forKey: "AppleInterfaceStyle")
-            return appleInterfaceStyle == "Dark" ? .dark : .light
-        }
-    }
-    
+    @Environment(\.colorScheme) var colorScheme
     var body: some View {
         VStack(spacing: 0) {
             Spacer().frame(height: 30)
-            
             VStack(spacing: 12) {
                 Image(systemName: "shippingbox.fill")
                     .font(.system(size: 40))
                     .foregroundColor(colorScheme == .dark ? .white : .black)
-                
                 Text(t("Models Required"))
                     .font(.system(size: 20, weight: .bold))
                     .foregroundColor(.primary)
             }
             .padding(.bottom, 24)
-            
             VStack(alignment: .leading, spacing: 16) {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "arrow.down.doc.fill")
@@ -44,7 +30,6 @@ struct ModelsRequiredExplanationView: View {
                             .lineSpacing(2)
                     }
                 }
-                
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "network.slash")
                         .font(.system(size: 14, weight: .semibold))
@@ -61,9 +46,7 @@ struct ModelsRequiredExplanationView: View {
                 }
             }
             .padding(.horizontal, 24)
-            
             Spacer()
-            
             Button(action: { dismiss() }) {
                 Text(t("I understand"))
                     .font(.system(size: 13, weight: .bold))

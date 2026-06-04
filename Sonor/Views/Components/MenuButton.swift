@@ -5,10 +5,8 @@ struct MenuButton: View {
     let icon: String
     let isSelected: Bool
     let action: () -> Void
-    
     @Environment(\.colorScheme) var colorScheme
     @State private var isHovered = false
-    
     var body: some View {
         Button(action: action) {
             HStack(spacing: 10) {
@@ -16,13 +14,10 @@ struct MenuButton: View {
                     .font(.system(size: 14, weight: .medium))
                     .frame(width: 20)
                     .foregroundColor(isSelected ? (colorScheme == .dark ? .black : .white) : .primary.opacity(0.8))
-                
                 Text(title)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundColor(isSelected ? (colorScheme == .dark ? .black : .white) : .primary.opacity(0.8))
-                
                 Spacer()
-                
                 if isSelected {
                     Circle()
                         .fill(colorScheme == .dark ? Color.black : Color.white)
@@ -45,7 +40,7 @@ struct MenuButton: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .focusable(false) // Wyłączenie focusu
+        .focusable(false) 
         .onHover { hovering in
             withAnimation(.easeInOut(duration: 0.2)) {
                 isHovered = hovering

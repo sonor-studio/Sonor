@@ -2,7 +2,6 @@ import SwiftUI
 
 struct CustomToggleStyle: ToggleStyle {
     @Environment(\.colorScheme) var colorScheme
-    
     func makeBody(configuration: Configuration) -> some View {
         HStack {
             configuration.label

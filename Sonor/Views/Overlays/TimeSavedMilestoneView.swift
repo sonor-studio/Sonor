@@ -4,15 +4,12 @@ struct TimeSavedMilestoneView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var colorScheme
     let hoursSaved: Int
-    
     var body: some View {
         VStack(spacing: 24) {
-            // Ikona nagrody w monochromatycznym motywie
             ZStack {
                 Circle()
                     .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05))
                     .frame(width: 80, height: 80)
-                
                 Image(systemName: "star.circle.fill")
                     .resizable()
                     .scaledToFit()
@@ -20,17 +17,14 @@ struct TimeSavedMilestoneView: View {
                     .foregroundColor(colorScheme == .dark ? .white : .black)
             }
             .padding(.top, 10)
-            
             VStack(spacing: 12) {
                 Text(t("Congratulations!"))
                     .font(.system(size: 24, weight: .black))
                     .multilineTextAlignment(.center)
-                
                 Text(String(format: t("You have already saved %d hours thanks to Sonor!"), hoursSaved))
                     .font(.system(size: 18, weight: .bold))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-                
                 Text(t("If you appreciate our work and the time you've saved, consider supporting the creator by buying them a virtual coffee."))
                     .font(.system(size: 14))
                     .foregroundColor(.secondary)
@@ -38,7 +32,6 @@ struct TimeSavedMilestoneView: View {
                     .padding(.horizontal, 20)
                     .lineSpacing(4)
             }
-            
             VStack(spacing: 12) {
                 Button(action: {
                     if let url = URL(string: "https://buymeacoffee.com/sonorstudio") {
@@ -59,7 +52,6 @@ struct TimeSavedMilestoneView: View {
                 }
                 .buttonStyle(.plain)
                 .focusable(false)
-                
                 Button(action: {
                     dismiss()
                 }) {
