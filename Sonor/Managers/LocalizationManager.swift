@@ -23,6 +23,19 @@ public class LocalizationManager: ObservableObject {
             UserDefaults.standard.set(detectedLang, forKey: "appLanguage")
             self.appLanguage = detectedLang
         }
+        if UserDefaults.standard.object(forKey: "suggestedSpeechLanguage") == nil {
+            let preferredLanguages = Locale.preferredLanguages
+            let systemLang = preferredLanguages.first ?? "Unknown"
+            let supportedLanguages = ["ar", "zh", "cs", "da", "nl", "en", "fi", "fr", "de", "el", "he", "hi", "hu", "it", "ja", "ko", "no", "pl", "pt", "pt-BR", "ro", "ru", "sk", "es", "sv", "th", "tr", "uk", "vi"]
+            var detectedLang = "en"
+            for lang in supportedLanguages {
+                if systemLang.hasPrefix(lang) {
+                    detectedLang = lang
+                    break
+                }
+            }
+            UserDefaults.standard.set(detectedLang, forKey: "suggestedSpeechLanguage")
+        }
     }
     private let translations: [String: [String]] = [
         "Start/Stop Recording": [
@@ -233,6 +246,39 @@ public class LocalizationManager: ObservableObject {
             "システムをミュート", 
             "Silenciar sistema", 
             "系统静音", 
+        ],
+        "Mute system during recording": [
+            "Mute system during recording",
+            "Wycisz system podczas nagrywania",
+            "System während der Aufnahme stummschalten",
+            "Silenciar el sistema durante la grabación",
+            "Mettre le système en sourdine pendant l'enregistrement",
+            "Silenzia il sistema durante la registrazione",
+            "録音中はシステムをミュートする",
+            "Silenciar o sistema durante a gravação",
+            "录音时静音系统"
+        ],
+        "Suggested Speech Language": [
+            "Suggested Speech Language",
+            "Sugerowany język mowy",
+            "Vorgeschlagene Sprache",
+            "Idioma de voz sugerido",
+            "Langue vocale suggérée",
+            "Lingua vocale suggerita",
+            "提案される音声言語",
+            "Idioma de voz sugerido",
+            "建议语音语言"
+        ],
+        "Hint for transcription engine": [
+            "Hint for transcription engine",
+            "Wskazówka dla silnika transkrypcji",
+            "Hinweis für die Transkriptions-Engine",
+            "Pista para el motor de transcripción",
+            "Indice pour le moteur de transcription",
+            "Suggerimento per il motore di trascrizione",
+            "文字起こしエンジンのヒント",
+            "Dica para o mecanismo de transcrição",
+            "转录引擎提示"
         ],
         "Pause media": [
             "Pause media", 

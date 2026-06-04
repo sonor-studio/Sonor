@@ -34,6 +34,7 @@ struct GeneralSettingsView: View {
             }
             appThemeSection
             appLanguageSection
+            suggestedSpeechLanguageSection
             historyStorageSection
             keyboardShortcutSection
             audioSourceSection
@@ -392,6 +393,64 @@ struct GeneralSettingsView: View {
                     Text("Polski").tag("pl")
                     Text("Português").tag("pt")
                     Text("中文").tag("zh")
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .font(.system(size: 13))
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+    @AppStorage("suggestedSpeechLanguage") private var suggestedSpeechLanguage = "en"
+    @ViewBuilder
+    private var suggestedSpeechLanguageSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("Suggested Speech Language"))
+                .font(.system(size: 16, weight: .semibold))
+            HStack {
+                Text(t("Hint for transcription engine"))
+                    .font(.system(size: 13))
+                Spacer()
+                Picker("", selection: $suggestedSpeechLanguage) {
+                    Text(t("Automatic")).tag("auto")
+                    Text(t("العربية")).tag("ar")
+                    Text(t("中文")).tag("zh")
+                    Text(t("Čeština")).tag("cs")
+                    Text(t("Dansk")).tag("da")
+                    Text(t("Nederlands")).tag("nl")
+                    Text(t("English")).tag("en")
+                    Text(t("Suomi")).tag("fi")
+                    Text(t("Français")).tag("fr")
+                    Text(t("Deutsch")).tag("de")
+                    Text(t("Ελληνικά")).tag("el")
+                    Text(t("עברית")).tag("he")
+                    Text(t("हिन्दी")).tag("hi")
+                    Text(t("Magyar")).tag("hu")
+                    Text(t("Italiano")).tag("it")
+                    Text(t("日本語")).tag("ja")
+                    Text(t("한국어")).tag("ko")
+                    Text(t("Norsk")).tag("no")
+                    Text(t("Polski")).tag("pl")
+                    Text(t("Português")).tag("pt")
+                    Text(t("Português (Brasil)")).tag("pt-BR")
+                    Text(t("Română")).tag("ro")
+                    Text(t("Русский")).tag("ru")
+                    Text(t("Slovenčina")).tag("sk")
+                    Text(t("Español")).tag("es")
+                    Text(t("Svenska")).tag("sv")
+                    Text(t("ไทย")).tag("th")
+                    Text(t("Türkçe")).tag("tr")
+                    Text(t("Українська")).tag("uk")
+                    Text(t("Tiếng Việt")).tag("vi")
                 }
                 .pickerStyle(.menu)
                 .labelsHidden()

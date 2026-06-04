@@ -12,9 +12,6 @@ struct ModeEditorView: View {
     @State private var showConflictAlert = false
     @State private var conflictingBundleID: String? = nil
     @State private var assistantWithConflictingApp: VoiceMode? = nil
-    @State private var showAudioPermissionModal = false
-    @State private var previousAudioBehavior: AudioBehavior? = nil
-    @State private var currentModeIDForAudioPermission: UUID? = nil
     
     var body: some View {
         if let index = modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) {
@@ -246,29 +243,14 @@ struct ModeEditorView: View {
                             }
                         }
                         HStack {
-                            Picker(t("Audio behavior"), selection: Binding(
-                                get: { modeBinding.wrappedValue.audioBehavior ?? .keep },
+                            Toggle(t("Mute system during recording"), isOn: Binding(
+                                get: { (modeBinding.wrappedValue.audioBehavior ?? .keep) == .mute },
                                 set: { newValue in
-                                    let oldValue = modeBinding.wrappedValue.audioBehavior ?? .keep
-                                    modeBinding.wrappedValue.audioBehavior = newValue
-                                    if newValue == .pause {
-                                        if !CGPreflightScreenCaptureAccess() {
-                                            self.previousAudioBehavior = oldValue
-                                            self.currentModeIDForAudioPermission = modeBinding.wrappedValue.id
-                                            self.showAudioPermissionModal = true
-                                        } else {
-                                            saveModes()
-                                        }
-                                    } else {
-                                        saveModes()
-                                    }
+                                    modeBinding.wrappedValue.audioBehavior = newValue ? .mute : .keep
+                                    saveModes()
                                 }
-                            )) {
-                                Text(t("Keep sound")).tag(AudioBehavior.keep)
-                                Text(t("Mute system")).tag(AudioBehavior.mute)
-                                Text(t("Pause media")).tag(AudioBehavior.pause)
-                            }
-                            .pickerStyle(MenuPickerStyle())
+                            ))
+                            .toggleStyle(CustomToggleStyle())
                             .font(.system(size: 12))
                             Button(action: {
                                 let newVal = modeBinding.wrappedValue.audioBehavior ?? .keep
@@ -404,22 +386,6 @@ struct ModeEditorView: View {
                     message: Text(t("You cannot delete the assistant that is currently being used for speaking.")),
                     dismissButton: .default(Text(t("OK")))
                 )
-            }
-            .sheet(isPresented: $showAudioPermissionModal) {
-                AudioPermissionExplanationView(
-                    onAccept: {
-                        requestScreenCaptureAccess()
-                        saveModes()
-                    },
-                    onCancel: {
-                        if let id = currentModeIDForAudioPermission,
-                           let idx = modes.firstIndex(where: { $0.id == id }) {
-                            modes[idx].audioBehavior = previousAudioBehavior ?? .keep
-                            saveModes()
-                        }
-                    }
-                )
-                .preferredColorScheme(colorScheme)
             }
         }
     }

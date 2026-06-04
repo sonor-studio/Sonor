@@ -41,29 +41,6 @@ class AppController: NSObject, ObservableObject {
         self.availableModes = modes
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
         self.currentMode = modes.first(where: { $0.id.uuidString == activeModeID }) ?? modes.first
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-            if !CGPreflightScreenCaptureAccess() {
-                var updatedModes = VoiceMode.loadAndMigrateModes()
-                var changed = false
-                for i in 0..<updatedModes.count {
-                    if updatedModes[i].audioBehavior == .pause {
-                        updatedModes[i].audioBehavior = .mute
-                        changed = true
-                    }
-                }
-                if changed {
-                    if let data = try? JSONEncoder().encode(updatedModes) {
-                        UserDefaults.standard.set(data, forKey: "voiceModes")
-                        NotificationCenter.default.post(name: Notification.Name("VoiceModesUpdated"), object: nil)
-                    }
-                    self.availableModes = updatedModes
-                    if let activeModeID = UserDefaults.standard.string(forKey: "activeModeID"),
-                       let updatedActive = updatedModes.first(where: { $0.id.uuidString == activeModeID }) {
-                        self.currentMode = updatedActive
-                    }
-                }
-            }
-        }
 
         setupHotkey()
         NotificationCenter.default.addObserver(forName: Notification.Name("VoiceModesUpdated"), object: nil, queue: .main) { _ in
@@ -187,7 +164,7 @@ class AppController: NSObject, ObservableObject {
             let behavior = selectedMode.audioBehavior ?? .keep
             if self.sonorContext == nil {
                 self.statusText = "Initializing"
-            } else if behavior == .pause || behavior == .mute {
+            } else if behavior == .mute {
                 self.statusText = "Preparing..."
             } else {
                 self.statusText = "Listening..."
@@ -230,33 +207,17 @@ class AppController: NSObject, ObservableObject {
             guard isStillRecording else { return }
             let behavior = selectedMode.audioBehavior ?? .keep
             DebugLogger.shared.addLog("startRecordingProcess: behavior for mode '\(selectedMode.name)' = \(behavior)")
-            let shouldMuteOrPause: Bool
-            if behavior == .pause {
-                if #available(macOS 12.3, *) {
-                    shouldMuteOrPause = await AudioCaptureManager.shared.checkIsAudioPlaying()
-                } else {
-                    shouldMuteOrPause = false
-                }
-            } else if behavior == .mute {
-                shouldMuteOrPause = true
-            } else {
-                shouldMuteOrPause = false
-            }
+            
             let isRecordingAfterCheck = await MainActor.run { return self.isRecording }
             DebugLogger.shared.addLog("startRecordingProcess: isRecordingAfterCheck = \(isRecordingAfterCheck)")
             guard isRecordingAfterCheck else { return }
             await MainActor.run {
-                if behavior != .keep {
-                    if shouldMuteOrPause {
-                        if behavior == .pause {
-                            MediaControlService.shared.pauseMultimedia(behavior: .pause)
-                        } else if behavior == .mute {
-                            MediaControlService.shared.pauseMultimedia(behavior: .mute)
-                        }
-                    } else {
-                        MediaControlService.shared.resetDidPauseMusic()
-                    }
+                if behavior == .mute {
+                    MediaControlService.shared.pauseMultimedia(behavior: .mute)
+                } else {
+                    MediaControlService.shared.resetDidPauseMusic()
                 }
+                
                 Task {
                     guard self.isRecording else { return }
                     Task {
@@ -446,7 +407,8 @@ class AppController: NSObject, ObservableObject {
                 self.hideHUDAfterDelay()
                 return
             }
-            let transcribedText = await context.transcribe(audioSamples: samples)
+            let suggestedLanguage = UserDefaults.standard.string(forKey: "suggestedSpeechLanguage") ?? "en"
+            let transcribedText = await context.transcribe(audioSamples: samples, language: suggestedLanguage)
             if Task.isCancelled {
                 self.hideHUDAfterDelay()
                 return

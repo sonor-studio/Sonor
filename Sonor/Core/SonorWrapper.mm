@@ -65,7 +65,7 @@ extern "C" void c_add_log(const char *msg);
     }
 }
 
-- (NSString *)transcribeAudioBuffer:(float *)samples count:(int)count {
+- (NSString *)transcribeAudioBuffer:(float *)samples count:(int)count language:(NSString *)language {
     if (!ctx) return @"";
     
     struct sonor_full_params params = sonor_full_default_params(SONOR_SAMPLING_GREEDY);
@@ -74,7 +74,14 @@ extern "C" void c_add_log(const char *msg);
     params.print_realtime   = false;
     params.print_timestamps = false;
     params.translate        = false;
-    params.language         = "auto";
+    
+    // Set language from parameter, defaulting to "auto" if not provided
+    if (language && [language length] > 0) {
+        params.language = [language UTF8String];
+    } else {
+        params.language = "auto";
+    }
+    
     params.n_threads        = 4;
     params.offset_ms        = 0;
     params.no_context       = true;

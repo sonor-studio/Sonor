@@ -141,6 +141,12 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                 modes.insert(defaults[4], at: min(modes.count, 4))
             }
         }
+        for i in 0..<modes.count {
+            if modes[i].audioBehavior == .pause {
+                modes[i].audioBehavior = .mute
+            }
+        }
+        
         save(modes)
         return modes
     }

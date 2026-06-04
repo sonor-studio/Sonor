@@ -12,7 +12,7 @@ public class SonorContext: ObservableObject, @unchecked Sendable {
         }
     }
     
-    public func transcribe(audioSamples: [Float]) async -> String {
+    public func transcribe(audioSamples: [Float], language: String = "auto") async -> String {
         guard let wrapper = wrapper else { return "" }
         await MainActor.run {
             self.isTranscribing = true
@@ -20,7 +20,7 @@ public class SonorContext: ObservableObject, @unchecked Sendable {
         let result = await Task.detached(priority: .userInitiated) {
             return audioSamples.withUnsafeBufferPointer { ptr in
                 guard let baseAddress = ptr.baseAddress else { return "" }
-                return wrapper.transcribeAudioBuffer(UnsafeMutablePointer(mutating: baseAddress), count: Int32(audioSamples.count))
+                return wrapper.transcribeAudioBuffer(UnsafeMutablePointer(mutating: baseAddress), count: Int32(audioSamples.count), language: language)
             }
         }.value
         await MainActor.run {
