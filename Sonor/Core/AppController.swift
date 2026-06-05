@@ -35,8 +35,6 @@ class AppController: NSObject, ObservableObject {
     override init() {
         super.init()
         DebugLogger.shared.addLog("AppController initialized")
-        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-        _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
         let modes = VoiceMode.loadAndMigrateModes()
         self.availableModes = modes
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
@@ -170,7 +168,6 @@ class AppController: NSObject, ObservableObject {
                 self.statusText = "Listening..."
             }
             WindowManager.shared.showHUD(controller: self)
-            WindowManager.shared.forceFloatingWindow()
             if self.sonorContext == nil {
                 DebugLogger.shared.addLog("SonorContext is nil, initiating load...")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
@@ -208,10 +205,9 @@ class AppController: NSObject, ObservableObject {
             let behavior = selectedMode.audioBehavior ?? .keep
             DebugLogger.shared.addLog("startRecordingProcess: behavior for mode '\(selectedMode.name)' = \(behavior)")
             
-            let isRecordingAfterCheck = await MainActor.run { return self.isRecording }
-            DebugLogger.shared.addLog("startRecordingProcess: isRecordingAfterCheck = \(isRecordingAfterCheck)")
-            guard isRecordingAfterCheck else { return }
             await MainActor.run {
+                guard self.isRecording else { return }
+                
                 if behavior == .mute {
                     MediaControlService.shared.pauseMultimedia(behavior: .mute)
                 } else {

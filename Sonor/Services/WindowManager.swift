@@ -12,20 +12,6 @@ class WindowManager {
     
     private init() {}
     
-    func forceFloatingWindow() {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            for window in NSApplication.shared.windows {
-                if window == self.settingsWindow || window == self.supportWindow || window == self.hudWindow {
-                    continue
-                }
-                if window.className.contains("SwiftUI.StatusBarWindow") || window.title.isEmpty || window.isOpaque == false {
-                    window.level = .floating
-                    window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
-                }
-            }
-        }
-    }
-    
     func showHUD(controller: AppController) {
         if hudWindow == nil {
             let panel = SonorHUDPanel(
@@ -69,7 +55,9 @@ class WindowManager {
         hudWindow?.orderOut(nil)
     }
     
-    func openSettings() {
+    private var hasShownSupportWindowThisSession = false
+
+    func openSettings(showSupportWindow: Bool = true) {
         if let window = settingsWindow {
             window.styleMask.insert(.fullSizeContentView)
             window.titlebarAppearsTransparent = true
@@ -77,7 +65,10 @@ class WindowManager {
             window.makeKeyAndOrderFront(nil)
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
-            self.openSupportWindow()
+            if showSupportWindow && !hasShownSupportWindowThisSession {
+                self.hasShownSupportWindowThisSession = true
+                self.openSupportWindow()
+            }
             return
         }
         let window = NSWindow(
@@ -109,7 +100,10 @@ class WindowManager {
         NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: false)
         window.makeKeyAndOrderFront(nil)
-        self.openSupportWindow()
+        if showSupportWindow && !hasShownSupportWindowThisSession {
+            self.hasShownSupportWindowThisSession = true
+            self.openSupportWindow()
+        }
     }
     
     func openSupportWindow() {
@@ -184,14 +178,14 @@ class WindowManager {
     }
     
     func openMicrophonePermissionWindow() {
-        self.openSettings()
+        self.openSettings(showSupportWindow: false)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             NotificationCenter.default.post(name: Notification.Name("ShowMicPermissionView"), object: nil)
         }
     }
     
     func openAccessibilityPermissionWindow() {
-        self.openSettings()
+        self.openSettings(showSupportWindow: false)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             NotificationCenter.default.post(name: Notification.Name("ShowAccessibilityPermissionView"), object: nil)
         }
