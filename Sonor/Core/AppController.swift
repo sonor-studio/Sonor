@@ -11,6 +11,7 @@ class AppController: NSObject, ObservableObject {
     @Published var isPopoverOpen = false
     private var wasPopoverOpenBeforeRecording = false
     @Published var statusText = "Ready"
+    private var currentRecordingSessionID: UUID? = nil
     var isCurrentlyProcessing: Bool {
         let nonProcessingStatuses: Set<String> = ["Ready", "Cancelled", "No microphone permission", "Microphone error", "No text recognized.", "Error: Missing model", "Done!"]
         return !isRecording && !nonProcessingStatuses.contains(statusText) && !statusText.hasPrefix("Mode:")
@@ -34,7 +35,6 @@ class AppController: NSObject, ObservableObject {
     private var currentTask: Task<Void, Never>?
     override init() {
         super.init()
-        DebugLogger.shared.addLog("AppController initialized")
         let modes = VoiceMode.loadAndMigrateModes()
         self.availableModes = modes
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
@@ -49,6 +49,14 @@ class AppController: NSObject, ObservableObject {
         NotificationCenter.default.addObserver(forName: Notification.Name("ReleaseWhisperContext"), object: nil, queue: .main) { _ in
             Task { @MainActor [weak self] in
                 self?.sonorContext = nil
+            }
+        }
+        NotificationCenter.default.addObserver(forName: Notification.Name("AccessibilityPermissionRevoked"), object: nil, queue: .main) { _ in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                if self.isRecording || self.isCurrentlyProcessing {
+                    self.cancelRecording()
+                }
             }
         }
     }
@@ -130,6 +138,32 @@ class AppController: NSObject, ObservableObject {
         if isRecording {
             stopRecordingAndTranscribe()
         } else {
+            let isTrusted = AXIsProcessTrusted()
+            if !isTrusted {
+                
+                let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+                let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+                WindowManager.shared.openAccessibilityPermissionWindow()
+                return
+            }
+            
+            let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+            if authStatus == .denied || authStatus == .restricted {
+                WindowManager.shared.openMicrophonePermissionWindow()
+                return
+            } else if authStatus == .notDetermined {
+                AVCaptureDevice.requestAccess(for: AVMediaType.audio) { granted in
+                    Task { @MainActor in
+                        if !granted {
+                            WindowManager.shared.openMicrophonePermissionWindow()
+                        } else {
+                            self.toggleRecording()
+                        }
+                    }
+                }
+                return
+            }
+
             let modeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
             self.activeHotkeyMode = (modeString == "Hold") ? .hold : .click
             guard case .downloaded = ModelManager.shared.whisperState else {
@@ -159,6 +193,9 @@ class AppController: NSObject, ObservableObject {
                 }
             }
             self.isRecording = true
+            let sessionID = UUID()
+            self.currentRecordingSessionID = sessionID
+            
             let behavior = selectedMode.audioBehavior ?? .keep
             if self.sonorContext == nil {
                 self.statusText = "Initializing"
@@ -169,44 +206,40 @@ class AppController: NSObject, ObservableObject {
             }
             WindowManager.shared.showHUD(controller: self)
             if self.sonorContext == nil {
-                DebugLogger.shared.addLog("SonorContext is nil, initiating load...")
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     Task.detached {
                         let path = await MainActor.run { return ModelManager.shared.whisperModelURL.path }
-                        DebugLogger.shared.addLog("Model path to load: \(path)")
                         if FileManager.default.fileExists(atPath: path) {
-                            DebugLogger.shared.addLog("Model file exists, creating SonorContext on BACKGROUND thread...")
                             let context = SonorContext(modelPath: path)
                             await MainActor.run {
-                                DebugLogger.shared.addLog("SonorContext created, starting recording process...")
+                                guard self.currentRecordingSessionID == sessionID else { return }
                                 self.sonorContext = context
-                                self.startRecordingProcess(selectedMode: selectedMode)
+                                self.startRecordingProcess(selectedMode: selectedMode, sessionID: sessionID)
                             }
                         } else {
-                            DebugLogger.shared.addLog("ERROR: Model file does not exist at path!")
                         }
                     }
                 }
             } else {
                 Task {
                     await MainActor.run {
-                        self.startRecordingProcess(selectedMode: selectedMode)
+                        self.startRecordingProcess(selectedMode: selectedMode, sessionID: sessionID)
                     }
                 }
             }
         }
     }
-    private func startRecordingProcess(selectedMode: VoiceMode) {
+    private func startRecordingProcess(selectedMode: VoiceMode, sessionID: UUID) {
         Task.detached {
             try? await Task.sleep(nanoseconds: 150_000_000)
-            let isStillRecording = await MainActor.run { return self.isRecording }
-            DebugLogger.shared.addLog("startRecordingProcess: isStillRecording = \(isStillRecording)")
+            let isStillRecording = await MainActor.run { 
+                return self.isRecording && self.currentRecordingSessionID == sessionID
+            }
             guard isStillRecording else { return }
             let behavior = selectedMode.audioBehavior ?? .keep
-            DebugLogger.shared.addLog("startRecordingProcess: behavior for mode '\(selectedMode.name)' = \(behavior)")
             
             await MainActor.run {
-                guard self.isRecording else { return }
+                guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
                 
                 if behavior == .mute {
                     MediaControlService.shared.pauseMultimedia(behavior: .mute)
@@ -215,14 +248,12 @@ class AppController: NSObject, ObservableObject {
                 }
                 
                 Task {
-                    guard self.isRecording else { return }
+                    guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
                     Task {
                         await SoundPlayer.shared.playSound(named: "Start")
                     }
-                    try? await Task.sleep(nanoseconds: 200_000_000)
                     await MainActor.run {
-                        DebugLogger.shared.addLog("startRecordingProcess: self.isRecording right before startRecording() = \(self.isRecording)")
-                        guard self.isRecording else { return }
+                        guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
                         self.startRecording()
                     }
                 }
@@ -231,51 +262,7 @@ class AppController: NSObject, ObservableObject {
     }
     private func startRecording() {
         self.isPaused = false
-        
-        let isTrusted = AXIsProcessTrusted()
-        if !isTrusted {
-            self.statusText = t("Accessibility denied")
-            self.isRecording = false
-            self.hideHUDAfterDelay()
-            WindowManager.shared.openAccessibilityPermissionWindow()
-            MediaControlService.shared.resumeMultimedia()
-            
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-                let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-                _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
-            }
-            return
-        }
-        
-        let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
-        DebugLogger.shared.addLog("startRecording: authStatus = \(authStatus.rawValue)")
-        if authStatus == .authorized {
-            performStartRecording()
-        } else if authStatus == .denied || authStatus == .restricted {
-            DebugLogger.shared.addLog("startRecording: permission denied or restricted. Opening window.")
-            self.statusText = t("Microphone denied")
-            self.isRecording = false
-            self.hideHUDAfterDelay()
-            WindowManager.shared.openMicrophonePermissionWindow()
-            MediaControlService.shared.resumeMultimedia()
-        } else {
-            DebugLogger.shared.addLog("startRecording: requesting access...")
-            AVCaptureDevice.requestAccess(for: AVMediaType.audio) { granted in
-                Task { @MainActor in
-                    guard granted else {
-                        DebugLogger.shared.addLog("startRecording: requestAccess NOT granted!")
-                        self.statusText = t("Microphone denied")
-                        self.isRecording = false
-                        self.hideHUDAfterDelay()
-                        WindowManager.shared.openMicrophonePermissionWindow()
-                        MediaControlService.shared.resumeMultimedia()
-                        return
-                    }
-                    DebugLogger.shared.addLog("startRecording: requestAccess GRANTED, calling performStartRecording()")
-                    self.performStartRecording()
-                }
-            }
-        }
+        performStartRecording()
     }
     private func performStartRecording() {
         self.isPaused = false
@@ -284,9 +271,7 @@ class AppController: NSObject, ObservableObject {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             do {
-                DebugLogger.shared.addLog("performStartRecording: calling try self.audioManager.startRecording()")
                 try self.audioManager.startRecording()
-                DebugLogger.shared.addLog("performStartRecording: startRecording() succeeded!")
                 DispatchQueue.main.async {
                     self.isRecording = true
                     NotificationCenter.default.post(name: Notification.Name("HidePermissionViews"), object: nil)
@@ -311,7 +296,6 @@ class AppController: NSObject, ObservableObject {
                     }
                 }
             } catch {
-                DebugLogger.shared.addLog("performStartRecording: CATCH ERROR: \(error.localizedDescription)")
                 DispatchQueue.main.async {
                     self.statusText = "Microphone error"
                     self.isRecording = false
@@ -337,6 +321,7 @@ class AppController: NSObject, ObservableObject {
         }
         isRecording = false
         self.isPaused = false
+        self.currentRecordingSessionID = nil
         statusText = "Cancelled"
         let taskToCancel = currentTask
         currentTask = nil
@@ -374,9 +359,9 @@ class AppController: NSObject, ObservableObject {
         guard isRecording else {
             return
         }
-        // wasPaused is no longer needed
         self.isPaused = false
         isRecording = false
+        self.currentRecordingSessionID = nil
         statusText = "Processing"
         if !wasPopoverOpenBeforeRecording {
             isPopoverOpen = false

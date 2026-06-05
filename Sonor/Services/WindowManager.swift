@@ -144,38 +144,7 @@ class WindowManager {
         window.makeKeyAndOrderFront(nil)
     }
     
-    private var debugConsoleWindow: NSWindow?
-    
-    func openDebugConsole() {
-        if let window = debugConsoleWindow {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.setActivationPolicy(.regular)
-            NSApp.activate(ignoringOtherApps: false)
-            return
-        }
-        let window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 600, height: 400),
-            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
-            backing: .buffered,
-            defer: false
-        )
-        window.title = "Konsola Debugowania"
-        window.minSize = NSSize(width: 400, height: 300)
-        window.center()
-        window.contentView = NSHostingView(rootView: DebugConsoleView())
-        window.isReleasedWhenClosed = false
-        window.titlebarAppearsTransparent = true
-        self.debugConsoleWindow = window
-        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
-            DispatchQueue.main.async {
-                self?.debugConsoleWindow = nil
-                self?.updateActivationPolicy()
-            }
-        }
-        NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: false)
-        window.makeKeyAndOrderFront(nil)
-    }
+
     
     func openMicrophonePermissionWindow() {
         self.openSettings(showSupportWindow: false)
@@ -194,8 +163,7 @@ class WindowManager {
     func updateActivationPolicy() {
         let isSettingsVisible = settingsWindow?.isVisible == true
         let isSupportVisible = supportWindow?.isVisible == true
-        let isConsoleVisible = debugConsoleWindow?.isVisible == true
-        if !isSettingsVisible && !isSupportVisible && !isConsoleVisible {
+        if !isSettingsVisible && !isSupportVisible {
             NSApp.setActivationPolicy(.accessory)
         }
     }

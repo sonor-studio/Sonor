@@ -3,7 +3,8 @@ import AppKit
 
 
 func eventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
-    return HotkeyManager.shared.handleEvent(type: type, event: event)
+    let result = HotkeyManager.shared.handleEvent(type: type, event: event)
+    return result
 }
 
 class HotkeyManager {
@@ -23,39 +24,71 @@ class HotkeyManager {
     private var cachedPauseHotkey: HotkeyDef?
     private var cachedAssistantHotkey: HotkeyDef?
     private var cachedHotkeyModeString: String = "Click"
-    private var checkTimer: Timer?
+    private var tapThread: Thread?
+    private var tapRunLoop: CFRunLoop?
+    private var hasNotifiedMissingPermissions = false
     
     private init() {
-        checkTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
-            guard let self = self else { return }
-            if AXIsProcessTrusted() {
-                if self.eventTap == nil {
-                    self.startListening()
-                } else if let tap = self.eventTap, !CGEvent.tapIsEnabled(tap: tap) {
-                    self.startListening()
+        self.checkPermissions()
+        
+        // Instead of polling every 2 seconds and locking up macOS TCCD (which lags the global keyboard),
+        // we check permissions automatically whenever the app becomes active (gains focus).
+        NSWorkspace.shared.notificationCenter.addObserver(
+            self,
+            selector: #selector(appDidBecomeActive),
+            name: NSWorkspace.didActivateApplicationNotification,
+            object: nil
+        )
+    }
+    
+    @objc private func appDidBecomeActive(_ notification: Notification) {
+        if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication,
+           app.processIdentifier == NSRunningApplication.current.processIdentifier {
+            self.checkPermissions()
+        }
+    }
+    
+    func checkPermissions() {
+        let trusted = AXIsProcessTrusted()
+        let hasTap = self.eventTap != nil
+        
+        if trusted {
+            self.hasNotifiedMissingPermissions = false
+            if !hasTap {
+                self.startListening()
+            } else if let tap = self.eventTap, !CGEvent.tapIsEnabled(tap: tap) {
+                self.startListening()
+            }
+        } else {
+            if hasTap {
+                self.stopListening()
+            }
+            
+            if !self.hasNotifiedMissingPermissions {
+                self.hasNotifiedMissingPermissions = true
+                NotificationCenter.default.post(name: Notification.Name("AccessibilityPermissionRevoked"), object: nil)
+                
+                DispatchQueue.main.async {
+                    let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+                    let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+                    WindowManager.shared.openAccessibilityPermissionWindow()
                 }
             }
         }
     }
     
     func startListening() {
-        if let source = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .defaultMode)
-            runLoopSource = nil
-        }
-        if let tap = eventTap {
-            CGEvent.tapEnable(tap: tap, enable: false)
-            eventTap = nil
+        self.stopListening()
+        
+        guard AXIsProcessTrusted() else {
+            return
         }
         
-        // Cache hotkeys here to avoid UserDefaults disk IO on every keystroke
         self.cachedMainHotkey = HotkeyDef(keyCodeKey: "hotkeyCode", modifiersKey: "hotkeyModifiers", stringKey: "hotkeyString", defaultCode: 50, defaultModifiers: 0x0100 | 0x0200)
         self.cachedCancelHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_cancel", modifiersKey: "hotkeyModifiers_cancel", stringKey: "hotkeyString_cancel")
         self.cachedPauseHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_pause", modifiersKey: "hotkeyModifiers_pause", stringKey: "hotkeyString_pause")
         self.cachedAssistantHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_assistant", modifiersKey: "hotkeyModifiers_assistant", stringKey: "hotkeyString_assistant")
         self.cachedHotkeyModeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
-        
-        guard AXIsProcessTrusted() else { return }
         
         let eventMask = CGEventMask((1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue) | (1 << CGEventType.flagsChanged.rawValue))
         guard let tap = CGEvent.tapCreate(
@@ -69,22 +102,46 @@ class HotkeyManager {
             return
         }
         self.eventTap = tap
-        self.runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
-        if let source = self.runLoopSource {
-            CFRunLoopAddSource(CFRunLoopGetCurrent(), source, .defaultMode)
-            CGEvent.tapEnable(tap: tap, enable: true)
+        
+        self.tapThread = Thread { [weak self] in
+            guard let self = self else { return }
+            self.tapRunLoop = CFRunLoopGetCurrent()
+            
+            self.runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
+            if let source = self.runLoopSource {
+                CFRunLoopAddSource(self.tapRunLoop!, source, .defaultMode)
+                CGEvent.tapEnable(tap: tap, enable: true)
+                CFRunLoopRun()
+            }
         }
+        self.tapThread?.name = "SonorCGEventTapThread"
+        self.tapThread?.start()
     }
     
     func stopListening() {
-        if let source = runLoopSource {
-            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), source, .defaultMode)
-            runLoopSource = nil
-        }
-        if let tap = eventTap {
+        if let tap = self.eventTap {
             CGEvent.tapEnable(tap: tap, enable: false)
-            eventTap = nil
+            CFMachPortInvalidate(tap)
         }
+        
+        let runLoopToStop = self.tapRunLoop
+        let sourceToRemove = self.runLoopSource
+        
+        self.eventTap = nil
+        self.runLoopSource = nil
+        self.tapRunLoop = nil
+        
+        if let runLoop = runLoopToStop {
+            if let source = sourceToRemove {
+                CFRunLoopRemoveSource(runLoop, source, .defaultMode)
+            }
+            CFRunLoopStop(runLoop)
+        }
+        
+        if let thread = self.tapThread {
+            thread.cancel()
+        }
+        self.tapThread = nil
     }
     
     struct HotkeyDef {
@@ -115,27 +172,21 @@ class HotkeyManager {
     }
     
     func handleEvent(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
-        if type == .tapDisabledByTimeout {
-            DebugLogger.shared.addLog("HotkeyManager: Event tap disabled by timeout! Attempting to re-enable...")
-            if AXIsProcessTrusted(), let tap = self.eventTap {
-                CGEvent.tapEnable(tap: tap, enable: true)
-            }
-            return Unmanaged.passUnretained(event)
-        }
-        if type == .tapDisabledByUserInput {
-            DebugLogger.shared.addLog("HotkeyManager: Event tap disabled by user input!")
-            return Unmanaged.passUnretained(event)
+        let passthrough = Unmanaged.passUnretained(event)
+        
+        if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            return passthrough
         }
 
         guard let nsEvent = NSEvent(cgEvent: event) else {
-            return Unmanaged.passUnretained(event)
+            return passthrough
         }
         
         guard let mainHotkey = self.cachedMainHotkey,
               let cancelHotkey = self.cachedCancelHotkey,
               let pauseHotkey = self.cachedPauseHotkey,
               let assistantHotkey = self.cachedAssistantHotkey else {
-            return Unmanaged.passUnretained(event)
+            return passthrough
         }
 
         if !self.isKeyDown {
@@ -172,57 +223,75 @@ class HotkeyManager {
                     if isPressed {
                         DispatchQueue.main.async { self.onCancelKeyDown?() }
                     }
-                } else if pauseHotkey.isOnlyModifier && code == pauseHotkey.code {
-                    if !isHoldMode && isPressed {
+                }
+                if pauseHotkey.isOnlyModifier && code == pauseHotkey.code {
+                    if isPressed {
                         DispatchQueue.main.async { self.onPauseKeyDown?() }
                     }
-                } else if assistantHotkey.isOnlyModifier && code == assistantHotkey.code {
+                }
+                if assistantHotkey.isOnlyModifier && code == assistantHotkey.code {
                     if isPressed {
                         DispatchQueue.main.async { self.onAssistantKeyDown?() }
                     }
                 }
             }
-            return Unmanaged.passUnretained(event)
+            return passthrough
         }
+        
         if type == .keyDown {
-            let currentModifiers = nsEvent.modifierFlags.intersection([.command, .shift, .option, .control])
             let code = Int(nsEvent.keyCode)
-            if code == mainHotkey.code && currentModifiers == mainHotkey.targetModifiers {
-                if !self.isKeyDown {
-                    self.isKeyDown = true
+            let modifiers = nsEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            if !mainHotkey.isOnlyModifier && code == mainHotkey.code && modifiers == mainHotkey.targetModifiers {
+                if !isKeyDown {
+                    isKeyDown = true
                     DispatchQueue.main.async { self.onHotkeyDown?() }
                 }
-                return nil 
+                return nil
             }
+            
             let secondaryActive = self.isSecondaryHotkeysEnabled?() ?? true
             if secondaryActive {
-                if code == cancelHotkey.code && currentModifiers == cancelHotkey.targetModifiers {
+                if !cancelHotkey.isOnlyModifier && code == cancelHotkey.code && modifiers == cancelHotkey.targetModifiers {
                     DispatchQueue.main.async { self.onCancelKeyDown?() }
                     return nil
-                } else if code == pauseHotkey.code && currentModifiers == pauseHotkey.targetModifiers {
-                    if !isHoldMode {
-                        DispatchQueue.main.async { self.onPauseKeyDown?() }
-                        return nil
-                    }
-                } else if code == assistantHotkey.code && currentModifiers == assistantHotkey.targetModifiers {
+                }
+                if !pauseHotkey.isOnlyModifier && code == pauseHotkey.code && modifiers == pauseHotkey.targetModifiers {
+                    DispatchQueue.main.async { self.onPauseKeyDown?() }
+                    return nil
+                }
+                if !assistantHotkey.isOnlyModifier && code == assistantHotkey.code && modifiers == assistantHotkey.targetModifiers {
                     DispatchQueue.main.async { self.onAssistantKeyDown?() }
                     return nil
                 }
             }
-        }
-        if type == .keyUp {
+            return passthrough
+        } else if type == .keyUp {
             let code = Int(nsEvent.keyCode)
-            if code == mainHotkey.code {
-                if self.isKeyDown {
-                    self.isKeyDown = false
+            if !mainHotkey.isOnlyModifier && code == mainHotkey.code {
+                if isKeyDown {
+                    isKeyDown = false
                     if isHoldMode {
                         DispatchQueue.main.async { self.onHotkeyUp?() }
                     }
                 }
-                return nil 
+                return nil
             }
+            
+            let secondaryActive = self.isSecondaryHotkeysEnabled?() ?? true
+            if secondaryActive {
+                if !cancelHotkey.isOnlyModifier && code == cancelHotkey.code {
+                    return nil
+                }
+                if !pauseHotkey.isOnlyModifier && code == pauseHotkey.code {
+                    return nil
+                }
+                if !assistantHotkey.isOnlyModifier && code == assistantHotkey.code {
+                    return nil
+                }
+            }
+            return passthrough
         }
-        return Unmanaged.passUnretained(event)
+        
+        return passthrough
     }
 }
-

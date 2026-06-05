@@ -158,10 +158,7 @@ struct SidebarView: View {
                     .padding(.bottom, 5)
                 }
                 
-                MenuButton(title: t("Konsola Debugowania"), icon: "terminal.fill", isSelected: false) {
-                    WindowManager.shared.openDebugConsole()
-                }
-                
+
                 MenuButton(title: t("Settings"), icon: "gearshape.fill", isSelected: selectedTab == .settings) {
                     selectedTab = .settings
                 }

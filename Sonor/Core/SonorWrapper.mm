@@ -6,13 +6,10 @@
     struct sonor_context * ctx;
 }
 @end
-extern "C" void c_add_log(const char *msg);
-
 #define S_LOG(fmt, ...) \
     do { \
         NSString *msg = [NSString stringWithFormat:fmt, ##__VA_ARGS__]; \
         NSLog(@"%@", msg); \
-        c_add_log([msg UTF8String]); \
     } while (0)
 
 @implementation SonorWrapper

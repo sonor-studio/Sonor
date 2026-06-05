@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
+import ScreenCaptureKit
 
 struct ModeEditorView: View {
     @Environment(\.colorScheme) var colorScheme
@@ -483,11 +484,7 @@ struct ModeEditorView: View {
             if #available(macOS 14.4, *) {
                 CGRequestScreenCaptureAccess()
             } else {
-                let display = CGMainDisplayID()
-                if let stream = CGDisplayStream(dispatchQueueDisplay: display, outputWidth: 1, outputHeight: 1, pixelFormat: Int32(kCVPixelFormatType_32BGRA), properties: nil, queue: .main, handler: { _, _, _, _ in }) {
-                    stream.start()
-                    stream.stop()
-                }
+                SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { _, _ in }
             }
         }
     }

@@ -26,24 +26,7 @@ class AudioManager: ObservableObject {
         }
     }
     
-    // DEBUG: Save WAV file to Desktop to verify audio integrity
-    func saveWav(samples: [Float], sampleRate: Double = 16000) {
-        guard let desktop = FileManager.default.urls(for: .desktopDirectory, in: .userDomainMask).first else { return }
-        let url = desktop.appendingPathComponent("sonor_debug_audio.wav")
-        let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: sampleRate, channels: 1, interleaved: false)!
-        let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(samples.count))!
-        buffer.frameLength = buffer.frameCapacity
-        for i in 0..<samples.count {
-            buffer.floatChannelData?[0][i] = samples[i]
-        }
-        do {
-            let file = try AVAudioFile(forWriting: url, settings: format.settings)
-            try file.write(from: buffer)
-            DebugLogger.shared.addLog("Saved debug audio to \(url.path)")
-        } catch {
-            DebugLogger.shared.addLog("Failed to save debug audio: \(error)")
-        }
-    }
+
     
     func startRecording(clearSamples: Bool = true) throws {
         if clearSamples {
@@ -70,9 +53,7 @@ class AudioManager: ObservableObject {
             }
         }
         let inputFormat = inputNode.inputFormat(forBus: 0)
-        DebugLogger.shared.addLog("AudioManager.startRecording: inputFormat = \(inputFormat)")
         guard let targetFormat = targetFormat else {
-            DebugLogger.shared.addLog("AudioManager.startRecording: targetFormat is nil!")
             return
         }
         audioConverter = AVAudioConverter(from: inputFormat, to: targetFormat)
@@ -80,11 +61,8 @@ class AudioManager: ObservableObject {
             self?.processAudio(buffer: buffer)
         }
         isTapInstalled = true
-        DebugLogger.shared.addLog("AudioManager.startRecording: tap installed, calling engine.prepare()...")
         engine.prepare()
-        DebugLogger.shared.addLog("AudioManager.startRecording: calling engine.start()...")
         try engine.start()
-        DebugLogger.shared.addLog("AudioManager.startRecording: engine.start() succeeded!")
         NotificationCenter.default.addObserver(self, selector: #selector(handleConfigurationChange), name: .AVAudioEngineConfigurationChange, object: engine)
         DispatchQueue.main.async {
             self.isRecording = true
@@ -138,15 +116,7 @@ class AudioManager: ObservableObject {
                     break
                 }
             }
-            let samplesCount = samples.count
-            var finalSumSq: Float = 0.0
-            for val in samples {
-                finalSumSq += val * val
-            }
-            let finalRms = samplesCount > 0 ? sqrt(finalSumSq / Float(samplesCount)) : 0.0
-            DebugLogger.shared.addLog("Finished recording. Samples: \(samplesCount), RMS of 16kHz audio: \(finalRms)")
-            
-            self.saveWav(samples: samples)
+
             
             accumulatedSamples = []
             return samples
@@ -201,7 +171,6 @@ class AudioManager: ObservableObject {
         }
     }
     func getAudioInputDevices() -> [AudioDevice] {
-        let captureDevices = AVCaptureDevice.DiscoverySession(deviceTypes: [.microphone], mediaType: .audio, position: .unspecified).devices
         var devices: [AudioDevice] = []
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioHardwarePropertyDevices,
@@ -210,32 +179,45 @@ class AudioManager: ObservableObject {
         )
         var size: UInt32 = 0
         let status = AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size)
-        var deviceIDs: [AudioDeviceID] = []
-        if status == noErr {
-            let count = Int(size) / MemoryLayout<AudioDeviceID>.size
-            deviceIDs = [AudioDeviceID](repeating: 0, count: count)
-            AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceIDs)
-        }
-        for captureDevice in captureDevices {
-            let uid = captureDevice.uniqueID
-            let name = captureDevice.localizedName
-            var matchedID: AudioDeviceID = 0
-            for id in deviceIDs {
-                var uidAddress = AudioObjectPropertyAddress(
-                    mSelector: kAudioDevicePropertyDeviceUID,
-                    mScope: kAudioObjectPropertyScopeGlobal,
-                    mElement: kAudioObjectPropertyElementMain
-                )
-                var uidSize = UInt32(MemoryLayout<CFString>.size)
-                var coreUID: Unmanaged<CFString>? = nil
-                AudioObjectGetPropertyData(id, &uidAddress, 0, nil, &uidSize, &coreUID)
-                if let uidStr = coreUID?.takeRetainedValue() as String?, uidStr == uid {
-                    matchedID = id
-                    break
-                }
+        if status != noErr { return devices }
+        
+        let count = Int(size) / MemoryLayout<AudioDeviceID>.size
+        var deviceIDs = [AudioDeviceID](repeating: 0, count: count)
+        AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceIDs)
+        
+        for id in deviceIDs {
+            var streamAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyStreams,
+                mScope: kAudioDevicePropertyScopeInput,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var streamSize: UInt32 = 0
+            if AudioObjectGetPropertyDataSize(id, &streamAddress, 0, nil, &streamSize) != noErr || streamSize == 0 {
+                continue 
             }
-            devices.append(AudioDevice(id: matchedID, uid: uid, name: name))
+            
+            var nameAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioObjectPropertyName,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var nameSize = UInt32(MemoryLayout<CFString>.size)
+            var coreName: Unmanaged<CFString>? = nil
+            AudioObjectGetPropertyData(id, &nameAddress, 0, nil, &nameSize, &coreName)
+            let name = (coreName?.takeRetainedValue() as String?) ?? "Unknown Device"
+            
+            var uidAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyDeviceUID,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var uidSize = UInt32(MemoryLayout<CFString>.size)
+            var coreUID: Unmanaged<CFString>? = nil
+            AudioObjectGetPropertyData(id, &uidAddress, 0, nil, &uidSize, &coreUID)
+            let uid = (coreUID?.takeRetainedValue() as String?) ?? UUID().uuidString
+            
+            devices.append(AudioDevice(id: id, uid: uid, name: name))
         }
-        return devices.filter { $0.id != kAudioObjectUnknown }
+        return devices
     }
 }

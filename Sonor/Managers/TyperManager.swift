@@ -166,6 +166,9 @@ class PasteManager {
 
 
     private func tryCGEventPaste() {
+        guard AXIsProcessTrusted() else {
+            return
+        }
         let src = CGEventSource(stateID: .hidSystemState)
 
         let vDown = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: true)
@@ -181,6 +184,9 @@ class PasteManager {
 
 
     func typeTextDirectly(text: String, targetPID: pid_t, forceFocusElement: AXUIElement? = nil) {
+        guard AXIsProcessTrusted() else {
+            return
+        }
         guard targetPID > 0 else {
             return
         }
@@ -214,6 +220,9 @@ class PasteManager {
 
 
     func typeTextToken(token: String, targetPID: pid_t) {
+        guard AXIsProcessTrusted() else {
+            return
+        }
         let source = CGEventSource(stateID: .combinedSessionState)
         let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true)
         let utf16Chars = Array(token.utf16)

@@ -37,13 +37,10 @@ class MediaControlService {
             var error: NSDictionary?
             script.executeAndReturnError(&error)
             if let error = error {
-                DebugLogger.shared.addLog("MediaControlService AppleScript error: \(error)")
                 print("AppleScript error: \(error)")
             } else {
-                DebugLogger.shared.addLog("MediaControlService AppleScript executed successfully: \(source)")
             }
         } else {
-            DebugLogger.shared.addLog("MediaControlService AppleScript initialization failed for source: \(source)")
         }
     }
 }

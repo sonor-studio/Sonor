@@ -68,9 +68,7 @@ final class ModelManager: ObservableObject {
                             let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
                             await MainActor.run {
                                 if hashString == expectedSHA256 {
-                                    DebugLogger.shared.addLog("✅ SHA256 checksum verified: \(hashString)")
                                 } else {
-                                    DebugLogger.shared.addLog("❌ SHA256 MISMATCH! Expected: \(expectedSHA256), Got: \(hashString)")
                                     try? FileManager.default.removeItem(atPath: whisperPath)
                                     self.whisperState = .notDownloaded
                                 }
@@ -79,7 +77,6 @@ final class ModelManager: ObservableObject {
                     }
                     whisperState = .downloaded
                 } else {
-                    DebugLogger.shared.addLog("❌ Whisper model file size mismatch (\(size) vs \(expectedSizeInBytes)). Corrupted download detected!")
                     try? FileManager.default.removeItem(atPath: whisperPath)
                     whisperState = .notDownloaded
                 }
