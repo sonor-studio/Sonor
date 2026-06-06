@@ -9,6 +9,7 @@ struct SidebarView: View {
     
     @ObservedObject var authManager = AuthManager.shared
     @ObservedObject var networkMonitor = NetworkMonitor.shared
+    @ObservedObject var localizer = LocalizationManager.shared
     
     var effectiveColorScheme: ColorScheme
     

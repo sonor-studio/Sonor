@@ -325,6 +325,9 @@ struct StatisticsView: View {
             case "ja":
                 suffix = "時間"
                 label = "目標: \(milestoneHours.truncatingRemainder(dividingBy: 1.0) == 0 ? "\(Int(milestoneHours))" : String(format: "%.1f", milestoneHours))\(suffix)"
+            case "zh":
+                suffix = "小时"
+                label = "目标: \(milestoneHours.truncatingRemainder(dividingBy: 1.0) == 0 ? "\(Int(milestoneHours))" : String(format: "%.1f", milestoneHours)) \(suffix)"
             default: 
                 suffix = milestoneHours == 1.0 ? "hour" : "hours"
                 label = "Goal: \(milestoneHours.truncatingRemainder(dividingBy: 1.0) == 0 ? "\(Int(milestoneHours))" : String(format: "%.1f", milestoneHours)) \(suffix)"

@@ -3877,6 +3877,17 @@ public class LocalizationManager: ObservableObject {
             "PREMIUM", 
             "高级会员", 
         ],
+        "Premium": [
+            "Premium",
+            "Premium",
+            "Premium",
+            "Premium",
+            "Premium",
+            "Premium",
+            "プレミアム",
+            "Premium",
+            "高级会员"
+        ],
         "Member since:": [
             "Member since:", 
             "Konto od:", 
