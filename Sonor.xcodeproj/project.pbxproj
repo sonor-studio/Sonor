@@ -643,7 +643,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor requires microphone access to capture your voice for speech-to-text transcription.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -664,8 +664,8 @@
 					"\"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/ggml/src/ggml-cpu\"",
 				);
 				MACH_O_TYPE = mh_execute;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 0.9.0;
 				MTL_HEADER_SEARCH_PATHS = "$(inherited) /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src/ggml-metal";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -720,7 +720,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor requires microphone access to capture your voice for speech-to-text transcription.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -741,8 +741,8 @@
 					"\"/Users/macbook/Desktop/Dev/Sonor/sonor.cpp/build/ggml/src/ggml-cpu\"",
 				);
 				MACH_O_TYPE = mh_execute;
-				MACOSX_DEPLOYMENT_TARGET = 14.0;
-				MARKETING_VERSION = 1.0;
+				MACOSX_DEPLOYMENT_TARGET = 14.6;
+				MARKETING_VERSION = 0.9.0;
 				MTL_HEADER_SEARCH_PATHS = "$(inherited) /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src/ggml-metal";
 				OTHER_LDFLAGS = (
 					"$(inherited)",

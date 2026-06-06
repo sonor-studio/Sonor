@@ -10,11 +10,14 @@ struct AudioDevice: Identifiable, Hashable {
     let name: String
 }
 
+/// Manages the capture of system audio or microphone input, converting it into
+/// 16kHz Float32 PCM samples suitable for Whisper model processing.
 class AudioManager: ObservableObject {
     private var audioEngine: AVAudioEngine?
-    private var audioConverter: AVAudioConverter?
+    private var audioConverter: AVAudioConverter? // Converts raw audio to our target format (16kHz)
+    
     @Published var isRecording = false
-    @Published var audioLevel: Float = 0.0
+    @Published var audioLevel: Float = 0.0 // RMS audio level for UI visualizations
     private var accumulatedSamples: [Float] = []
     private let samplesQueue = DispatchQueue(label: "com.sonor.samplesQueue")
     private var isTapInstalled = false
@@ -28,6 +31,8 @@ class AudioManager: ObservableObject {
     
 
     
+    /// Initializes the audio engine and begins capturing samples.
+    /// - Parameter clearSamples: If true, previously recorded samples are discarded before starting.
     func startRecording(clearSamples: Bool = true) throws {
         if clearSamples {
             accumulatedSamples.removeAll()
@@ -81,6 +86,9 @@ class AudioManager: ObservableObject {
         } catch {
         }
     }
+    /// Stops the audio engine and returns the accumulated audio samples.
+    /// Also trims any trailing silence (defined by `silenceThreshold`) from the end of the recording.
+    /// - Returns: An array of processed, 16kHz float samples ready for transcription.
     func stopRecording() -> [Float] {
         NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: audioEngine)
         if isTapInstalled {
@@ -122,6 +130,8 @@ class AudioManager: ObservableObject {
             return samples
         }
     }
+    /// Receives raw buffers from the audio engine, calculates UI volume levels,
+    /// and performs format conversion into `accumulatedSamples`.
     private func processAudio(buffer: AVAudioPCMBuffer) {
         if isPaused {
             DispatchQueue.main.async {

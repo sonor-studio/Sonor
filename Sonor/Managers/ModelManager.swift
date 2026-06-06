@@ -5,6 +5,7 @@ import Hub
 import HuggingFace
 import CryptoKit
 
+/// Represents the current state of a model file on disk.
 enum DownloadState: Equatable {
     case notDownloaded
     case downloading(progress: Double)
@@ -12,6 +13,7 @@ enum DownloadState: Equatable {
     case downloaded
 }
 
+// PRIVACY FIRST: ModelManager handles downloading AI models (like Whisper and Gemma) directly to the user's machine. Once downloaded, all models run 100% locally to ensure user privacy and maximum security.
 @MainActor
 final class ModelManager: ObservableObject {
     static let shared = ModelManager()
@@ -47,6 +49,8 @@ final class ModelManager: ObservableObject {
             }
         }
     }
+    /// Validates the existence and integrity of models on app startup.
+    /// Uses SHA256 checksums to verify that downloaded models aren't corrupted.
     func checkInitialStates() {
         let whisperPath = whisperModelURL.path
         let whisperIncompletePath = whisperPath + ".incomplete"
@@ -132,6 +136,8 @@ final class ModelManager: ObservableObject {
             gemmaState = .notDownloaded
         }
     }
+    /// Initiates or resumes the download of the Whisper model.
+    /// Resumes from an `.incomplete` file if a previous download was paused or interrupted.
     func downloadWhisper() {
         if case .downloading = whisperState { return }
         if case .downloaded = whisperState { return }
@@ -238,6 +244,7 @@ final class ModelManager: ObservableObject {
         cleanHubCache(repoName: "models--ggerganov--whisper.cpp")
         whisperState = .notDownloaded
     }
+    /// Initiates or resumes the download of the Gemma LLM model from Hugging Face.
     func downloadGemma() {
         if case .downloading = gemmaState { return }
         if case .downloaded = gemmaState { return }
@@ -356,6 +363,8 @@ final class ModelManager: ObservableObject {
             }
         }
     }
+    /// Deeply cleans Hugging Face hub caches to free up disk space when models are uninstalled.
+    /// Hugging Face library aggressively caches files across multiple directories.
     private func cleanHubCache(repoName: String) {
         let fm = FileManager.default
         var cacheRoots: [URL] = []

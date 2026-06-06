@@ -9,6 +9,13 @@ class AssistantWorkflowService {
     
     private init() {}
     
+    /// Orchestrates the entire post-transcription workflow, including optional LLM modifications,
+    /// pasting text via Accessibility (AX) APIs, or falling back to the clipboard.
+    /// - Parameters:
+    ///   - correctedText: The transcribed string (after initial dictionary corrections).
+    ///   - selectedMode: The active VoiceMode, determining if/how the LLM modifies the text.
+    ///   - initialPID: Process ID of the target application to paste into.
+    ///   - targetAXElement: The focused text field element where text will be injected.
     func execute(
         correctedText: String,
         selectedMode: VoiceMode,
@@ -44,6 +51,8 @@ class AssistantWorkflowService {
         let shouldRunLLM = !selectedMode.prompt.isEmpty && isPremium
         
         if !shouldRunLLM {
+            // DIRECT PASTE PATH: We skip LLM generation (e.g. for "Raw Output" mode)
+            // and immediately inject the transcribed text into the target app.
             onStatusChange("Done!")
             MessageMemoryManager.shared.saveMessage(correctedText)
             
@@ -64,6 +73,8 @@ class AssistantWorkflowService {
                 Task { await SoundPlayer.shared.playSound(named: "Error") }
             }
         } else {
+            // LLM GENERATION PATH: The text goes through a local LLM model to apply
+            // stylistic changes, corrections, or fulfill specific user commands.
             if Task.isCancelled { return }
             
             if !LLMManager.shared.isReady {

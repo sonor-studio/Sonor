@@ -4,12 +4,18 @@ import Combine
 import AVFoundation
 import CoreAudio
 
+// Sonor: A privacy-first, local-only AI assistant. We believe in keeping your data on your device.
+
 @MainActor
 class AppController: NSObject, ObservableObject {
+    // MARK: - Published State
+    
     @Published var isRecording = false
     @Published var activeDictionaryNotification: DictionaryNotification? = nil
     @Published var isPopoverOpen = false
     private var wasPopoverOpenBeforeRecording = false
+    
+    /// Displays the current status of the app in the HUD (e.g. "Listening...", "Processing")
     @Published var statusText = "Ready"
     private var currentRecordingSessionID: UUID? = nil
     var isCurrentlyProcessing: Bool {
@@ -26,12 +32,20 @@ class AppController: NSObject, ObservableObject {
             audioManager.isPaused = isPaused
         }
     }
+    // MARK: - Hardware & System State
+    
     private let audioManager = AudioManager()
-    private var sonorContext: SonorContext?
+    private var sonorContext: SonorContext? // C++ interop for the local Whisper model
+    
+    /// The process ID of the external application the user was focusing before recording started.
     private var targetAppPID: pid_t = 0  
+    
+    /// Accessibility Element reference to the specific text field the user had focused.
     private var targetAXElement: AXUIElement? = nil
     private var targetAppBundleID: String? = nil
     private var wasTextFieldFocusedAtStart: Bool = false
+    
+    // Task management for cancelling active recordings or processing
     private var currentTask: Task<Void, Never>?
     private var startRecordingTask: Task<Void, Never>?
     
@@ -135,6 +149,10 @@ class AppController: NSObject, ObservableObject {
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
         self.currentMode = modes.first(where: { $0.id.uuidString == activeModeID }) ?? modes.first
     }
+    // MARK: - Core Recording Flow
+
+    /// Toggles the recording state. 
+    /// Handles accessibility permissions, microphone permissions, and model checking before proceeding.
     func toggleRecording() {
         if isCurrentlyProcessing {
             return
@@ -251,8 +269,6 @@ class AppController: NSObject, ObservableObject {
                 
                 if behavior == .mute {
                     MediaControlService.shared.pauseMultimedia(behavior: .mute)
-                } else {
-                    MediaControlService.shared.resetDidPauseMusic()
                 }
                 
                 Task {
@@ -377,6 +393,8 @@ class AppController: NSObject, ObservableObject {
             }
         }
     }
+    /// Stops recording, retrieves the audio samples, and feeds them into the local Whisper model.
+    /// Passes the transcribed text to AssistantWorkflowService to handle LLM logic and paste actions.
     private func stopRecordingAndTranscribe() {
         guard isRecording else {
             return
@@ -412,6 +430,8 @@ class AppController: NSObject, ObservableObject {
                 return
             }
             let suggestedLanguage = UserDefaults.standard.string(forKey: "suggestedSpeechLanguage") ?? "en"
+            
+            // PRIVACY FIRST: The entire transcription process happens locally on the user's device using the downloaded Whisper model. No audio data is ever sent to the cloud.
             let transcribedText = await context.transcribe(audioSamples: samples, language: suggestedLanguage)
             if Task.isCancelled {
                 self.hideHUDAfterDelay()

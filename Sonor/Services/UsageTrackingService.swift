@@ -5,6 +5,7 @@ class UsageTrackingService {
     
     private init() {}
     
+    // PRIVACY FIRST: We track only minimal usage statistics (word count and duration) to show the user their saved time. This data is stored strictly locally in UserDefaults and is never uploaded to any external database.
     func recordUsage(duration: Double, text: String) {
         if UserDefaults.standard.bool(forKey: "isIncognitoMode") {
             return

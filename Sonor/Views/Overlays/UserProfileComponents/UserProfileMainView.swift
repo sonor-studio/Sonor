@@ -37,12 +37,13 @@ struct UserProfileMainView: View {
             .padding(.bottom, 30)
             
             VStack(spacing: 12) {
-                HStack(spacing: 10) {
+                HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "envelope.fill")
                         .font(.system(size: 14))
                         .foregroundColor(.secondary)
+                        .padding(.top, 2)
                     
-                    Toggle(t("Email Updates"), isOn: Binding(
+                    Toggle("", isOn: Binding(
                         get: { viewModel.localMarketingOptIn },
                         set: { newValue in
                             if !newValue {
@@ -53,10 +54,17 @@ struct UserProfileMainView: View {
                             }
                         }
                     ))
+                    .labelsHidden()
                     .toggleStyle(.checkbox)
                     .focusable(false)
                     .accentColor(colorScheme == .dark ? .white : .black)
                     .tint(colorScheme == .dark ? .white : .black)
+                    
+                    Text(t("I want to receive email updates about new products, upcoming changes, and other announcements."))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
                     
                     Spacer()
                     

@@ -497,9 +497,15 @@ struct LoginView: View {
         let bundleUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: nil) ?? []
         let politicsUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: "Politics") ?? []
         let allUrls = bundleUrls + politicsUrls
-        if let matched = allUrls.first(where: { $0.lastPathComponent.contains(suffix) }) {
+        
+        let filteredUrls = allUrls.filter { url in
+            let name = url.lastPathComponent.lowercased()
+            return name.contains("privac") || name.contains("polit") || name.contains("datenschutz") || name.contains("隐私") || name.contains("プライバシー")
+        }
+        
+        if let matched = filteredUrls.first(where: { $0.lastPathComponent.contains(suffix) }) {
             NSWorkspace.shared.open(matched)
-        } else if let fallback = allUrls.first(where: { $0.lastPathComponent.contains("(EN).pdf") }) {
+        } else if let fallback = filteredUrls.first(where: { $0.lastPathComponent.contains("(EN).pdf") }) {
             NSWorkspace.shared.open(fallback)
         }
     }
@@ -509,15 +515,21 @@ struct LoginView: View {
         let bundleUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: nil) ?? []
         let termsUrls = Bundle.main.urls(forResourcesWithExtension: "pdf", subdirectory: "Terms") ?? []
         let allUrls = bundleUrls + termsUrls
+        
+        let filteredUrls = allUrls.filter { url in
+            let name = url.lastPathComponent.lowercased()
+            return name.contains("term") || name.contains("regulamin") || name.contains("condition") || name.contains("nutzung") || name.contains("利用") || name.contains("服务")
+        }
+        
         if lang == "EN" {
-            if let matched = allUrls.first(where: { $0.lastPathComponent.contains("(Updated).pdf") }) {
+            if let matched = filteredUrls.first(where: { $0.lastPathComponent.contains("(Updated).pdf") }) {
                 NSWorkspace.shared.open(matched)
                 return
             }
         }
-        if let matched = allUrls.first(where: { $0.lastPathComponent.contains(suffix) }) {
+        if let matched = filteredUrls.first(where: { $0.lastPathComponent.contains(suffix) }) {
             NSWorkspace.shared.open(matched)
-        } else if let fallback = allUrls.first(where: { $0.lastPathComponent.contains("(Updated).pdf") }) {
+        } else if let fallback = filteredUrls.first(where: { $0.lastPathComponent.contains("(Updated).pdf") }) {
             NSWorkspace.shared.open(fallback)
         }
     }

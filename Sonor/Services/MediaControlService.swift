@@ -2,6 +2,8 @@ import Foundation
 import CoreAudio
 import AppKit
 
+/// Manages the system's multimedia volume, allowing the app to mute audio during 
+/// voice recording to prevent echo or feedback loops.
 @MainActor
 class MediaControlService {
     static let shared = MediaControlService()
@@ -12,34 +14,34 @@ class MediaControlService {
     
     private init() {}
     
+    /// Mutes the system volume if the selected behavior demands it.
+    /// - Parameter behavior: Defines whether audio should be kept or muted during recording.
     func pauseMultimedia(behavior: AudioBehavior) {
-        print("MediaControlService: pauseMultimedia called")
         unmuteWorkItem?.cancel()
         unmuteWorkItem = nil
         
         self.activeAudioBehavior = behavior
         if behavior == .mute {
             self.wasMutedBeforeRecording = getSystemMute()
-            print("MediaControlService: wasMutedBeforeRecording = \(self.wasMutedBeforeRecording)")
             if !self.wasMutedBeforeRecording {
                 setSystemMuteAppleScript(true)
             }
         }
     }
     
+    /// Unmutes the system volume. If the volume was already muted before the app 
+    /// started recording, it leaves it muted to respect the user's prior state.
+    /// - Parameter delay: Delay before unmuting, allowing audio drivers to settle.
     func resumeMultimedia(delay: TimeInterval = 0.5) {
-        print("MediaControlService: resumeMultimedia called")
         self.activeAudioBehavior = nil
         
         if self.wasMutedBeforeRecording {
-            print("MediaControlService: System was muted before recording, skipping unmute.")
             return
         }
         
         unmuteWorkItem?.cancel()
         let item = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
-            print("MediaControlService: Starting hybrid AppleScript unmute loop")
             
             // Hybrid approach: wait an extra 0.5s (so 1.0s total) for the driver to recover
             Thread.sleep(forTimeInterval: 0.5)
@@ -47,24 +49,21 @@ class MediaControlService {
             // Bombard the system with 'unmute' commands 5 times over 1 second (every 0.2s)
             for i in 1...5 {
                 if self.unmuteWorkItem?.isCancelled == true {
-                    print("MediaControlService: Bombardment cancelled (User started recording again)")
                     return
                 }
                 
-                print("MediaControlService: Bombardment attempt \(i)...")
                 self.setSystemMuteAppleScript(false)
                 Thread.sleep(forTimeInterval: 0.2)
             }
-            print("MediaControlService: Bombardment finished")
         }
         unmuteWorkItem = item
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay, execute: item)
     }
     
-    func resetDidPauseMusic() {
-        print("MediaControlService: resetDidPauseMusic called")
-    }
+
     
+    /// Uses CoreAudio to check the current hardware mute status of the default output device.
+    /// We do this nonisolated because CoreAudio calls can be executed on background threads.
     nonisolated private func getSystemMute() -> Bool {
         var defaultOutputDeviceID = AudioDeviceID(0)
         var defaultOutputDeviceIDSize = UInt32(MemoryLayout.size(ofValue: defaultOutputDeviceID))
@@ -99,6 +98,8 @@ class MediaControlService {
         return false
     }
     
+    /// Executes a small AppleScript to securely and globally mute/unmute the system volume.
+    /// This is often more reliable than attempting to modify CoreAudio properties directly.
     nonisolated private func setSystemMuteAppleScript(_ mute: Bool) {
         let scriptStr = mute ? "set volume with output muted" : "set volume without output muted"
         var error: NSDictionary?

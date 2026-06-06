@@ -65,6 +65,7 @@ struct MainAppView: View {
     @State private var isShowingMilestoneSheet = false
     @State private var isShowingMicPermissionSheet = false
     @State private var isShowingAccessibilityPermissionSheet = false
+    @State private var isShowingChangelogSheet = false
     @State private var milestoneHoursForSheet = 10
     @ObservedObject private var modelManager = ModelManager.shared
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
@@ -124,8 +125,6 @@ struct MainAppView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(minWidth: 1000, idealWidth: 1200, minHeight: 600, idealHeight: 700)
-        // Usunięto .background(Color(NSColor.windowBackgroundColor)) i .cornerRadius(30)
-        // aby NavigationSplitView i okno mogły rysować natywne tła macOS z poprawnymi zaokrągleniami
         .preferredColorScheme(effectiveColorScheme)
         .onAppear {
             isDummyFocused = true
@@ -138,6 +137,17 @@ struct MainAppView: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     NotificationCenter.default.post(name: Notification.Name("ShowAccessibilityPermissionView"), object: nil)
                 }
+            }
+            
+            let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
+            let lastSeenVersion = UserDefaults.standard.string(forKey: "lastSeenChangelogVersion") ?? ""
+            let hasChangelogFeatures = !ChangelogLocalization.shared.getFeatures().isEmpty
+            
+            if !lastSeenVersion.isEmpty && lastSeenVersion != currentVersion && hasChangelogFeatures {
+                isShowingChangelogSheet = true
+                UserDefaults.standard.set(currentVersion, forKey: "lastSeenChangelogVersion")
+            } else if lastSeenVersion.isEmpty || (!hasChangelogFeatures && lastSeenVersion != currentVersion) {
+                UserDefaults.standard.set(currentVersion, forKey: "lastSeenChangelogVersion")
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowThankYouView"))) { _ in
@@ -158,6 +168,12 @@ struct MainAppView: View {
         .sheet(isPresented: $isShowingThankYouSheet) {
             ThankYouView(onComplete: {
                 isShowingThankYouSheet = false
+            })
+            .preferredColorScheme(effectiveColorScheme)
+        }
+        .sheet(isPresented: $isShowingChangelogSheet) {
+            ChangelogView(onComplete: {
+                isShowingChangelogSheet = false
             })
             .preferredColorScheme(effectiveColorScheme)
         }

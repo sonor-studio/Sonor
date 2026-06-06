@@ -53,16 +53,16 @@ class UpdateManager: ObservableObject {
         let isLessThanMin = (comparisonToMin == .orderedAscending)
         let isLessThanLatest = (comparisonToLatest == .orderedAscending)
         if isLessThanMin {
-            showBlockingAlert(url: config.update_url)
+            showBlockingAlert(url: config.update_url, currentVersion: currentVersion, latestVersion: config.latest_version)
         } else if isLessThanLatest {
-            showOptionalAlert(url: config.update_url)
+            showOptionalAlert(url: config.update_url, currentVersion: currentVersion, latestVersion: config.latest_version)
         } else {
         }
     }
-    private func showBlockingAlert(url: String) {
+    private func showBlockingAlert(url: String, currentVersion: String, latestVersion: String) {
         let alert = NSAlert()
         alert.messageText = t("Update Required")
-        alert.informativeText = t("You are using an older version of the application that is no longer supported. Please update to continue using Sonor.")
+        alert.informativeText = String(format: t("You are using an older version of the application that is no longer supported.\n\nCurrent version: %@\nLatest version: %@\n\nPlease update to continue using Sonor."), currentVersion, latestVersion)
         alert.alertStyle = .critical
         alert.addButton(withTitle: t("Update"))
         alert.addButton(withTitle: t("Quit"))
@@ -77,10 +77,10 @@ class UpdateManager: ObservableObject {
             NSApplication.shared.terminate(nil)
         }
     }
-    private func showOptionalAlert(url: String) {
+    private func showOptionalAlert(url: String, currentVersion: String, latestVersion: String) {
         let alert = NSAlert()
         alert.messageText = t("Update Available")
-        alert.informativeText = t("A new version of Sonor is available. Would you like to update now?")
+        alert.informativeText = String(format: t("A new version of Sonor is available.\n\nCurrent version: %@\nLatest version: %@\n\nWould you like to update now?"), currentVersion, latestVersion)
         alert.alertStyle = .informational
         alert.addButton(withTitle: t("Update"))
         alert.addButton(withTitle: t("Later"))

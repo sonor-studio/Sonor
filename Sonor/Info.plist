@@ -15,5 +15,7 @@
 			</array>
 		</dict>
 	</array>
+	<key>Privacy - Accessibility Usage Description</key>
+	<string>Sonor requires accessibility permissions to detect your global dictation hotkeys and to seamlessly stream the transcribed text directly into your active text fields.</string>
 </dict>
 </plist>
