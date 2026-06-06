@@ -33,6 +33,8 @@ class AppController: NSObject, ObservableObject {
     private var targetAppBundleID: String? = nil
     private var wasTextFieldFocusedAtStart: Bool = false
     private var currentTask: Task<Void, Never>?
+    private var startRecordingTask: Task<Void, Never>?
+    
     override init() {
         super.init()
         let modes = VoiceMode.loadAndMigrateModes()
@@ -80,11 +82,13 @@ class AppController: NSObject, ObservableObject {
             self?.selectNextMode()
         }
         HotkeyManager.shared.isSecondaryHotkeysEnabled = { [weak self] in
-            return self?.isRecording == true || self?.isPaused == true
+            return self?.isRecording == true
         }
         HotkeyManager.shared.startListening()
     }
     func selectNextMode() {
+        guard isRecording else { return }
+        
         let terminalStates = ["Cancelled", "Done!", "No text recognized.", "Error: Missing model", "No microphone permission", "Microphone error"]
         if isCurrentlyProcessing || terminalStates.contains(statusText) {
             return
@@ -230,8 +234,11 @@ class AppController: NSObject, ObservableObject {
         }
     }
     private func startRecordingProcess(selectedMode: VoiceMode, sessionID: UUID) {
-        Task.detached {
+        startRecordingTask?.cancel()
+        startRecordingTask = Task.detached {
             try? await Task.sleep(nanoseconds: 150_000_000)
+            if Task.isCancelled { return }
+            
             let isStillRecording = await MainActor.run { 
                 return self.isRecording && self.currentRecordingSessionID == sessionID
             }
@@ -239,6 +246,7 @@ class AppController: NSObject, ObservableObject {
             let behavior = selectedMode.audioBehavior ?? .keep
             
             await MainActor.run {
+                if Task.isCancelled { return }
                 guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
                 
                 if behavior == .mute {
@@ -248,23 +256,25 @@ class AppController: NSObject, ObservableObject {
                 }
                 
                 Task {
+                    if Task.isCancelled { return }
                     guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
                     Task {
                         await SoundPlayer.shared.playSound(named: "Start")
                     }
                     await MainActor.run {
+                        if Task.isCancelled { return }
                         guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
-                        self.startRecording()
+                        self.startRecording(sessionID: sessionID)
                     }
                 }
             }
         }
     }
-    private func startRecording() {
+    private func startRecording(sessionID: UUID) {
         self.isPaused = false
-        performStartRecording()
+        performStartRecording(sessionID: sessionID)
     }
-    private func performStartRecording() {
+    private func performStartRecording(sessionID: UUID) {
         self.isPaused = false
         let modeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
         self.activeHotkeyMode = (modeString == "Hold") ? .hold : .click
@@ -273,6 +283,10 @@ class AppController: NSObject, ObservableObject {
             do {
                 try self.audioManager.startRecording()
                 DispatchQueue.main.async {
+                    guard self.currentRecordingSessionID == sessionID else {
+                        _ = self.audioManager.stopRecording()
+                        return
+                    }
                     self.isRecording = true
                     NotificationCenter.default.post(name: Notification.Name("HidePermissionViews"), object: nil)
                     withAnimation(.easeInOut(duration: 0.3)) {
@@ -297,6 +311,7 @@ class AppController: NSObject, ObservableObject {
                 }
             } catch {
                 DispatchQueue.main.async {
+                    MediaControlService.shared.resumeMultimedia()
                     self.statusText = "Microphone error"
                     self.isRecording = false
                     self.hideHUDAfterDelay()
@@ -307,7 +322,13 @@ class AppController: NSObject, ObservableObject {
 
 
     func togglePause() {
+        guard isRecording else { return }
         self.isPaused.toggle()
+        if self.isPaused {
+            self.statusText = "Paused"
+        } else {
+            self.statusText = "Listening..."
+        }
     }
 
     func selectMode(_ mode: VoiceMode) {
@@ -326,12 +347,13 @@ class AppController: NSObject, ObservableObject {
         let taskToCancel = currentTask
         currentTask = nil
         taskToCancel?.cancel()
-        Task.detached {
-            _ = await self.audioManager.stopRecording()
-        }
-        if MediaControlService.shared.didPauseMusic {
-            MediaControlService.shared.resumeMultimedia()
-        }
+        
+        startRecordingTask?.cancel()
+        startRecordingTask = nil
+        
+        _ = self.audioManager.stopRecording()
+        
+        MediaControlService.shared.resumeMultimedia()
         withAnimation {
             self.audioLevels = Array(repeating: 0.01, count: 40)
         }
@@ -366,11 +388,12 @@ class AppController: NSObject, ObservableObject {
         if !wasPopoverOpenBeforeRecording {
             isPopoverOpen = false
         }
+        
+        startRecordingTask?.cancel()
+        startRecordingTask = nil
 
         let samples = audioManager.stopRecording()
-        if MediaControlService.shared.didPauseMusic {
-            MediaControlService.shared.resumeMultimedia()
-        }
+        MediaControlService.shared.resumeMultimedia()
         currentTask = Task {
             guard let context = sonorContext else {
                 await MainActor.run { 

@@ -623,7 +623,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = B8R3X8NN3X;
+				DEVELOPMENT_TEAM = 6F78X5RA6P;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -642,7 +642,6 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Aplikacja potrzebuje uprawnień do Automatyzacji, aby móc używać schowka i wklejać tekst.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -701,7 +700,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = B8R3X8NN3X;
+				DEVELOPMENT_TEAM = 6F78X5RA6P;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -720,7 +719,6 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Aplikacja potrzebuje uprawnień do Automatyzacji, aby móc używać schowka i wklejać tekst.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -780,7 +778,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Aplikacja potrzebuje uprawnień do Automatyzacji, aby móc używać schowka i wklejać tekst.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
 				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "Aplikacja wymaga dostępu do nagrywania ekranu, aby móc wyłapać dźwięk systemowy i wstrzymywać odtwarzane multimedia.";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
@@ -808,7 +805,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Aplikacja potrzebuje uprawnień do Automatyzacji, aby móc używać schowka i wklejać tekst.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
 				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "Aplikacja wymaga dostępu do nagrywania ekranu, aby móc wyłapać dźwięk systemowy i wstrzymywać odtwarzane multimedia.";
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
@@ -835,7 +831,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Aplikacja potrzebuje uprawnień do Automatyzacji, aby móc używać schowka i wklejać tekst.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
 				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "Aplikacja wymaga dostępu do nagrywania ekranu, aby móc wyłapać dźwięk systemowy i wstrzymywać odtwarzane multimedia.";
 				MARKETING_VERSION = 1.0;
@@ -861,7 +856,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
-				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Aplikacja potrzebuje uprawnień do Automatyzacji, aby móc używać schowka i wklejać tekst.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor AI potrzebuje mikrofonu do transkrypcji mowy.";
 				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "Aplikacja wymaga dostępu do nagrywania ekranu, aby móc wyłapać dźwięk systemowy i wstrzymywać odtwarzane multimedia.";
 				MARKETING_VERSION = 1.0;

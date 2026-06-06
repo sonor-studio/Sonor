@@ -86,20 +86,18 @@ struct CapsuleHUDView: View {
                     let level = levels[index]
                     let barHeight = CGFloat(2 + (level * 350))
                     RoundedRectangle(cornerRadius: 1.5)
-                        .fill(controller.isPaused ? Color.primary.opacity(0.4) : Color.primary)
+                        .fill((controller.isPaused || !controller.isRecording) ? Color.primary.opacity(0.4) : Color.primary)
                         .frame(width: 3, height: min(barHeight, 28))
                         .animation(.spring(response: 0.1, dampingFraction: 0.5), value: level)
                 }
             }
             Spacer()
                 .frame(width: 14)
-            if controller.isRecording {
-                Text(formatDuration(recordingDuration))
-                    .font(.system(size: 11, weight: .bold, design: .monospaced))
-                    .foregroundColor(.primary.opacity(0.85))
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-            }
+            Text(formatDuration(recordingDuration))
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundColor((controller.isPaused || !controller.isRecording) ? .primary.opacity(0.4) : .primary.opacity(0.85))
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
             Spacer()
                 .frame(width: 12)
         }
@@ -243,7 +241,7 @@ struct CapsuleHUDView: View {
                         Button(action: {
                         }) {
                             ZStack {
-                                if !isProcessing && controller.statusText != "Initializing" {
+                                if controller.statusText != "Initializing" {
                                     audioWavesView
                                         .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
                                 } else {
@@ -316,7 +314,7 @@ struct CapsuleHUDView: View {
                     showPauseButton = false
                     width = targetWidth
                     height = 40
-                    isProcessing = true
+                    isProcessing = controller.statusText == "Initializing"
                 }
             } else {
                 recordingDuration = 0
@@ -324,14 +322,14 @@ struct CapsuleHUDView: View {
                     showPauseButton = controller.activeHotkeyMode == .click
                     width = targetWidth
                     height = 40
-                    isProcessing = controller.statusText != "Listening..."
+                    isProcessing = controller.statusText == "Initializing"
                 }
             }
         }
         .onChange(of: controller.statusText) {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
                 width = targetWidth
-                isProcessing = controller.statusText != "Listening..."
+                isProcessing = controller.statusText == "Initializing"
             }
             if isFinalState {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {

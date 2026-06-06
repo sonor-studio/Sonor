@@ -3,55 +3,63 @@ import AVFoundation
 import AppKit
 
 @MainActor
-class SoundPlayer: NSObject, NSSoundDelegate {
+class SoundPlayer: NSObject, AVAudioPlayerDelegate {
     static let shared = SoundPlayer()
-    private var activeSounds: [NSSound] = []
-    private var continuations: [NSSound: CheckedContinuation<Void, Never>] = [:]
-    private var cachedSounds: [String: NSSound] = [:]
+    private var activePlayers: [AVAudioPlayer] = []
+    private var continuations: [AVAudioPlayer: CheckedContinuation<Void, Never>] = [:]
+    private var cachedUrls: [String: URL] = [:]
+    
     private override init() {
         super.init()
         preloadSounds()
     }
+    
     private func preloadSounds() {
         let soundsToPreload = ["Start", "End", "Error"]
         for name in soundsToPreload {
             if let url = Bundle.main.url(forResource: name, withExtension: "wav") {
-                if let sound = NSSound(contentsOf: url, byReference: true) {
-                    cachedSounds[name] = sound
-                }
+                cachedUrls[name] = url
             } else {
                 let localURL = URL(fileURLWithPath: "/Users/macbook/Desktop/Dev/Sonor/Sonor/\(name).wav")
                 if FileManager.default.fileExists(atPath: localURL.path) {
-                    if let sound = NSSound(contentsOf: localURL, byReference: true) {
-                        cachedSounds[name] = sound
-                    }
+                    cachedUrls[name] = localURL
                 }
             }
         }
     }
+    
     func playSound(named name: String) async {
         let defaults = UserDefaults.standard
         let playAnySound = defaults.object(forKey: "playAnySound") == nil ? true : defaults.bool(forKey: "playAnySound")
         let playSpecificSound = defaults.object(forKey: "playSound_\(name)") == nil ? true : defaults.bool(forKey: "playSound_\(name)")
+        
         guard playAnySound && playSpecificSound else { return }
+        
         return await withCheckedContinuation { continuation in
-            if let prototype = cachedSounds[name], let sound = prototype.copy() as? NSSound {
-                sound.delegate = self
-                activeSounds.append(sound)
-                continuations[sound] = continuation
-                sound.play()
-            } else {
+            guard let url = cachedUrls[name] else {
+                continuation.resume()
+                return
+            }
+            
+            do {
+                let player = try AVAudioPlayer(contentsOf: url)
+                player.delegate = self
+                activePlayers.append(player)
+                continuations[player] = continuation
+                player.play()
+            } catch {
                 continuation.resume()
             }
         }
     }
-    nonisolated func sound(_ sound: NSSound, didFinishPlaying flag: Bool) {
+    
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
-            if let continuation = continuations[sound] {
+            if let continuation = continuations[player] {
                 continuation.resume()
-                continuations.removeValue(forKey: sound)
+                continuations.removeValue(forKey: player)
             }
-            activeSounds.removeAll { $0 == sound }
+            activePlayers.removeAll { $0 == player }
         }
     }
 }
