@@ -9,29 +9,36 @@ Sonor is a modern, minimalist macOS application designed for high-performance vo
 ## ✨ Key Features
 
 * **Local-First & Privacy-First:** No cloud API endpoints, no data tracking, no external servers. Complete peace of mind.
-* **Hardware Accelerated:** Deep integration with `whisper.cpp` optimized for Apple Silicon (M1/M2/M3/M4 chips) using Metal.
+* **Hardware Accelerated:** Deep integration with `whisper.cpp` optimized for Apple Silicon (M1/M2/M3/M4 chips and newer) using Metal.
 * **Model Manager:** Built-in dashboard to easily download, manage, and delete Whisper and Gemma models directly inside the app.
-* **Productivity Suite:** Advanced history management (collapsible layouts), custom Snippets, AI Assistants, and custom Dictionaries.
-* **Speech Analytics:** Track your voice metrics with real-time stats and an innovative Speech Tempo (WPM) chart.
+* **Productivity Suite:** Advanced history management (collapsible layouts), custom Snippets, Assistants, and custom Dictionaries.
+* **Speech Analytics:** Track your voice metrics with real-time stats and an innovative Speaking Rate (WPM) chart.
 
 ## 🛠️ Tech Stack
 
-* **Frontend:** Swift, SwiftUI (optimized for macOS, adopting a sleek Obsidian/Velvet Black theme)
+* **Frontend:** Swift, SwiftUI (optimized for macOS)
 * **Core Engine:** C++ (`whisper.cpp`, Gemma runtime)
-* **Backend Framework:** Supabase (Secure user accounts & premium lifecycle)
+* **Backend Framework:** Supabase (Secure user accounts & lifecycle management)
 
 ---
 
 ## 🚀 Getting Started
 
-### Prerequisites
-* A Mac running macOS 13.0 or later (Apple Silicon highly recommended for GPU acceleration).
+### Requirements
+* **System:** macOS 14.6 or later.
+* **Hardware:** Apple Silicon (M1/M2/M3/M4 chips and newer) **is strictly required** for local hardware acceleration. Intel processors are not supported.
 
-### Installation
-1. Go to the **Releases** tab on GitHub.
-2. Download the latest `Sonor.dmg` file.
-3. Open the `.dmg` and drag Sonor to your `Applications` folder.
-4. Launch the app and follow the onboarding flow to set up your account and download your first speech model via the **Model Manager**.
+### Installation & Gatekeeper Bypass
+Because this is an independent open-source release without a paid Apple Developer certificate, macOS Gatekeeper will block the application on the first launch. Please follow these steps to run Sonor:
+
+1. Go to the **Releases** tab on GitHub and download the latest `Sonor.dmg` file.
+2. Open the `.dmg` and drag `Sonor.app` into your system **Applications** folder.
+3. Double-click `Sonor.app` to trigger the initial system check. macOS will show a dialog stating it cannot be opened — click **Cancel**.
+4. Open your macOS **System Settings** and navigate to **Privacy & Security**.
+5. Scroll down to the *Security* section and click the **"Open Anyway"** button next to the Sonor block notice.
+6. Confirm with your Mac password or Touch ID.
+
+*Note: This configuration is a one-time process. Once approved, Sonor will launch instantly every time.*
 
 ---
 
@@ -39,13 +46,13 @@ Sonor is a modern, minimalist macOS application designed for high-performance vo
 
 Sonor is engineered from the ground up to respect user privacy.
 * Audio processing is computed directly via the Mac's GPU/Unified Memory.
-* Account synchronization, localization safety checkboxes, and subscription checks are handled via encrypted Supabase connections.
+* Account synchronization and core analytics are securely handled via encrypted Supabase connections. No audio data or transcripts are ever transmitted.
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions from the open-source community! Whether you want to fix a bug, expand multi-language translations, or suggest new AI assistant flows:
+I welcome contributions from the open-source community! Whether you want to fix a bug, expand multi-language translations, or suggest new AI assistant flows:
 
 1. Fork the repository.
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
@@ -57,7 +64,7 @@ We welcome contributions from the open-source community! Whether you want to fix
 
 ## 📄 License
 
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License**. See the [LICENSE](LICENSE) file for more details.
 
 ---
 
