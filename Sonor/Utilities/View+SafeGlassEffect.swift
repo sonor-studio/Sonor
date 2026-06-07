@@ -5,7 +5,7 @@ struct SafeGlassModifier: ViewModifier {
     @Environment(\.colorScheme) var colorScheme
     func body(content: Content) -> some View {
         if #available(macOS 26.0, *) {
-            content.glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
+            content.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
         } else {
             let isDark = colorScheme == .dark
             content
@@ -19,7 +19,8 @@ struct SafeGlassModifier: ViewModifier {
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke((isDark ? Color.white : Color.black).opacity(0.15), lineWidth: 0.5) 
+                        .stroke((isDark ? Color.white : Color.black).opacity(0.15), lineWidth: 0.5)
+                        .allowsHitTesting(false) 
                 )
         }
     }

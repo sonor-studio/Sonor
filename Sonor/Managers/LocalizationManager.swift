@@ -23,19 +23,6 @@ public class LocalizationManager: ObservableObject {
             UserDefaults.standard.set(detectedLang, forKey: "appLanguage")
             self.appLanguage = detectedLang
         }
-        if UserDefaults.standard.object(forKey: "suggestedSpeechLanguage") == nil {
-            let preferredLanguages = Locale.preferredLanguages
-            let systemLang = preferredLanguages.first ?? "Unknown"
-            let supportedLanguages = ["ar", "zh", "cs", "da", "nl", "en", "fi", "fr", "de", "el", "he", "hi", "hu", "it", "ja", "ko", "no", "pl", "pt", "pt-BR", "ro", "ru", "sk", "es", "sv", "th", "tr", "uk", "vi"]
-            var detectedLang = "en"
-            for lang in supportedLanguages {
-                if systemLang.hasPrefix(lang) {
-                    detectedLang = lang
-                    break
-                }
-            }
-            UserDefaults.standard.set(detectedLang, forKey: "suggestedSpeechLanguage")
-        }
     }
     private let translations: [String: [String]] = [
         "Start/Stop Recording": [
@@ -70,6 +57,28 @@ public class LocalizationManager: ObservableObject {
             "一時停止/再開", 
             "Pausar/Retomar", 
             "暂停/恢复", 
+        ],
+        "Duplicate Shortcut": [
+            "Duplicate Shortcut",
+            "Zduplikowany skrót",
+            "Doppelte Tastenkombination",
+            "Atajo duplicado",
+            "Raccourci en double",
+            "Scorciatoia duplicata",
+            "重複するショートカット",
+            "Atalho duplicado",
+            "快捷键重复"
+        ],
+        "This shortcut is already used by another action.": [
+            "This shortcut is already used by another action.",
+            "Ten skrót jest już używany przez inną akcję.",
+            "Diese Tastenkombination wird bereits von einer anderen Aktion verwendet.",
+            "Este atajo ya está en uso por otra acción.",
+            "Ce raccourci est déjà utilisé par une autre action.",
+            "Questa scorciatoia è già in uso da un'altra azione.",
+            "このショートカットは既に別のアクションで使用されています。",
+            "Este atalho já está em uso por outra ação.",
+            "此快捷键已被其他操作使用。"
         ],
         "Change Assistant": [
             "Change Assistant", 
@@ -125,6 +134,39 @@ public class LocalizationManager: ObservableObject {
             "貼り付け先", 
             "Alvo de colagem", 
             "粘贴目标", 
+        ],
+        "Rename Assistant": [
+            "Rename Assistant",
+            "Zmień nazwę asystenta",
+            "Assistent umbenennen",
+            "Renombrar asistente",
+            "Renommer l'assistant",
+            "Rinomina assistente",
+            "アシスタントの名前を変更",
+            "Renomear assistente",
+            "重命名助手"
+        ],
+        "Enter new name for the assistant:": [
+            "Enter new name for the assistant:",
+            "Wprowadź nową nazwę dla asystenta:",
+            "Geben Sie einen neuen Namen für den Assistenten ein:",
+            "Ingrese el nuevo nombre para el asistente:",
+            "Entrez le nouveau nom de l'assistant:",
+            "Inserisci il nuovo nome per l'assistente:",
+            "アシスタントの新しい名前を入力してください：",
+            "Digite o novo nome para o assistente:",
+            "输入助手的新名称："
+        ],
+        "Name already exists.": [
+            "Name already exists.",
+            "Nazwa już istnieje.",
+            "Name existiert bereits.",
+            "El nombre ya existe.",
+            "Le nom existe déjà.",
+            "Il nome esiste già.",
+            "名前は既に存在します。",
+            "O nome já existe.",
+            "名称已存在。"
         ],
         "Field focused at start": [
             "Field focused at start", 
@@ -1775,6 +1817,17 @@ public class LocalizationManager: ObservableObject {
             "キャンセル", 
             "Cancelar", 
             "取消", 
+        ],
+        "Save": [
+            "Save", 
+            "Zapisz", 
+            "Speichern", 
+            "Guardar", 
+            "Enregistrer", 
+            "Salva", 
+            "保存", 
+            "Salvar", 
+            "保存", 
         ],
         "Cancelled": [
             "Cancelled", 
@@ -4635,6 +4688,50 @@ public class LocalizationManager: ObservableObject {
             "3. 「アクセシビリティ」を選択",
             "3. Selecione: Acessibilidade",
             "3. 选择：辅助功能"
+        ],
+        "Assistant Types": [
+            "Assistant Types",
+            "Rodzaje asystentów",
+            "Assistententypen",
+            "Tipos de asistente",
+            "Types d'assistants",
+            "Tipi di assistente",
+            "アシスタントの種類",
+            "Tipos de assistente",
+            "助手类型"
+        ],
+        "The assistant acts as an advanced corrector. It listens to your voice and intelligently formats it by adding punctuation, removing filler words (like 'umm'), and fixing grammatical errors while strictly maintaining your original meaning. It does not add new information.": [
+            "The assistant acts as an advanced corrector. It listens to your voice and intelligently formats it by adding punctuation, removing filler words (like 'umm'), and fixing grammatical errors while strictly maintaining your original meaning. It does not add new information.",
+            "Asystent działa jako zaawansowany korektor. Słucha Twojego głosu i inteligentnie go formatuje dodając interpunkcję, usuwając wtrącenia (np. 'yyy') i naprawiając błędy gramatyczne, przy zachowaniu Twojego oryginalnego sensu. Nie dodaje nowych informacji.",
+            "Der Assistent fungiert als erweiterte Korrektur. Er hört auf Ihre Stimme und formatiert sie intelligent, indem er Satzzeichen hinzufügt, Füllwörter entfernt und Grammatikfehler behebt, während Ihre ursprüngliche Bedeutung strikt beibehalten wird. Er fügt keine neuen Informationen hinzu.",
+            "El asistente actúa como un corrector avanzado. Escucha su voz y la formatea de manera inteligente agregando puntuación, eliminando muletillas y corrigiendo errores gramaticales mientras mantiene estrictamente su significado original. No añade información nueva.",
+            "L'assistant agit comme un correcteur avancé. Il écoute votre voix et la formate intelligemment en ajoutant la ponctuation, en supprimant les mots de remplissage et en corrigeant les erreurs grammaticales tout en conservant strictement votre sens d'origine. Il n'ajoute pas de nouvelles informations.",
+            "L'assistente funge da correttore avanzato. Ascolta la tua voce e la formatta in modo intelligente aggiungendo punteggiatura, rimuovendo intercalari e correggendo errori grammaticali mantenendo rigorosamente il significato originale. Non aggiunge nuove informazioni.",
+            "アシスタントは高度な校正者として機能します。音声を認識し、句読点を追加し、不要な言葉を取り除き、文法エラーを修正しながら、元の意味を厳密に維持します。新しい情報は追加しません。",
+            "O assistente atua como um corretor avançado. Ouve a sua voz e formata de forma inteligente, adicionando pontuação, removendo palavras de preenchimento e corrigindo erros gramaticais, mantendo estritamente o seu significado original. Não adiciona novas informações.",
+            "该助手充当高级校对器。它聆听您的声音并对其进行智能格式化：添加标点符号、删除口头禅并修复语法错误，同时严格保持您的原始含义。它不会添加新信息。"
+        ],
+        "The assistant acts as a creative co-author. Instead of just dictating text, you can speak out instructions like 'Summarize this text in 3 points' or 'Reply to this email politely'. Sonor will actively generate new content or significantly rewrite existing text based on your prompt.": [
+            "The assistant acts as a creative co-author. Instead of just dictating text, you can speak out instructions like 'Summarize this text in 3 points' or 'Reply to this email politely'. Sonor will actively generate new content or significantly rewrite existing text based on your prompt.",
+            "Asystent działa jak kreatywny współautor. Zamiast tylko dyktować tekst, możesz wypowiadać instrukcje typu 'Podsumuj ten tekst w 3 punktach' lub 'Odpowiedz grzecznie na ten e-mail'. Sonor aktywnie wygeneruje nową treść lub znacząco przepisze istniejący tekst na podstawie Twojego promptu.",
+            "Der Assistent fungiert als kreativer Co-Autor. Anstatt nur Text zu diktieren, können Sie Anweisungen wie 'Diesen Text in 3 Punkten zusammenfassen' oder 'Höflich auf diese E-Mail antworten' einsprechen. Sonor wird aktiv neue Inhalte generieren oder vorhandenen Text basierend auf Ihrer Eingabe umschreiben.",
+            "El asistente actúa como un coautor creativo. En lugar de solo dictar texto, puede decir instrucciones como 'Resume este texto en 3 puntos' o 'Responde a este correo electrónico educadamente'. Sonor generará contenido nuevo o reescribirá significativamente el texto existente en función de sus indicaciones.",
+            "L'assistant agit comme un co-auteur créatif. Au lieu de simplement dicter du texte, vous pouvez énoncer des instructions telles que « Résumez ce texte en 3 points » ou « Répondez poliment à cet e-mail ». Sonor générera activement un nouveau contenu ou réécrira considérablement le texte existant.",
+            "L'assistente funge da coautore creativo. Invece di dettare semplicemente del testo, puoi pronunciare istruzioni come 'Riassumi questo testo in 3 punti' o 'Rispondi gentilmente a questa e-mail'. Sonor genererà nuovi contenuti o riscriverà in modo significativo il testo esistente.",
+            "アシスタントは創造的な共同執筆者として機能します。テキストをそのままディクテーションするのではなく、「このテキストを3つのポイントで要約して」や「このメールに丁寧に返信して」といった指示を話しかけることができます。Sonorは指示に基づいて新しいコンテンツを積極的に生成したり、既存のテキストを大幅に書き換えたりします。",
+            "O assistente atua como um coautor criativo. Em vez de apenas ditar texto, você pode falar instruções como 'Resuma este texto em 3 pontos' ou 'Responda a este e-mail educadamente'. O Sonor vai gerar novos conteúdos ou reescrever significativamente o texto existente com base em suas instruções.",
+            "该助手作为富有创造力的合著者。您不仅仅可以口述文本，还可以说出指示，例如“将此文本总结为3点”或“礼貌地回复这封电子邮件”。Sonor 将积极生成新内容或根据您的提示重写现有文本。"
+        ],
+        "Understood": [
+            "Understood",
+            "Zrozumiałem",
+            "Verstanden",
+            "Entendido",
+            "Compris",
+            "Capito",
+            "理解しました",
+            "Entendido",
+            "我明白了"
         ]
     ]
 

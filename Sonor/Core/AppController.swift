@@ -95,9 +95,7 @@ class AppController: NSObject, ObservableObject {
         HotkeyManager.shared.onAssistantKeyDown = { [weak self] in
             self?.selectNextMode()
         }
-        HotkeyManager.shared.isSecondaryHotkeysEnabled = { [weak self] in
-            return self?.isRecording == true
-        }
+
         HotkeyManager.shared.startListening()
     }
     func selectNextMode() {
@@ -338,7 +336,9 @@ class AppController: NSObject, ObservableObject {
 
 
     func togglePause() {
-        guard isRecording else { return }
+        guard isRecording else { 
+            return 
+        }
         self.isPaused.toggle()
         if self.isPaused {
             self.statusText = "Paused"
@@ -421,15 +421,29 @@ class AppController: NSObject, ObservableObject {
                 self.hideHUDAfterDelay()
                 return
             }
-            guard samples.count >= 4800 else {
+            guard samples.count >= 8000 else {
                 await MainActor.run { 
-                    self.statusText = "No text recognized." 
+                    self.statusText = "Cancelled" 
                 }
-                await SoundPlayer.shared.playSound(named: "Error")
                 self.hideHUDAfterDelay()
                 return
             }
-            let suggestedLanguage = UserDefaults.standard.string(forKey: "suggestedSpeechLanguage") ?? "en"
+            
+            // Check if the audio is completely silent (zeroed out by the trimmer) to prevent Whisper hallucinations like "Thank you."
+            var sumSq: Float = 0.0
+            for sample in samples {
+                sumSq += sample * sample
+            }
+            guard sumSq > 0.001 else {
+                await MainActor.run { 
+                    self.statusText = "Cancelled" 
+                }
+                self.hideHUDAfterDelay()
+                return
+            }
+            
+            let selectedMode = await MainActor.run { return self.currentMode ?? VoiceMode.defaults.first! }
+            let suggestedLanguage = selectedMode.language ?? "auto"
             
             // PRIVACY FIRST: The entire transcription process happens locally on the user's device using the downloaded Whisper model. No audio data is ever sent to the cloud.
             let transcribedText = await context.transcribe(audioSamples: samples, language: suggestedLanguage)
@@ -449,7 +463,6 @@ class AppController: NSObject, ObservableObject {
             let duration = Double(samples.count) / 16000.0
             UsageTrackingService.shared.recordUsage(duration: duration, text: rawText)
             let correctedText = TextProcessingService.shared.applyCorrections(to: rawText, isLoggedIn: AuthManager.shared.isLoggedIn)
-            let selectedMode = self.currentMode ?? VoiceMode.defaults.first!
             await AssistantWorkflowService.shared.execute(
                 correctedText: correctedText,
                 selectedMode: selectedMode,

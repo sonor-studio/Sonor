@@ -644,6 +644,7 @@
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor requires microphone access to capture your voice for speech-to-text transcription.";
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = "<key>UIRequiredDeviceCapabilities</key>\n<array>\n\\ \\ \\ \\ <string>arm64</string>\n</array>";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -721,6 +722,7 @@
 				INFOPLIST_KEY_NSAccessibilityUsageDescription = "Aplikacja potrzebuje uprawnień dostępu, aby móc wklejać transkrybowany tekst do innych programów.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Sonor requires microphone access to capture your voice for speech-to-text transcription.";
+				INFOPLIST_KEY_UIRequiredDeviceCapabilities = "<key>UIRequiredDeviceCapabilities</key>\n<array>\n\\ \\ \\ \\ <string>arm64</string>\n</array>";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

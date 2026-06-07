@@ -14,7 +14,6 @@ class HotkeyManager {
     var onCancelKeyDown: (() -> Void)?
     var onPauseKeyDown: (() -> Void)?
     var onAssistantKeyDown: (() -> Void)?
-    var isSecondaryHotkeysEnabled: (() -> Bool)?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isKeyDown = false
@@ -24,6 +23,7 @@ class HotkeyManager {
     private var cachedPauseHotkey: HotkeyDef?
     private var cachedAssistantHotkey: HotkeyDef?
     private var cachedHotkeyModeString: String = "Click"
+    private var capturedKeys: Set<Int> = []
     private var tapThread: Thread?
     private var tapRunLoop: CFRunLoop?
     private var hasNotifiedMissingPermissions = false
@@ -84,10 +84,10 @@ class HotkeyManager {
             return
         }
         
-        self.cachedMainHotkey = HotkeyDef(keyCodeKey: "hotkeyCode", modifiersKey: "hotkeyModifiers", stringKey: "hotkeyString", defaultCode: 50, defaultModifiers: 0x0100 | 0x0200)
-        self.cachedCancelHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_cancel", modifiersKey: "hotkeyModifiers_cancel", stringKey: "hotkeyString_cancel")
-        self.cachedPauseHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_pause", modifiersKey: "hotkeyModifiers_pause", stringKey: "hotkeyString_pause")
-        self.cachedAssistantHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_assistant", modifiersKey: "hotkeyModifiers_assistant", stringKey: "hotkeyString_assistant")
+        self.cachedMainHotkey = HotkeyDef(keyCodeKey: "hotkeyCode", modifiersKey: "hotkeyModifiers", stringKey: "hotkeyString", defaultCode: 49, defaultModifiers: 0x1800)
+        self.cachedCancelHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_cancel", modifiersKey: "hotkeyModifiers_cancel", stringKey: "hotkeyString_cancel", defaultCode: 6, defaultModifiers: 0x1800)
+        self.cachedPauseHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_pause", modifiersKey: "hotkeyModifiers_pause", stringKey: "hotkeyString_pause", defaultCode: 7, defaultModifiers: 0x1800)
+        self.cachedAssistantHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_assistant", modifiersKey: "hotkeyModifiers_assistant", stringKey: "hotkeyString_assistant", defaultCode: 8, defaultModifiers: 0x1800)
         self.cachedHotkeyModeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
         
         let eventMask = CGEventMask((1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue) | (1 << CGEventType.flagsChanged.rawValue))
@@ -206,7 +206,7 @@ class HotkeyManager {
             case 63: isPressed = modifiers.contains(.function)
             default: break
             }
-            if mainHotkey.isOnlyModifier && code == mainHotkey.code {
+            if mainHotkey.isOnlyModifier && code == mainHotkey.code && modifiers == mainHotkey.targetModifiers {
                 if isPressed && !self.isKeyDown {
                     self.isKeyDown = true
                     DispatchQueue.main.async { self.onHotkeyDown?() }
@@ -217,22 +217,19 @@ class HotkeyManager {
                     }
                 }
             }
-            let secondaryActive = self.isSecondaryHotkeysEnabled?() ?? true
-            if secondaryActive {
-                if cancelHotkey.isOnlyModifier && code == cancelHotkey.code {
-                    if isPressed {
-                        DispatchQueue.main.async { self.onCancelKeyDown?() }
-                    }
+            if cancelHotkey.isOnlyModifier && code == cancelHotkey.code && modifiers == cancelHotkey.targetModifiers {
+                if isPressed {
+                    DispatchQueue.main.async { self.onCancelKeyDown?() }
                 }
-                if pauseHotkey.isOnlyModifier && code == pauseHotkey.code {
-                    if isPressed {
-                        DispatchQueue.main.async { self.onPauseKeyDown?() }
-                    }
+            }
+            if pauseHotkey.isOnlyModifier && code == pauseHotkey.code && modifiers == pauseHotkey.targetModifiers {
+                if isPressed {
+                    DispatchQueue.main.async { self.onPauseKeyDown?() }
                 }
-                if assistantHotkey.isOnlyModifier && code == assistantHotkey.code {
-                    if isPressed {
-                        DispatchQueue.main.async { self.onAssistantKeyDown?() }
-                    }
+            }
+            if assistantHotkey.isOnlyModifier && code == assistantHotkey.code && modifiers == assistantHotkey.targetModifiers {
+                if isPressed {
+                    DispatchQueue.main.async { self.onAssistantKeyDown?() }
                 }
             }
             return passthrough
@@ -246,48 +243,39 @@ class HotkeyManager {
                     isKeyDown = true
                     DispatchQueue.main.async { self.onHotkeyDown?() }
                 }
+                capturedKeys.insert(code)
                 return nil
             }
             
-            let secondaryActive = self.isSecondaryHotkeysEnabled?() ?? true
-            if secondaryActive {
-                if !cancelHotkey.isOnlyModifier && code == cancelHotkey.code && modifiers == cancelHotkey.targetModifiers {
-                    DispatchQueue.main.async { self.onCancelKeyDown?() }
-                    return nil
-                }
-                if !pauseHotkey.isOnlyModifier && code == pauseHotkey.code && modifiers == pauseHotkey.targetModifiers {
-                    DispatchQueue.main.async { self.onPauseKeyDown?() }
-                    return nil
-                }
-                if !assistantHotkey.isOnlyModifier && code == assistantHotkey.code && modifiers == assistantHotkey.targetModifiers {
-                    DispatchQueue.main.async { self.onAssistantKeyDown?() }
-                    return nil
-                }
+            if !cancelHotkey.isOnlyModifier && code == cancelHotkey.code && modifiers == cancelHotkey.targetModifiers {
+                DispatchQueue.main.async { self.onCancelKeyDown?() }
+                capturedKeys.insert(code)
+                return nil
+            }
+            if !pauseHotkey.isOnlyModifier && code == pauseHotkey.code && modifiers == pauseHotkey.targetModifiers {
+                DispatchQueue.main.async { self.onPauseKeyDown?() }
+                capturedKeys.insert(code)
+                return nil
+            }
+            if !assistantHotkey.isOnlyModifier && code == assistantHotkey.code && modifiers == assistantHotkey.targetModifiers {
+                DispatchQueue.main.async { self.onAssistantKeyDown?() }
+                capturedKeys.insert(code)
+                return nil
             }
             return passthrough
         } else if type == .keyUp {
             let code = Int(nsEvent.keyCode)
-            if !mainHotkey.isOnlyModifier && code == mainHotkey.code {
-                if isKeyDown {
-                    isKeyDown = false
-                    if isHoldMode {
-                        DispatchQueue.main.async { self.onHotkeyUp?() }
+            if capturedKeys.contains(code) {
+                capturedKeys.remove(code)
+                if !mainHotkey.isOnlyModifier && code == mainHotkey.code {
+                    if isKeyDown {
+                        isKeyDown = false
+                        if isHoldMode {
+                            DispatchQueue.main.async { self.onHotkeyUp?() }
+                        }
                     }
                 }
                 return nil
-            }
-            
-            let secondaryActive = self.isSecondaryHotkeysEnabled?() ?? true
-            if secondaryActive {
-                if !cancelHotkey.isOnlyModifier && code == cancelHotkey.code {
-                    return nil
-                }
-                if !pauseHotkey.isOnlyModifier && code == pauseHotkey.code {
-                    return nil
-                }
-                if !assistantHotkey.isOnlyModifier && code == assistantHotkey.code {
-                    return nil
-                }
             }
             return passthrough
         }

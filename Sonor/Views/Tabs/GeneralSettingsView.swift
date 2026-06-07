@@ -6,10 +6,10 @@ struct GeneralSettingsView: View {
     @Environment(\.colorScheme) var appColorScheme
     @ObservedObject var localizer = LocalizationManager.shared
     @AppStorage("autoLearnDictionary") private var autoLearnDictionary = false
-    @AppStorage("hotkeyString") private var hotkeyString = "Cmd + Shift + `"
-    @AppStorage("hotkeyString_cancel") private var hotkeyStringCancel = "None"
-    @AppStorage("hotkeyString_pause") private var hotkeyStringPause = "None"
-    @AppStorage("hotkeyString_assistant") private var hotkeyStringAssistant = "None"
+    @AppStorage("hotkeyString") private var hotkeyString = "Ctrl + Opt + Space"
+    @AppStorage("hotkeyString_cancel") private var hotkeyStringCancel = "Ctrl + Opt + Z"
+    @AppStorage("hotkeyString_pause") private var hotkeyStringPause = "Ctrl + Opt + X"
+    @AppStorage("hotkeyString_assistant") private var hotkeyStringAssistant = "Ctrl + Opt + C"
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
     @AppStorage("appTheme") private var appTheme = "system"
     @AppStorage("playAnySound") private var playAnySound = true
@@ -18,9 +18,11 @@ struct GeneralSettingsView: View {
     @AppStorage("playSound_End") private var playSound_End = true
     @ObservedObject private var memoryManager = MessageMemoryManager.shared
     @State private var isShowingSwitchToRamAlert = false
+    @State private var isShowingDuplicateShortcutAlert = false
     @State private var activeRecordingType: RecordingHotkeyType? = nil
     @State private var eventMonitor: Any?
-    @State private var lastModifierPressed: UInt16? = nil
+    @State private var pressedModifiers: Set<UInt16> = []
+    @State private var maxPressedModifiers: Set<UInt16> = []
     @State private var audioDevices: [AudioDevice] = []
     @AppStorage("selectedAudioDeviceUID") private var selectedDeviceUID = ""
     var body: some View {
@@ -34,7 +36,6 @@ struct GeneralSettingsView: View {
             }
             appThemeSection
             appLanguageSection
-            suggestedSpeechLanguageSection
             historyStorageSection
             keyboardShortcutSection
             audioSourceSection
@@ -63,6 +64,11 @@ struct GeneralSettingsView: View {
             }
         } message: {
             Text(t("Switching to RAM-only means your persistent history file will be deleted and your current history will disappear forever once you close the application. Are you sure you want to continue?"))
+        }
+        .alert(t("Duplicate Shortcut"), isPresented: $isShowingDuplicateShortcutAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(t("This shortcut is already used by another action."))
         }
     }
     @ViewBuilder
@@ -213,41 +219,70 @@ struct GeneralSettingsView: View {
                 .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
+    private func clearShortcut(for type: RecordingHotkeyType) {
+        let codeKey = type == .main ? "hotkeyCode" : "hotkeyCode_\(type.rawValue)"
+        let modKey = type == .main ? "hotkeyModifiers" : "hotkeyModifiers_\(type.rawValue)"
+        let strKey = type == .main ? "hotkeyString" : "hotkeyString_\(type.rawValue)"
+        
+        UserDefaults.standard.set(-1, forKey: codeKey)
+        UserDefaults.standard.set(0, forKey: modKey)
+        UserDefaults.standard.set("None", forKey: strKey)
+        
+        HotkeyManager.shared.startListening()
+    }
+
     private func hotkeyRow(title: String, type: RecordingHotkeyType, hotkeyStringVal: String) -> some View {
         VStack(alignment: .leading, spacing: 5) {
             Text(t(title))
                 .font(.system(size: 14, weight: .bold))
-            Button(action: {
-                if activeRecordingType == type {
-                    activeRecordingType = nil
-                    HotkeyManager.shared.startListening()
-                } else {
-                    activeRecordingType = type
-                    HotkeyManager.shared.stopListening()
+            HStack(spacing: 8) {
+                Button(action: {
+                    if activeRecordingType == type {
+                        activeRecordingType = nil
+                        HotkeyManager.shared.startListening()
+                    } else {
+                        activeRecordingType = type
+                        HotkeyManager.shared.stopListening()
+                    }
+                }) {
+                    let isDark = appColorScheme == .dark
+                    let isRecording = activeRecordingType == type
+                    HStack {
+                        Text(isRecording ? t("Press keys...") : hotkeyStringVal)
+                            .font(.system(size: 16, weight: .bold))
+                            .foregroundColor(isRecording ? (isDark ? .black : .white) : .primary)
+                        Spacer()
+                        Image(systemName: "keyboard")
+                            .font(.system(size: 16))
+                            .foregroundColor(isRecording ? (isDark ? .black : .white) : .secondary)
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 15)
+                    .background(isRecording ? (isDark ? .white : .black) : Color.primary.opacity(0.05))
+                    .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(isRecording ? (isDark ? .white : .black) : Color.primary.opacity(0.1), lineWidth: 1)
+                    )
                 }
-            }) {
-                let isDark = appColorScheme == .dark
-                let isRecording = activeRecordingType == type
-                HStack {
-                    Text(isRecording ? t("Press keys...") : hotkeyStringVal)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(isRecording ? (isDark ? .black : .white) : .primary)
-                    Spacer()
-                    Image(systemName: "keyboard")
-                        .font(.system(size: 16))
-                        .foregroundColor(isRecording ? (isDark ? .black : .white) : .secondary)
+                .buttonStyle(.plain)
+                .focusable(false)
+
+                if hotkeyStringVal != "None" {
+                    Button(action: {
+                        clearShortcut(for: type)
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundColor(.secondary)
+                            .frame(width: 38, height: 38)
+                            .background(Color.primary.opacity(0.05))
+                            .cornerRadius(10)
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
                 }
-                .padding(.vertical, 10)
-                .padding(.horizontal, 15)
-                .background(isRecording ? (isDark ? .white : .black) : Color.primary.opacity(0.05))
-                .cornerRadius(10)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(isRecording ? (isDark ? .white : .black) : Color.primary.opacity(0.1), lineWidth: 1)
-                )
             }
-            .buttonStyle(.plain)
-            .focusable(false)
         }
     }
     @ViewBuilder
@@ -410,64 +445,7 @@ struct GeneralSettingsView: View {
                 .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
-    @AppStorage("suggestedSpeechLanguage") private var suggestedSpeechLanguage = "en"
-    @ViewBuilder
-    private var suggestedSpeechLanguageSection: some View {
-        VStack(alignment: .leading, spacing: 15) {
-            Text(t("Suggested Speech Language"))
-                .font(.system(size: 16, weight: .semibold))
-            HStack {
-                Text(t("Hint for transcription engine"))
-                    .font(.system(size: 13))
-                Spacer()
-                Picker("", selection: $suggestedSpeechLanguage) {
-                    Text(t("Automatic")).tag("auto")
-                    Text(t("العربية")).tag("ar")
-                    Text(t("中文")).tag("zh")
-                    Text(t("Čeština")).tag("cs")
-                    Text(t("Dansk")).tag("da")
-                    Text(t("Nederlands")).tag("nl")
-                    Text(t("English")).tag("en")
-                    Text(t("Suomi")).tag("fi")
-                    Text(t("Français")).tag("fr")
-                    Text(t("Deutsch")).tag("de")
-                    Text(t("Ελληνικά")).tag("el")
-                    Text(t("עברית")).tag("he")
-                    Text(t("हिन्दी")).tag("hi")
-                    Text(t("Magyar")).tag("hu")
-                    Text(t("Italiano")).tag("it")
-                    Text(t("日本語")).tag("ja")
-                    Text(t("한국어")).tag("ko")
-                    Text(t("Norsk")).tag("no")
-                    Text(t("Polski")).tag("pl")
-                    Text(t("Português")).tag("pt")
-                    Text(t("Português (Brasil)")).tag("pt-BR")
-                    Text(t("Română")).tag("ro")
-                    Text(t("Русский")).tag("ru")
-                    Text(t("Slovenčina")).tag("sk")
-                    Text(t("Español")).tag("es")
-                    Text(t("Svenska")).tag("sv")
-                    Text(t("ไทย")).tag("th")
-                    Text(t("Türkçe")).tag("tr")
-                    Text(t("Українська")).tag("uk")
-                    Text(t("Tiếng Việt")).tag("vi")
-                }
-                .pickerStyle(.menu)
-                .labelsHidden()
-                .font(.system(size: 13))
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
-        )
-    }
+
     private func setupEventMonitor() {
         self.eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .flagsChanged]) { event in
             if let recordingType = activeRecordingType {
@@ -489,33 +467,53 @@ struct GeneralSettingsView: View {
                         default: break
                         }
                         if isPressed {
-                            lastModifierPressed = keyCode
+                            pressedModifiers.insert(keyCode)
+                            maxPressedModifiers.insert(keyCode)
                         } else {
-                            if keyCode == lastModifierPressed {
+                            pressedModifiers.remove(keyCode)
+                            if pressedModifiers.isEmpty && !maxPressedModifiers.isEmpty {
+                                let finalKeyCode = keyCode
+                                var carbonModifiers: UInt32 = 0
                                 var str = ""
-                                switch keyCode {
-                                case 54, 55: str = "Command"
-                                case 56, 60: str = "Shift"
-                                case 58, 61: str = "Option"
-                                case 59, 62: str = "Control"
-                                case 63: str = "Fn"
+                                
+                                let otherMods = maxPressedModifiers.subtracting([finalKeyCode])
+                                if otherMods.contains(54) || otherMods.contains(55) { carbonModifiers |= UInt32(cmdKey); str += "Cmd + " }
+                                if otherMods.contains(56) || otherMods.contains(60) { carbonModifiers |= UInt32(shiftKey); str += "Shift + " }
+                                if otherMods.contains(58) || otherMods.contains(61) { carbonModifiers |= UInt32(optionKey); str += "Opt + " }
+                                if otherMods.contains(59) || otherMods.contains(62) { carbonModifiers |= UInt32(controlKey); str += "Ctrl + " }
+                                
+                                switch finalKeyCode {
+                                case 54, 55: str += "Command"
+                                case 56, 60: str += "Shift"
+                                case 58, 61: str += "Option"
+                                case 59, 62: str += "Control"
+                                case 63: str += "Fn"
                                 default: break
                                 }
-                                UserDefaults.standard.set(Int(keyCode), forKey: codeKey)
-                                UserDefaults.standard.set(0, forKey: modKey)
+                                
+                                if isShortcutInUse(keyCode: Int(finalKeyCode), modifiers: Int(carbonModifiers), ignoringType: recordingType) {
+                                    isShowingDuplicateShortcutAlert = true
+                                    activeRecordingType = nil
+                                    HotkeyManager.shared.startListening()
+                                    maxPressedModifiers.removeAll()
+                                    return nil
+                                }
+                                
+                                UserDefaults.standard.set(Int(finalKeyCode), forKey: codeKey)
+                                UserDefaults.standard.set(Int(carbonModifiers), forKey: modKey)
                                 UserDefaults.standard.set(str, forKey: strKey)
                                 activeRecordingType = nil
                                 HotkeyManager.shared.startListening()
-                                lastModifierPressed = nil
+                                maxPressedModifiers.removeAll()
                                 return nil 
                             }
-                            lastModifierPressed = nil
                         }
                     }
                     return event
                 }
                 if event.type == .keyDown {
-                    lastModifierPressed = nil 
+                    pressedModifiers.removeAll()
+                    maxPressedModifiers.removeAll()
                     let keyCode = event.keyCode
                     if keyCode == 53 {
                         activeRecordingType = nil
@@ -524,16 +522,24 @@ struct GeneralSettingsView: View {
                     }
                     let modifiers = event.modifierFlags
                     let hasModifiers = modifiers.contains(.command) || modifiers.contains(.shift) || modifiers.contains(.option) || modifiers.contains(.control)
-                    let functionKeyCodes: Set<UInt16> = [53, 122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111, 105, 107, 113, 123, 124, 125, 126, 49]
+                    let functionKeyCodes: Set<UInt16> = [122, 120, 99, 118, 96, 97, 98, 100, 101, 109, 103, 111, 105, 107, 113, 123, 124, 125, 126]
                     let isFunctionKey = functionKeyCodes.contains(keyCode)
                     if !hasModifiers && !isFunctionKey {
-                        return event 
+                        return nil 
                     }
                     var carbonModifiers: UInt32 = 0
                     if modifiers.contains(.command) { carbonModifiers |= UInt32(cmdKey) }
                     if modifiers.contains(.shift) { carbonModifiers |= UInt32(shiftKey) }
                     if modifiers.contains(.option) { carbonModifiers |= UInt32(optionKey) }
                     if modifiers.contains(.control) { carbonModifiers |= UInt32(controlKey) }
+                    
+                    if isShortcutInUse(keyCode: Int(keyCode), modifiers: Int(carbonModifiers), ignoringType: recordingType) {
+                        isShowingDuplicateShortcutAlert = true
+                        activeRecordingType = nil
+                        HotkeyManager.shared.startListening()
+                        return nil
+                    }
+                    
                     UserDefaults.standard.set(Int(keyCode), forKey: codeKey)
                     UserDefaults.standard.set(Int(carbonModifiers), forKey: modKey)
                     var str = ""
@@ -541,8 +547,39 @@ struct GeneralSettingsView: View {
                     if modifiers.contains(.shift) { str += "Shift + " }
                     if modifiers.contains(.option) { str += "Opt + " }
                     if modifiers.contains(.control) { str += "Ctrl + " }
-                    let keyChar = event.charactersIgnoringModifiers?.first ?? "`"
-                    str += String(keyChar).uppercased()
+                    let keyString: String
+                    switch keyCode {
+                    case 49: keyString = "Space"
+                    case 53: keyString = "Esc"
+                    case 36: keyString = "Return"
+                    case 48: keyString = "Tab"
+                    case 51: keyString = "Delete"
+                    case 117: keyString = "Forward Delete"
+                    case 123: keyString = "Left"
+                    case 124: keyString = "Right"
+                    case 125: keyString = "Down"
+                    case 126: keyString = "Up"
+                    case 115: keyString = "Home"
+                    case 119: keyString = "End"
+                    case 116: keyString = "Page Up"
+                    case 121: keyString = "Page Down"
+                    case 122: keyString = "F1"
+                    case 120: keyString = "F2"
+                    case 99: keyString = "F3"
+                    case 118: keyString = "F4"
+                    case 96: keyString = "F5"
+                    case 97: keyString = "F6"
+                    case 98: keyString = "F7"
+                    case 100: keyString = "F8"
+                    case 101: keyString = "F9"
+                    case 109: keyString = "F10"
+                    case 103: keyString = "F11"
+                    case 111: keyString = "F12"
+                    default:
+                        let keyChar = event.charactersIgnoringModifiers?.first ?? "`"
+                        keyString = String(keyChar).uppercased()
+                    }
+                    str += keyString
                     UserDefaults.standard.set(str, forKey: strKey)
                     activeRecordingType = nil
                     HotkeyManager.shared.startListening()
@@ -558,5 +595,29 @@ struct GeneralSettingsView: View {
             NSEvent.removeMonitor(monitor)
             self.eventMonitor = nil
         }
+    }
+    
+    private func isShortcutInUse(keyCode: Int, modifiers: Int, ignoringType: RecordingHotkeyType?) -> Bool {
+        let types: [RecordingHotkeyType] = [.main, .cancel, .pause, .assistant]
+        for type in types {
+            if type == ignoringType { continue }
+            let codeKey = type == .main ? "hotkeyCode" : "hotkeyCode_\(type.rawValue)"
+            let modKey = type == .main ? "hotkeyModifiers" : "hotkeyModifiers_\(type.rawValue)"
+            let strKey = type == .main ? "hotkeyString" : "hotkeyString_\(type.rawValue)"
+            
+            let existingStr = UserDefaults.standard.string(forKey: strKey) ?? (type == .main ? "Ctrl + Opt + Space" : (type == .cancel ? "Ctrl + Opt + Z" : (type == .pause ? "Ctrl + Opt + X" : "Ctrl + Opt + C")))
+            if existingStr == "None" { continue }
+            
+            let defaultCode = type == .main ? 49 : (type == .cancel ? 6 : (type == .pause ? 7 : 8))
+            let defaultMods = 0x1800
+            
+            let existingCode = UserDefaults.standard.object(forKey: codeKey) as? Int ?? defaultCode
+            let existingMods = UserDefaults.standard.object(forKey: modKey) as? Int ?? defaultMods
+            
+            if existingCode == keyCode && existingMods == modifiers {
+                return true
+            }
+        }
+        return false
     }
 }

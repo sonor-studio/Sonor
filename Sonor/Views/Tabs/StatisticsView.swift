@@ -121,7 +121,7 @@ struct StatisticsView: View {
                         .foregroundColor(colorScheme == .dark ? .white : .black)
                         .tracking(1)
                 }
-                Text(String(format: t("You have already saved %@"), formatDuration(totalSavedTime)))
+                Text(stats.isEmpty ? "-" : String(format: t("You have already saved %@"), formatDuration(totalSavedTime)))
                     .font(.system(size: 26, weight: .black))
                     .foregroundColor(.primary)
                 Text(t("Voice typing in Sonor is on average 3.5x faster than typing on a keyboard. Thanks to this, you got back valuable time for more important tasks."))
@@ -163,7 +163,7 @@ struct StatisticsView: View {
                         .frame(width: 80, height: 80)
                         .rotationEffect(.degrees(-90))
                     VStack(spacing: 2) {
-                        Text("\(percent)%")
+                        Text(stats.isEmpty ? "-" : "\(percent)%")
                             .font(.system(size: 18, weight: .black))
                             .foregroundColor(.primary)
                         Text(t("of goal"))
@@ -171,7 +171,7 @@ struct StatisticsView: View {
                             .foregroundColor(.secondary)
                     }
                 }
-                Text(nextMilestone.label)
+                Text(stats.isEmpty ? "-" : nextMilestone.label)
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.secondary)
             }
@@ -192,25 +192,25 @@ struct StatisticsView: View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
             StatCard(
                 title: t("AVERAGE SPEECH PACE"),
-                value: String(format: t("%.0f words/min"), averageSpeechSpeed > 0 ? averageSpeechSpeed : 140.0),
+                value: stats.isEmpty ? "-" : String(format: t("%.0f words/min"), averageSpeechSpeed > 0 ? averageSpeechSpeed : 140.0),
                 subtitle: t("Standard typing: ~40 words/min"),
                 icon: "speedometer"
             )
             StatCard(
                 title: t("TOTAL SPOKEN WORDS"),
-                value: String(format: t("%d words"), totalWords),
-                subtitle: String(format: t("Approx. %d A4 pages without keyboard"), pagesSaved),
+                value: stats.isEmpty ? "-" : String(format: t("%d words"), totalWords),
+                subtitle: stats.isEmpty ? "-" : String(format: t("Approx. %d A4 pages without keyboard"), pagesSaved),
                 icon: "bubble.left.and.bubble.right.fill"
             )
             StatCard(
                 title: t("SPEAKING TIME"),
-                value: formatDuration(totalSpeakingTime),
+                value: stats.isEmpty ? "-" : formatDuration(totalSpeakingTime),
                 subtitle: t("Active recording time"),
                 icon: "mic.fill"
             )
             StatCard(
                 title: t("NUMBER OF RECORDINGS"),
-                value: String(format: t("%d sessions"), stats.count),
+                value: stats.isEmpty ? "-" : String(format: t("%d sessions"), stats.count),
                 subtitle: t("Transcriptions done locally"),
                 icon: "waveform"
             )

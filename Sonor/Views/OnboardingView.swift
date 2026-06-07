@@ -7,7 +7,7 @@ struct OnboardingView: View {
     let onComplete: () -> Void
     var onLoginRequest: (() -> Void)? = nil
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
-    @AppStorage("hotkeyString") private var hotkeyString = "Cmd + Shift + `"
+    @AppStorage("hotkeyString") private var hotkeyString = "Ctrl + Opt + Space"
     @State private var isRecordingHotkey = false
     @State private var eventMonitor: Any? = nil
     @State private var lastModifierPressed: UInt16? = nil

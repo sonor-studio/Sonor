@@ -153,6 +153,7 @@ class AssistantWorkflowService {
     }
     
     private func buildSystemPrompt(selectedMode: VoiceMode) -> String {
+        let basePrompt: String
         if selectedMode.assistantType == "edit" {
             let activeAppName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Application"
             let clipboardText = NSPasteboard.general.string(forType: .string) ?? ""
@@ -163,34 +164,12 @@ class AssistantWorkflowService {
             if (selectedMode.passCopiedText ?? true) && !clipboardText.isEmpty {
                 contextInfo += "=== COPIED TEXT (CLIPBOARD) ===\n\(clipboardText)\n\n"
             }
-            let langInstruction: String
-            if let lang = selectedMode.language, lang != "auto" {
-                let langMap: [String: String] = [
-                    "pl": "Polish", "en": "English", "de": "German", "es": "Spanish",
-                    "fr": "French", "it": "Italian", "pt": "Portuguese", "nl": "Dutch",
-                    "ru": "Russian", "uk": "Ukrainian", "cs": "Czech", "sk": "Slovak",
-                    "sv": "Swedish", "no": "Norwegian", "da": "Danish", "fi": "Finnish",
-                    "zh": "Chinese", "ja": "Japanese", "ko": "Korean", "ar": "Arabic",
-                    "tr": "Turkish", "hi": "Hindi", "vi": "Vietnamese", "th": "Thai",
-                    "el": "Greek", "pt-BR": "Portuguese (Brazilian)", "he": "Hebrew",
-                    "ro": "Romanian", "hu": "Hungarian"
-                ]
-                let langName = langMap[lang] ?? lang
-                langInstruction = "Your response MUST be in language: \(langName)."
-            } else {
-                langInstruction = """
-                Language priority (Automatic Mode):
-                - By default, if you edit 'Copied Text', preserve the original language of that text.
-                - HOWEVER, if the user explicitly requests a language change in their instruction (e.g., "translate to Polish", "write this in English", "change language to..."), you MUST fulfill this request and change the language to the requested one. The user's instruction has the highest priority!
-                - If the user is creating new content, use the language in which the user is speaking (the instruction).
-                """
-            }
-            return """
+            basePrompt = """
             \(selectedMode.prompt)
             Use the LLM to edit and create content based on the provided context.
             \(contextInfo.isEmpty ? "" : "Context:\n" + contextInfo)
             The user will provide instructions in the 'Text' section below. Generate the output based on this instruction and context.
-            \(langInstruction)
+            
             IMPORTANT CONTEXT RULES:
             1) Just because you received 'Copied Text' as context does not mean you MUST use it! Sense the user's intent.
             2) If the user says "write a message to...", "create...", "generate..." and does not refer to the passed text, ignore the context and create new content.
@@ -202,7 +181,11 @@ class AssistantWorkflowService {
             Respond ONLY with the generated content (or corrected text), without any comments and without any introductory text.
             """
         } else {
-            return selectedMode.prompt
+            basePrompt = selectedMode.prompt
         }
+        
+        let universalLanguageRule = "\n\nCRITICAL RULE: Do not change the language of the text. Do not translate the text under any circumstances, unless the user explicitly requested it in their prompt. Always respond in the exact same language as the input text."
+        
+        return basePrompt + universalLanguageRule
     }
 }

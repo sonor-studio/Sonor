@@ -4,6 +4,7 @@ struct ContentView: View {
     @ObservedObject var controller: AppController
     @ObservedObject var localizer = LocalizationManager.shared
     @Environment(\.colorScheme) var colorScheme
+    @AppStorage("hotkeyString") private var hotkeyString = "Ctrl + Opt + Space"
     var body: some View {
         VStack(spacing: 20) {
             HStack {
@@ -50,7 +51,7 @@ struct ContentView: View {
             }
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Cmd + Shift + `")
+                    Text(hotkeyString)
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.secondary)
                     Text(t("Record / Stop"))

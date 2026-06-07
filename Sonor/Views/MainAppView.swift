@@ -238,15 +238,35 @@ struct MainAppView: View {
                     ModelDownloadErrorView(error: modelManager.downloadError ?? t("An unknown network error occurred."))
                         .preferredColorScheme(effectiveColorScheme)
                 }
-
         )
         .onAppear {
             loadModes()
+            updateWindowAppearance()
+        }
+        .onChange(of: appTheme) { _ in
+            updateWindowAppearance()
         }
         .overlay(
             IncognitoAnimationOverlay()
                 .allowsHitTesting(false)
         )
+    }
+    
+    private func updateWindowAppearance() {
+        let appearance: NSAppearance?
+        if appTheme == "dark" {
+            appearance = NSAppearance(named: .darkAqua)
+        } else if appTheme == "light" {
+            appearance = NSAppearance(named: .aqua)
+        } else {
+            appearance = nil
+        }
+        NSApp.appearance = appearance
+        for window in NSApplication.shared.windows {
+            if !(window is NSPanel) {
+                window.appearance = appearance
+            }
+        }
     }
     private func loadModes() {
         self.modes = VoiceMode.loadAndMigrateModes()

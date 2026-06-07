@@ -73,7 +73,7 @@ class WindowManager {
         }
         let window = NSWindow(
             contentRect: NSRect(x: 0, y: 0, width: 1200, height: 700),
-            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
@@ -89,7 +89,8 @@ class WindowManager {
         window.toolbar = nil
         window.standardWindowButton(.closeButton)?.isHidden = false
         window.standardWindowButton(.miniaturizeButton)?.isHidden = false
-        window.standardWindowButton(.zoomButton)?.isHidden = false
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+        window.collectionBehavior.remove(.fullScreenPrimary)
         window.isMovableByWindowBackground = false
         self.settingsWindow = window
         NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in

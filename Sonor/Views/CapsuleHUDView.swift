@@ -86,29 +86,35 @@ struct CapsuleHUDView: View {
                     let level = levels[index]
                     let barHeight = CGFloat(2 + (level * 350))
                     RoundedRectangle(cornerRadius: 1.5)
-                        .fill((controller.isPaused || !controller.isRecording) ? Color.primary.opacity(0.4) : Color.primary)
-                        .frame(width: 3, height: min(barHeight, 28))
+                        .fill(controller.isPaused ? textColor.opacity(0.4) : textColor)
+                        .frame(width: 3, height: min(barHeight, 40))
                         .animation(.spring(response: 0.1, dampingFraction: 0.5), value: level)
                 }
             }
             Spacer()
                 .frame(width: 14)
-            Text(formatDuration(recordingDuration))
-                .font(.system(size: 11, weight: .bold, design: .monospaced))
-                .foregroundColor((controller.isPaused || !controller.isRecording) ? .primary.opacity(0.4) : .primary.opacity(0.85))
-                .lineLimit(1)
-                .fixedSize(horizontal: true, vertical: false)
+            if controller.isRecording {
+                Text(formatDuration(recordingDuration))
+                    .font(.system(size: 11, weight: .bold, design: .monospaced))
+                    .foregroundColor(controller.isPaused ? textColor.opacity(0.4) : textColor.opacity(0.85))
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
+            }
             Spacer()
                 .frame(width: 12)
         }
         .frame(width: width, height: 40)
         .clipShape(Capsule())
     }
+    private var textColor: Color {
+        effectiveColorScheme == .dark ? .white : .black
+    }
+    
     private var loaderView: some View {
         HStack(spacing: 8) {
             Text(t(controller.statusText))
                 .font(.system(size: 11, weight: .medium))
-                .foregroundColor(.primary)
+                .foregroundColor(textColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
                 .id(controller.statusText)
@@ -123,7 +129,7 @@ struct CapsuleHUDView: View {
                 Circle()
                     .trim(from: 0, to: 0.6)
                     .stroke(
-                        Color.primary,
+                        textColor,
                         style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
                     )
                     .frame(width: 16, height: 16)
@@ -144,12 +150,12 @@ struct CapsuleHUDView: View {
                         HStack {
                             Text(t(mode.name))
                                 .font(.system(size: 12, weight: .medium))
-                                .foregroundColor(.primary)
+                                .foregroundColor(textColor)
                             Spacer()
                             if controller.currentMode?.id == mode.id {
                                 Image(systemName: "checkmark")
-                                    .font(.system(size: 10, weight: .bold))
-                                    .foregroundColor(.primary)
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(textColor)
                             }
                         }
                         .padding(.vertical, 6)
@@ -241,7 +247,7 @@ struct CapsuleHUDView: View {
                         Button(action: {
                         }) {
                             ZStack {
-                                if controller.statusText != "Initializing" {
+                                if !isProcessing && controller.statusText != "Initializing" {
                                     audioWavesView
                                         .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
                                 } else {
@@ -265,7 +271,7 @@ struct CapsuleHUDView: View {
                             }) {
                                 Image(systemName: controller.isPaused ? "play.fill" : "pause.fill")
                                     .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.primary)
+                                    .foregroundColor(textColor)
                                     .frame(width: 40, height: 40)
                                     .contentShape(Rectangle())
                                     .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
@@ -282,7 +288,7 @@ struct CapsuleHUDView: View {
                             }) {
                                 Image(systemName: "xmark")
                                     .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(.primary)
+                                    .foregroundColor(textColor)
                                     .frame(width: 40, height: 40)
                                     .contentShape(Rectangle())
                                     .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
@@ -314,7 +320,7 @@ struct CapsuleHUDView: View {
                     showPauseButton = false
                     width = targetWidth
                     height = 40
-                    isProcessing = controller.statusText == "Initializing"
+                    isProcessing = true
                 }
             } else {
                 recordingDuration = 0
@@ -322,14 +328,14 @@ struct CapsuleHUDView: View {
                     showPauseButton = controller.activeHotkeyMode == .click
                     width = targetWidth
                     height = 40
-                    isProcessing = controller.statusText == "Initializing"
+                    isProcessing = controller.statusText != "Listening..." && controller.statusText != "Paused"
                 }
             }
         }
         .onChange(of: controller.statusText) {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
                 width = targetWidth
-                isProcessing = controller.statusText == "Initializing"
+                isProcessing = controller.statusText != "Listening..." && controller.statusText != "Paused"
             }
             if isFinalState {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {

@@ -144,7 +144,16 @@ struct ModesSettingsView: View {
         }
     }
     private func addNewMode() {
-        let newMode = VoiceMode(name: "New Assistant", prompt: "Enter your prompt here...", assistantType: "dictation")
+        let baseName = t("New Assistant")
+        var finalName = baseName
+        var counter = 2
+        
+        while modes.contains(where: { $0.name == finalName }) {
+            finalName = "\(baseName) (\(counter))"
+            counter += 1
+        }
+        
+        let newMode = VoiceMode(name: finalName, prompt: "", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", language: "auto", pasteTiming: "end", fallbackToClipboard: false)
         modes.append(newMode)
         if let data = try? JSONEncoder().encode(modes) {
             UserDefaults.standard.set(data, forKey: "voiceModes")
