@@ -12,6 +12,7 @@ class AppController: NSObject, ObservableObject {
     
     @Published var isRecording = false
     @Published var activeDictionaryNotification: DictionaryNotification? = nil
+    @Published var activeCopyNotification: String? = nil
     @Published var isPopoverOpen = false
     private var wasPopoverOpenBeforeRecording = false
     
@@ -29,7 +30,15 @@ class AppController: NSObject, ObservableObject {
     @Published var activeHotkeyMode: HotkeyMode = .click
     @Published var isPaused = false {
         didSet {
-            audioManager.isPaused = isPaused
+            if isPaused {
+                audioManager.pauseRecording()
+            } else {
+                do {
+                    try audioManager.resumeRecording()
+                } catch {
+                    print("Failed to resume recording: \(error)")
+                }
+            }
         }
     }
     // MARK: - Hardware & System State
@@ -212,6 +221,8 @@ class AppController: NSObject, ObservableObject {
                     self.selectMode(selectedMode)
                 }
             }
+            self.activeCopyNotification = nil
+            self.activeDictionaryNotification = nil
             self.isRecording = true
             let sessionID = UUID()
             self.currentRecordingSessionID = sessionID
@@ -385,7 +396,7 @@ class AppController: NSObject, ObservableObject {
         Task {
             await MainActor.run {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    if !self.isRecording {
+                    if !self.isRecording && self.activeDictionaryNotification == nil && self.activeCopyNotification == nil {
                         self.statusText = "Ready"
                         WindowManager.shared.hideHUD()
                     }
@@ -443,10 +454,9 @@ class AppController: NSObject, ObservableObject {
             }
             
             let selectedMode = await MainActor.run { return self.currentMode ?? VoiceMode.defaults.first! }
-            let suggestedLanguage = selectedMode.language ?? "auto"
-            
+            let configuredLanguage = selectedMode.language ?? "auto"
             // PRIVACY FIRST: The entire transcription process happens locally on the user's device using the downloaded Whisper model. No audio data is ever sent to the cloud.
-            let transcribedText = await context.transcribe(audioSamples: samples, language: suggestedLanguage)
+            let transcribedText = await context.transcribe(audioSamples: samples, language: "auto")
             if Task.isCancelled {
                 self.hideHUDAfterDelay()
                 return
@@ -474,6 +484,9 @@ class AppController: NSObject, ObservableObject {
                 },
                 onAutoLearnTrigger: { [weak self] targetPID, text in
                     self?.startAutoLearnTracking(targetPID: targetPID, originalText: text)
+                },
+                onCopyNotificationTrigger: { [weak self] textToCopy in
+                    self?.showCopyNotification(text: textToCopy)
                 }
             )
             self.hideHUDAfterDelay()
@@ -505,11 +518,21 @@ class AppController: NSObject, ObservableObject {
         }
     }
 
-    func undoDictionaryEntry() {
+    func undoDictionaryEntry(delayHide: Bool = false) {
         if let notification = activeDictionaryNotification {
             AutoLearnService.shared.undoDictionaryEntry(notification: notification)
         }
-        self.hideDictionaryNotification()
+        
+        if delayHide {
+            Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                await MainActor.run {
+                    self.hideDictionaryNotification()
+                }
+            }
+        } else {
+            self.hideDictionaryNotification()
+        }
     }
     
     func hideDictionaryNotification() {
@@ -518,6 +541,51 @@ class AppController: NSObject, ObservableObject {
         }
         if !self.isRecording {
             self.hideHUDAfterDelay()
+        }
+    }
+    
+    func showCopyNotification(text: String) {
+        self.activeCopyNotification = text
+        WindowManager.shared.showHUD(controller: self)
+        
+        Task {
+            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            await MainActor.run {
+                if self.activeCopyNotification == text {
+                    self.hideCopyNotification()
+                }
+            }
+        }
+    }
+    
+    func hideCopyNotification() {
+        withAnimation(.easeOut(duration: 0.5)) {
+            self.activeCopyNotification = nil
+        }
+        if UserDefaults.standard.bool(forKey: "isIncognitoMode") {
+            NotificationCenter.default.post(name: NSNotification.Name("PlayIncognitoAnimation"), object: NSNumber(value: true))
+        }
+        if !self.isRecording {
+            self.hideHUDAfterDelay()
+        }
+    }
+    
+    func copyNotificationTextToClipboard(delayHide: Bool = false) {
+        if let text = activeCopyNotification {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(text, forType: .string)
+            if delayHide {
+                Task {
+                    try? await Task.sleep(nanoseconds: 1_200_000_000)
+                    await MainActor.run {
+                        if self.activeCopyNotification == text {
+                            self.hideCopyNotification()
+                        }
+                    }
+                }
+            } else {
+                self.hideCopyNotification()
+            }
         }
     }
 }

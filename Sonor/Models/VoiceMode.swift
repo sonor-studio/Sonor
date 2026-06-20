@@ -39,15 +39,15 @@ struct VoiceMode: Identifiable, Codable, Equatable {
         if isBuiltIn == true {
             return true
         }
-        let builtInNames = ["Raw Output", "Text Smoothing", "Formal Email", "Structured Note", "Edit & Create", "Zwykły output", "Wygładzanie tekstu", "Formalny e-mail", "Ustrukturyzowana notatka", "Edycja i tworzenie"]
+        let builtInNames = ["Raw Output", "Text Smoothing", "Formal Style", "Casual Style", "Edit & Create", "Zwykły output", "Wygładzanie tekstu", "Styl formalny", "Luźny styl", "Edycja i tworzenie"]
         return builtInNames.contains(name)
     }
     static let defaults: [VoiceMode] = [
         VoiceMode(name: "Raw Output", prompt: "", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
-        VoiceMode(name: "Text Smoothing", prompt: "Clean up and organize this spoken text. Remove stuttering, filler words, repetitions, speech errors, and grammatical mistakes. Add appropriate punctuation. Preserve 100% of the original meaning, vocabulary, and tone (do not change it to formal or any other style).\n\nCRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Do not translate the text under any circumstances. Reply ONLY with the cleaned-up text.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
-        VoiceMode(name: "Formal Email", prompt: "Transform this spoken text into a professional, elegant, and formal business email in the language of the spoken text. Retain all key information, requests, and points, but elevate the style from casual spoken thoughts to formal business correspondence.\n\nCRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Do not translate the text under any circumstances. Reply ONLY with the email content.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
-        VoiceMode(name: "Structured Note", prompt: "Organize this spoken text and convert it into a clear, structured note.\nUse ONLY plain text.\n\nKey formatting and content rules:\n1. NO EXTRAPOLATION: Structure only the information that was directly spoken. Do not add your own thoughts, action plans, 'to consider' sections, or extra suggestions not dictated by the user. If the user mentioned not needing something, simply omit it or record it exactly as spoken without adding comments or advice at the bottom.\n2. PARAGRAPH BREAKS: Separate related thoughts into clean paragraphs with empty lines.\n3. INDENTATION: Use appropriate spacing (tabs/spaces) at the start of lines to create a visual hierarchical structure for sub-bullets.\n4. HEADERS: If the text naturally divides into sections, highlight headers using UPPERCASE letters only (e.g., SHOPPING LIST, NOTES). Do not create artificial introduction sections (like INTRODUCTION).\n\nCRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Do not translate the text under any circumstances. Reply ONLY with the formatted plain text, with no introductory or concluding remarks.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
-        VoiceMode(name: "Edit & Create", prompt: "Act as an expert copywriter and editor. Your task is to edit or create text based on the user's spoken instructions. The user may ask you to rewrite a specific text they highlighted, or they may ask you to generate something entirely new based on their description.\n\nCRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Reply ONLY with the final text, without any conversational filler, introductory, or concluding remarks.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "edit", isBuiltIn: true)
+        VoiceMode(name: "Text Smoothing", prompt: "You are a professional text editor. Your goal is to transform a raw speech transcript into a clean, structured, and readable text while preserving the original intent of the author.\n\nStrictly adhere to the following rules:\n1. Filter thoughts: Remove all stutters, repetitions, and filler words.\n2. Smart correction: If the author changes their mind while speaking (e.g., 'I'll do A... no, wait, B'), include ONLY the final decision. Remove the entire hesitation and plan-changing process. Present ONLY the synthetic final result. Do not analyze or repeat the thought process behind the changes in the source text.\n3. Formatting: Autonomously divide the text into logical paragraphs. If you detect a list of steps, plans, or items, create a clear list.\n4. NO MARKDOWN OR HTML: Use absolutely no asterisks (*), hashes (#), dashes (-), or HTML tags.\n5. Lists: To create lists, use exclusively numbers with periods (e.g., 1. 2. 3.) and standard spaces.\n\nDo not add any comments of your own at the beginning or end. Return only the final text.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
+        VoiceMode(name: "Formal Style", prompt: "Rewrite the following text into a professional, elegant, and formal style. Do NOT write an email. Do NOT add greetings or sign-offs (e.g. 'Dear X', 'Best regards', 'Sincerely'). Simply elevate the vocabulary and tone to be formal and polite.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
+        VoiceMode(name: "Casual Style", prompt: "Rewrite the following text into a casual, relaxed, and conversational style. You may use common colloquialisms or slang, but do not exaggerate or make it sound unnatural. Keep it friendly and laid-back. Do NOT add greetings or sign-offs.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
+        VoiceMode(name: "Edit & Create", prompt: "Act as an expert copywriter. Modify or generate text exactly as requested by the user, while maintaining the appropriate tone.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "edit", isBuiltIn: true)
     ]
     static func loadAndMigrateModes() -> [VoiceMode] {
         guard let voiceModesData = UserDefaults.standard.data(forKey: "voiceModes") else {
@@ -92,7 +92,7 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                 return defaults
             }
         }
-        let oldBuiltInNames = ["Poprawianie", "Formalny", "Strukturyzowana notatka"]
+        let oldBuiltInNames = ["Poprawianie", "Formalny"]
         modes.removeAll(where: { oldBuiltInNames.contains($0.name) && ($0.isBuiltIn == true) })
         let markdownNoteNames = ["Notatka markdown", "Notatka Markdown", "Markdown Note"]
         modes.removeAll(where: { markdownNoteNames.contains($0.name) })
@@ -114,21 +114,21 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                 modes.insert(defaults[1], at: min(modes.count, 1))
             }
         }
-        if let index = modes.firstIndex(where: { $0.name == "Formalny e-mail" || $0.name == "Formal Email" }) {
-            modes[index].name = "Formal Email"
+        if let index = modes.firstIndex(where: { $0.name == "Formalny e-mail" || $0.name == "Formal Email" || $0.name == "Styl formalny" || $0.name == "Formal Style" }) {
+            modes[index].name = "Formal Style"
             modes[index].isBuiltIn = true
             modes[index].prompt = defaults[2].prompt
         } else {
-            if !modes.contains(where: { $0.name == "Formal Email" }) {
+            if !modes.contains(where: { $0.name == "Formal Style" }) {
                 modes.insert(defaults[2], at: min(modes.count, 2))
             }
         }
-        if let index = modes.firstIndex(where: { $0.name == "Ustrukturyzowana notatka" || $0.name == "Structured Note" }) {
-            modes[index].name = "Structured Note"
+        if let index = modes.firstIndex(where: { $0.name == "Luźny styl" || $0.name == "Casual Style" }) {
+            modes[index].name = "Casual Style"
             modes[index].isBuiltIn = true
             modes[index].prompt = defaults[3].prompt
         } else {
-            if !modes.contains(where: { $0.name == "Structured Note" }) {
+            if !modes.contains(where: { $0.name == "Casual Style" }) {
                 modes.insert(defaults[3], at: min(modes.count, 3))
             }
         }

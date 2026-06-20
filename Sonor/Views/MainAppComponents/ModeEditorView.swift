@@ -324,49 +324,51 @@ struct ModeEditorView: View {
                             }
                         }
 
-                        HStack {
-                            Text(t("Language"))
-                                .font(.system(size: 12))
-                            Spacer()
-                            Picker("", selection: Binding(
-                                get: { modeBinding.wrappedValue.language ?? "auto" },
-                                set: { modeBinding.wrappedValue.language = $0 }
-                            )) {
-                                Text(t("Automatic")).tag("auto")
-                                Text(t("العربية")).tag("ar")
-                                Text(t("中文")).tag("zh")
-                                Text(t("Čeština")).tag("cs")
-                                Text(t("Dansk")).tag("da")
-                                Text(t("Nederlands")).tag("nl")
-                                Text(t("English")).tag("en")
-                                Text(t("Suomi")).tag("fi")
-                                Text(t("Français")).tag("fr")
-                                Text(t("Deutsch")).tag("de")
-                                Text(t("Ελληνικά")).tag("el")
-                                Text(t("עברית")).tag("he")
-                                Text(t("हिन्दी")).tag("hi")
-                                Text(t("Magyar")).tag("hu")
-                                Text(t("Italiano")).tag("it")
-                                Text(t("日本語")).tag("ja")
-                                Text(t("한국어")).tag("ko")
-                                Text(t("Norsk")).tag("no")
-                                Text(t("Polski")).tag("pl")
-                                Text(t("Português")).tag("pt")
-                                Text(t("Português (Brasil)")).tag("pt-BR")
-                                Text(t("Română")).tag("ro")
-                                Text(t("Русский")).tag("ru")
-                                Text(t("Slovenčina")).tag("sk")
-                                Text(t("Español")).tag("es")
-                                Text(t("Svenska")).tag("sv")
-                                Text(t("ไทย")).tag("th")
-                                Text(t("Türkçe")).tag("tr")
-                                Text(t("Українська")).tag("uk")
-                                Text(t("Tiếng Việt")).tag("vi")
+                        if modeBinding.wrappedValue.name != "Raw Output" && modeBinding.wrappedValue.name != "Zwykły output" {
+                            HStack {
+                                Text(t("Language"))
+                                    .font(.system(size: 12))
+                                Spacer()
+                                Picker("", selection: Binding(
+                                    get: { modeBinding.wrappedValue.language ?? "auto" },
+                                    set: { modeBinding.wrappedValue.language = $0 }
+                                )) {
+                                    Text(t("Automatic")).tag("auto")
+                                    Text(t("العربية")).tag("ar")
+                                    Text(t("中文")).tag("zh")
+                                    Text(t("Čeština")).tag("cs")
+                                    Text(t("Dansk")).tag("da")
+                                    Text(t("Nederlands")).tag("nl")
+                                    Text(t("English")).tag("en")
+                                    Text(t("Suomi")).tag("fi")
+                                    Text(t("Français")).tag("fr")
+                                    Text(t("Deutsch")).tag("de")
+                                    Text(t("Ελληνικά")).tag("el")
+                                    Text(t("עברית")).tag("he")
+                                    Text(t("हिन्दी")).tag("hi")
+                                    Text(t("Magyar")).tag("hu")
+                                    Text(t("Italiano")).tag("it")
+                                    Text(t("日本語")).tag("ja")
+                                    Text(t("한국어")).tag("ko")
+                                    Text(t("Norsk")).tag("no")
+                                    Text(t("Polski")).tag("pl")
+                                    Text(t("Português")).tag("pt")
+                                    Text(t("Português (Brasil)")).tag("pt-BR")
+                                    Text(t("Română")).tag("ro")
+                                    Text(t("Русский")).tag("ru")
+                                    Text(t("Slovenčina")).tag("sk")
+                                    Text(t("Español")).tag("es")
+                                    Text(t("Svenska")).tag("sv")
+                                    Text(t("ไทย")).tag("th")
+                                    Text(t("Türkçe")).tag("tr")
+                                    Text(t("Українська")).tag("uk")
+                                    Text(t("Tiếng Việt")).tag("vi")
+                                }
+                                .pickerStyle(.menu)
+                                .frame(width: 150)
+                                .accentColor(.black)
+                                .tint(.black)
                             }
-                            .pickerStyle(.menu)
-                            .frame(width: 150)
-                            .accentColor(.black)
-                            .tint(.black)
                         }
                         VStack(alignment: .leading, spacing: 8) {
                             if modeBinding.wrappedValue.isBuiltInMode {
@@ -378,10 +380,10 @@ struct ModeEditorView: View {
                                         return t("Performs pure 1:1 transcription of your speech, without any corrections or AI editing.")
                                     case "Text Smoothing", "Wygładzanie tekstu":
                                         return t("Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.")
-                                    case "Formal Email", "Formalny e-mail":
-                                        return t("Automatically transforms loose thoughts into professional, elegant, and official business correspondence. Ideal for writing emails quickly.")
-                                    case "Structured Note", "Ustrukturyzowana notatka":
-                                        return t("Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).")
+                                    case "Formal Style", "Styl formalny":
+                                        return t("Automatically transforms loose thoughts into professional, elegant, and official style. Ideal for formal communication.")
+                                    case "Casual Style", "Luźny styl":
+                                        return t("Transforms text into a casual, relaxed, and conversational style with natural colloquialisms. Ideal for friendly communication.")
                                     case "Edit & Create", "Edycja i tworzenie":
                                         return t("Acts as an expert editor. It perfectly executes your spoken instructions to edit, rewrite, or generate brand new texts. Ideal for creating custom content on the fly.")
                                     default:

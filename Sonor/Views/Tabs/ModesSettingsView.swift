@@ -136,7 +136,7 @@ struct ModesSettingsView: View {
                 }
                 .padding(.top, 10)
                 .padding(.horizontal, 20)
-                .padding(.bottom, 40)
+                .padding(.bottom, 10)
             }
         }
         .sheet(isPresented: $isShowingInfo) {

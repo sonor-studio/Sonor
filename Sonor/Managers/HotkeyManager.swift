@@ -17,7 +17,11 @@ class HotkeyManager {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isKeyDown = false
+    private var isCancelKeyDown = false
+    private var isPauseKeyDown = false
+    private var isAssistantKeyDown = false
     private var activeIsHoldMode = false
+    private var modifierOnlyHotkeyAborted = false
     private var cachedMainHotkey: HotkeyDef?
     private var cachedCancelHotkey: HotkeyDef?
     private var cachedPauseHotkey: HotkeyDef?
@@ -196,47 +200,188 @@ class HotkeyManager {
         
         if type == .flagsChanged {
             let code = Int(nsEvent.keyCode)
-            let modifiers = nsEvent.modifierFlags
-            var isPressed = false
+            let modifiers = nsEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            
+            var changedFlag: NSEvent.ModifierFlags?
             switch code {
-            case 54, 55: isPressed = modifiers.contains(.command)
-            case 56, 60: isPressed = modifiers.contains(.shift)
-            case 58, 61: isPressed = modifiers.contains(.option)
-            case 59, 62: isPressed = modifiers.contains(.control)
-            case 63: isPressed = modifiers.contains(.function)
+            case 54, 55: changedFlag = .command
+            case 56, 60: changedFlag = .shift
+            case 58, 61: changedFlag = .option
+            case 59, 62: changedFlag = .control
             default: break
             }
-            if mainHotkey.isOnlyModifier && code == mainHotkey.code && modifiers == mainHotkey.targetModifiers {
-                if isPressed && !self.isKeyDown {
-                    self.isKeyDown = true
-                    DispatchQueue.main.async { self.onHotkeyDown?() }
+            
+            var isPressed = false
+            if let flag = changedFlag {
+                isPressed = modifiers.contains(flag)
+            }
+            
+            // Main Hotkey
+            if mainHotkey.isOnlyModifier {
+                var mainTriggerFlag = NSEvent.ModifierFlags()
+                switch mainHotkey.code {
+                case 54, 55: mainTriggerFlag = .command
+                case 56, 60: mainTriggerFlag = .shift
+                case 58, 61: mainTriggerFlag = .option
+                case 59, 62: mainTriggerFlag = .control
+                default: break
+                }
+                
+                if self.isKeyDown && isPressed && code != mainHotkey.code && (changedFlag == nil || !mainHotkey.targetModifiers.contains(changedFlag!)) {
+                    self.modifierOnlyHotkeyAborted = true
+                }
+                
+                if code == mainHotkey.code && isPressed {
+                    let activeOthers = modifiers.subtracting(mainTriggerFlag)
+                    if activeOthers == mainHotkey.targetModifiers {
+                        if !self.isKeyDown {
+                            self.isKeyDown = true
+                            self.modifierOnlyHotkeyAborted = false
+                            if isHoldMode {
+                                DispatchQueue.main.async { self.onHotkeyDown?() }
+                            }
+                        }
+                    }
                 } else if !isPressed && self.isKeyDown {
-                    self.isKeyDown = false
-                    if isHoldMode {
-                        DispatchQueue.main.async { self.onHotkeyUp?() }
+                    let releasedTrigger = (code == mainHotkey.code)
+                    let releasedOtherRequired = (changedFlag != nil && mainHotkey.targetModifiers.contains(changedFlag!))
+                    if releasedTrigger || releasedOtherRequired {
+                        self.isKeyDown = false
+                        if isHoldMode {
+                            DispatchQueue.main.async { self.onHotkeyUp?() }
+                        } else {
+                            if !self.modifierOnlyHotkeyAborted {
+                                DispatchQueue.main.async { self.onHotkeyDown?() }
+                            }
+                        }
                     }
                 }
             }
-            if cancelHotkey.isOnlyModifier && code == cancelHotkey.code && modifiers == cancelHotkey.targetModifiers {
-                if isPressed {
-                    DispatchQueue.main.async { self.onCancelKeyDown?() }
+            
+            // Cancel Hotkey
+            if cancelHotkey.isOnlyModifier {
+                var cancelTriggerFlag = NSEvent.ModifierFlags()
+                switch cancelHotkey.code {
+                case 54, 55: cancelTriggerFlag = .command
+                case 56, 60: cancelTriggerFlag = .shift
+                case 58, 61: cancelTriggerFlag = .option
+                case 59, 62: cancelTriggerFlag = .control
+                default: break
+                }
+                
+                if self.isCancelKeyDown && isPressed && code != cancelHotkey.code && (changedFlag == nil || !cancelHotkey.targetModifiers.contains(changedFlag!)) {
+                    self.modifierOnlyHotkeyAborted = true
+                }
+                
+                if code == cancelHotkey.code && isPressed {
+                    let activeOthers = modifiers.subtracting(cancelTriggerFlag)
+                    if activeOthers == cancelHotkey.targetModifiers {
+                        if !self.isCancelKeyDown {
+                            self.isCancelKeyDown = true
+                            self.modifierOnlyHotkeyAborted = false
+                        }
+                    }
+                } else if !isPressed && self.isCancelKeyDown {
+                    let releasedTrigger = (code == cancelHotkey.code)
+                    let releasedOtherRequired = (changedFlag != nil && cancelHotkey.targetModifiers.contains(changedFlag!))
+                    if releasedTrigger || releasedOtherRequired {
+                        self.isCancelKeyDown = false
+                        if !self.modifierOnlyHotkeyAborted {
+                            DispatchQueue.main.async { self.onCancelKeyDown?() }
+                        }
+                    }
                 }
             }
-            if pauseHotkey.isOnlyModifier && code == pauseHotkey.code && modifiers == pauseHotkey.targetModifiers {
-                if isPressed {
-                    DispatchQueue.main.async { self.onPauseKeyDown?() }
+            
+            // Pause Hotkey
+            if pauseHotkey.isOnlyModifier {
+                var pauseTriggerFlag = NSEvent.ModifierFlags()
+                switch pauseHotkey.code {
+                case 54, 55: pauseTriggerFlag = .command
+                case 56, 60: pauseTriggerFlag = .shift
+                case 58, 61: pauseTriggerFlag = .option
+                case 59, 62: pauseTriggerFlag = .control
+                default: break
+                }
+                
+                if self.isPauseKeyDown && isPressed && code != pauseHotkey.code && (changedFlag == nil || !pauseHotkey.targetModifiers.contains(changedFlag!)) {
+                    self.modifierOnlyHotkeyAborted = true
+                }
+                
+                if code == pauseHotkey.code && isPressed {
+                    let activeOthers = modifiers.subtracting(pauseTriggerFlag)
+                    if activeOthers == pauseHotkey.targetModifiers {
+                        if !self.isPauseKeyDown {
+                            self.isPauseKeyDown = true
+                            self.modifierOnlyHotkeyAborted = false
+                        }
+                    }
+                } else if !isPressed && self.isPauseKeyDown {
+                    let releasedTrigger = (code == pauseHotkey.code)
+                    let releasedOtherRequired = (changedFlag != nil && pauseHotkey.targetModifiers.contains(changedFlag!))
+                    if releasedTrigger || releasedOtherRequired {
+                        self.isPauseKeyDown = false
+                        if !self.modifierOnlyHotkeyAborted {
+                            DispatchQueue.main.async { self.onPauseKeyDown?() }
+                        }
+                    }
                 }
             }
-            if assistantHotkey.isOnlyModifier && code == assistantHotkey.code && modifiers == assistantHotkey.targetModifiers {
-                if isPressed {
-                    DispatchQueue.main.async { self.onAssistantKeyDown?() }
+            
+            // Assistant Hotkey
+            if assistantHotkey.isOnlyModifier {
+                var assistantTriggerFlag = NSEvent.ModifierFlags()
+                switch assistantHotkey.code {
+                case 54, 55: assistantTriggerFlag = .command
+                case 56, 60: assistantTriggerFlag = .shift
+                case 58, 61: assistantTriggerFlag = .option
+                case 59, 62: assistantTriggerFlag = .control
+                default: break
+                }
+                
+                if self.isAssistantKeyDown && isPressed && code != assistantHotkey.code && (changedFlag == nil || !assistantHotkey.targetModifiers.contains(changedFlag!)) {
+                    self.modifierOnlyHotkeyAborted = true
+                }
+                
+                if code == assistantHotkey.code && isPressed {
+                    let activeOthers = modifiers.subtracting(assistantTriggerFlag)
+                    if activeOthers == assistantHotkey.targetModifiers {
+                        if !self.isAssistantKeyDown {
+                            self.isAssistantKeyDown = true
+                            self.modifierOnlyHotkeyAborted = false
+                        }
+                    }
+                } else if !isPressed && self.isAssistantKeyDown {
+                    let releasedTrigger = (code == assistantHotkey.code)
+                    let releasedOtherRequired = (changedFlag != nil && assistantHotkey.targetModifiers.contains(changedFlag!))
+                    if releasedTrigger || releasedOtherRequired {
+                        self.isAssistantKeyDown = false
+                        if !self.modifierOnlyHotkeyAborted {
+                            DispatchQueue.main.async { self.onAssistantKeyDown?() }
+                        }
+                    }
                 }
             }
+            
             return passthrough
         }
         
         if type == .keyDown {
             let code = Int(nsEvent.keyCode)
+            
+            if self.isKeyDown && mainHotkey.isOnlyModifier {
+                self.modifierOnlyHotkeyAborted = true
+            }
+            if self.isCancelKeyDown && cancelHotkey.isOnlyModifier {
+                self.modifierOnlyHotkeyAborted = true
+            }
+            if self.isPauseKeyDown && pauseHotkey.isOnlyModifier {
+                self.modifierOnlyHotkeyAborted = true
+            }
+            if self.isAssistantKeyDown && assistantHotkey.isOnlyModifier {
+                self.modifierOnlyHotkeyAborted = true
+            }
+            
             let modifiers = nsEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
             if !mainHotkey.isOnlyModifier && code == mainHotkey.code && modifiers == mainHotkey.targetModifiers {
                 if !isKeyDown {

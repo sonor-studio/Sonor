@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import AppKit
 
 struct CapsuleHUDView: View {
     @ObservedObject var controller: AppController
@@ -40,6 +41,10 @@ struct CapsuleHUDView: View {
     @State private var hoveredModeID: UUID? = nil
     @State private var dragTracker = WindowDragTracker()
     @State private var recordingDuration: TimeInterval = 0
+    @State private var dictProgress: CGFloat = 1.0
+    @State private var copyProgress: CGFloat = 1.0
+    @State private var isCopied: Bool = false
+    @State private var isUndone: Bool = false
     private let recordingTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
     private var assistantSelector: some View {
         Button(action: {
@@ -66,7 +71,7 @@ struct CapsuleHUDView: View {
             .contentShape(Rectangle())
             .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
         }
-        .buttonStyle(.plain)
+                        .buttonStyle(NoAnimButtonStyle())
         .focusable(false)
         .simultaneousGesture(dragGesture)
     }
@@ -174,7 +179,7 @@ struct CapsuleHUDView: View {
                             }
                         }
                     }
-                    .buttonStyle(.plain)
+                                    .buttonStyle(NoAnimButtonStyle())
                     .focusable(false)
                 }
                 .padding(4)
@@ -191,40 +196,136 @@ struct CapsuleHUDView: View {
     private var dictionaryNotificationView: some View {
         guard let notification = controller.activeDictionaryNotification else { return AnyView(EmptyView()) }
         return AnyView(
-            HStack(spacing: 8) {
-                Image(systemName: "book.closed.fill")
-                    .font(.system(size: 13))
-                    .foregroundColor(.primary.opacity(0.8))
-                    .padding(.leading, 12)
-                Text("\"\(notification.wrong)\" ➔ \"\(notification.correct)\"")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer()
-                Button(action: {
-                    withAnimation {
-                        controller.undoDictionaryEntry()
-                    }
-                }) {
-                    Text(t("Undo"))
-                        .font(.system(size: 11, weight: .bold))
+            ZStack(alignment: .bottomLeading) {
+                Button(action: {}) { Color.white.opacity(0.001) }
+                    .buttonStyle(NoAnimButtonStyle())
+                HStack(spacing: 8) {
+                    Image(systemName: "book.closed.fill")
+                        .font(.system(size: 13))
+                        .foregroundColor(.primary.opacity(0.8))
+                        .padding(.leading, 12)
+                    Text("\"\(notification.wrong)\" ➔ \"\(notification.correct)\"")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer()
+                    Button(action: {
+                        if !dragTracker.isDragging {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                isUndone = true
+                            }
+                            controller.undoDictionaryEntry(delayHide: true)
+                        }
+                    }) {
+                        ZStack {
+                            if isUndone {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .transition(.scale.combined(with: .opacity))
+                            } else {
+                                Text(t("Undo"))
+                                    .font(.system(size: 11, weight: .bold))
+                                    .fixedSize()
+                                    .transition(.scale.combined(with: .opacity))
+                            }
+                        }
                         .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
+                        .padding(.horizontal, isUndone ? 0 : 10)
+                        .frame(width: isUndone ? 24 : nil, height: 24)
                         .background(Color.primary)
-                        .cornerRadius(12)
+                        .clipShape(Capsule())
+                    }
+                                    .buttonStyle(NoAnimButtonStyle())
+                    .focusable(false)
+                    .padding(.trailing, 8)
                 }
-                .buttonStyle(.plain)
-                .focusable(false)
-                .padding(.trailing, 8)
+                .frame(width: 284, height: 40)
+                
+                Capsule()
+                    .fill(effectiveColorScheme == .dark ? Color.white : Color.black)
+                    .frame(width: 284 * dictProgress, height: 4)
+                    .opacity(isUndone ? 0 : 1)
             }
             .frame(width: 284, height: 40)
+            .contentShape(RoundedRectangle(cornerRadius: 20))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
             .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
-            .transition(.asymmetric(
-                insertion: .move(edge: .bottom).combined(with: .opacity),
-                removal: .move(edge: .top).combined(with: .opacity)
-            ))
+            .onAppear {
+                isUndone = false
+                dictProgress = 1.0
+                withAnimation(.linear(duration: 5.0)) {
+                    dictProgress = 0.0
+                }
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            .simultaneousGesture(dragGesture)
+        )
+    }
+    private var copyNotificationView: some View {
+        guard let _ = controller.activeCopyNotification else { return AnyView(EmptyView()) }
+        return AnyView(
+            ZStack(alignment: .bottomLeading) {
+                Button(action: {}) { Color.white.opacity(0.001) }
+                    .buttonStyle(NoAnimButtonStyle())
+                HStack(spacing: 8) {
+                    Text(t("Nie wykryto pola"))
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                        .padding(.leading, 14)
+                    Spacer()
+                    Button(action: {
+                        if !dragTracker.isDragging {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                isCopied = true
+                            }
+                            controller.copyNotificationTextToClipboard(delayHide: true)
+                        }
+                    }) {
+                        ZStack {
+                            if isCopied {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .transition(.scale.combined(with: .opacity))
+                            } else {
+                                Text(t("Skopiuj"))
+                                    .font(.system(size: 11, weight: .bold))
+                                    .fixedSize()
+                                    .transition(.scale.combined(with: .opacity))
+                            }
+                        }
+                        .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
+                        .padding(.horizontal, isCopied ? 0 : 10)
+                        .frame(width: isCopied ? 24 : nil, height: 24)
+                        .background(Color.primary)
+                        .clipShape(Capsule())
+                    }
+                                    .buttonStyle(NoAnimButtonStyle())
+                    .focusable(false)
+                    .padding(.trailing, 8)
+                }
+                .frame(width: 284, height: 40)
+                
+                Capsule()
+                    .fill(effectiveColorScheme == .dark ? Color.white : Color.black)
+                    .frame(width: 284 * copyProgress, height: 4)
+                    .opacity(isCopied ? 0 : 1)
+            }
+            .frame(width: 284, height: 40)
+            .contentShape(RoundedRectangle(cornerRadius: 20))
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+            .onAppear {
+                isCopied = false
+                copyProgress = 1.0
+                withAnimation(.linear(duration: 5.0)) {
+                    copyProgress = 0.0
+                }
+            }
+            .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            .simultaneousGesture(dragGesture)
         )
     }
     var body: some View {
@@ -232,76 +333,86 @@ struct CapsuleHUDView: View {
             if showList {
                 dropdownListView
             }
-            VStack(spacing: 8) {
+            ZStack(alignment: .bottom) {
                 if let _ = controller.activeDictionaryNotification {
                     dictionaryNotificationView
+                        .zIndex(2)
+                } else if let _ = controller.activeCopyNotification {
+                    copyNotificationView
+                        .zIndex(2)
                 } else {
-                    if AuthManager.shared.isLoggedIn && modelManager.gemmaState == .downloaded {
-                        if !isInitializing && !isFinalState && controller.isRecording {
-                            assistantSelector
-                                .transition(.asymmetric(insertion: .offset(y: 40).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(y: 40).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
-                                .zIndex(0)
+                    VStack(spacing: 8) {
+                        if AuthManager.shared.isLoggedIn && modelManager.gemmaState == .downloaded {
+                            if !isInitializing && !isFinalState && controller.isRecording {
+                                assistantSelector
+                                    .transition(.asymmetric(insertion: .offset(y: 40).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(y: 40).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
+                                    .zIndex(0)
+                            }
                         }
-                    }
-                    HStack(spacing: (isInitializing || isFinalState) ? -40 : 12) {
-                        Button(action: {
-                        }) {
-                            ZStack {
-                                if !isProcessing && controller.statusText != "Initializing" {
-                                    audioWavesView
-                                        .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
-                                } else {
-                                    loaderView
-                                        .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
+                        HStack(spacing: (isInitializing || isFinalState) ? -40 : 12) {
+                            Button(action: {
+                            }) {
+                                ZStack {
+                                    if !isProcessing && controller.statusText != "Initializing" {
+                                        audioWavesView
+                                            .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
+                                    } else {
+                                        loaderView
+                                            .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
+                                    }
                                 }
+                                .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3), value: isProcessing)
+                                .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3), value: controller.statusText)
+                                .frame(width: width, height: height)
+                                .contentShape(Capsule())
+                                .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
                             }
-                            .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3), value: isProcessing)
-                            .animation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3), value: controller.statusText)
-                            .frame(width: width, height: height)
-                            .contentShape(Capsule())
-                            .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
-                        }
-                        .buttonStyle(.plain)
-                        .focusable(false)
-                        .simultaneousGesture(dragGesture)
-                        .zIndex(1)
-                        if showPauseButton && !isInitializing && !isFinalState {
-                            Button(action: {
-                                if !dragTracker.isDragging { controller.togglePause() }
-                            }) {
-                                Image(systemName: controller.isPaused ? "play.fill" : "pause.fill")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(textColor)
-                                    .frame(width: 40, height: 40)
-                                    .contentShape(Rectangle())
-                                    .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
-                            }
-                            .buttonStyle(.plain)
+                            .buttonStyle(NoAnimButtonStyle())
                             .focusable(false)
                             .simultaneousGesture(dragGesture)
-                            .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
-                            .zIndex(0)
-                        }
-                        if !isInitializing && !isFinalState {
-                            Button(action: {
-                                if !dragTracker.isDragging { controller.cancelRecording() }
-                            }) {
-                                Image(systemName: "xmark")
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundColor(textColor)
-                                    .frame(width: 40, height: 40)
-                                    .contentShape(Rectangle())
-                                    .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+                            .zIndex(1)
+                            if showPauseButton && !isInitializing && !isFinalState {
+                                Button(action: {
+                                    if !dragTracker.isDragging { controller.togglePause() }
+                                }) {
+                                    Image(systemName: controller.isPaused ? "play.fill" : "pause.fill")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundColor(textColor)
+                                        .frame(width: 40, height: 40)
+                                        .contentShape(Rectangle())
+                                        .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+                                }
+                                .buttonStyle(NoAnimButtonStyle())
+                                .focusable(false)
+                                .simultaneousGesture(dragGesture)
+                                .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
+                                .zIndex(0)
                             }
-                            .buttonStyle(.plain)
-                            .focusable(false)
-                            .simultaneousGesture(dragGesture)
-                            .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
-                            .zIndex(0)
+                            if !isInitializing && !isFinalState {
+                                Button(action: {
+                                    if !dragTracker.isDragging { controller.cancelRecording() }
+                                }) {
+                                    Image(systemName: "xmark")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundColor(textColor)
+                                        .frame(width: 40, height: 40)
+                                        .contentShape(Rectangle())
+                                        .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+                                }
+                                .buttonStyle(NoAnimButtonStyle())
+                                .focusable(false)
+                                .simultaneousGesture(dragGesture)
+                                .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
+                                .zIndex(0)
+                            }
                         }
                     }
+                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+                    .zIndex(1)
                 }
             }
+            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: controller.activeDictionaryNotification != nil)
+            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: controller.activeCopyNotification != nil)
         }
         .frame(width: 350, height: 600, alignment: .bottom)
         .opacity(opacity)
@@ -338,8 +449,10 @@ struct CapsuleHUDView: View {
                 isProcessing = controller.statusText != "Listening..." && controller.statusText != "Paused"
             }
             if isFinalState {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 0.0
+                if controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil {
+                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                        opacity = 0.0
+                    }
                 }
                 showList = false
             } else {
@@ -350,7 +463,22 @@ struct CapsuleHUDView: View {
             }
         }
         .onChange(of: controller.activeDictionaryNotification) {
-            if controller.activeDictionaryNotification == nil && !controller.isRecording {
+            if controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil && !controller.isRecording {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    opacity = 0.0
+                }
+                showList = false
+            } else {
+                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                    opacity = 1.0
+                }
+            }
+        }
+        .onChange(of: controller.activeCopyNotification) {
+            if controller.activeCopyNotification == nil {
+                isCopied = false
+            }
+            if controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil && !controller.isRecording {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                     opacity = 0.0
                 }
@@ -419,8 +547,20 @@ struct GlassModifier: ViewModifier {
     func body(content: Content) -> some View {
         let isDark = colorScheme == .dark
         content
-            .background(RoundedRectangle(cornerRadius: cornerRadius).fill(.ultraThinMaterial))
-            .background(RoundedRectangle(cornerRadius: cornerRadius).fill((isDark ? Color.black : Color.white).opacity(opacity)))
+            .background(
+                ZStack {
+                    ActiveVisualEffectView(
+                        material: .popover,
+                        blendingMode: .behindWindow,
+                        state: .active,
+                        cornerRadius: cornerRadius,
+                        colorScheme: colorScheme
+                    )
+                    
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill((isDark ? Color.black.opacity(opacity * 0.3) : Color.white.opacity(opacity * 0.5)))
+                }
+            )
             .overlay(RoundedRectangle(cornerRadius: cornerRadius).stroke((isDark ? Color.white : Color.black).opacity(0.15), lineWidth: 0.5))
     }
 }
@@ -428,6 +568,12 @@ struct GlassModifier: ViewModifier {
 extension View {
     func glass(cornerRadius: CGFloat = 20, opacity: Double = 0.5, colorScheme: ColorScheme) -> some View {
         self.modifier(GlassModifier(cornerRadius: cornerRadius, opacity: opacity, colorScheme: colorScheme))
+    }
+}
+
+struct NoAnimButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
     }
 }
 

@@ -70,13 +70,12 @@
     params.print_special    = false;
     params.print_realtime   = false;
     params.print_timestamps = false;
-    params.translate        = false;
     
     // Set language from parameter, defaulting to "auto" if not provided
     if (language && [language length] > 0) {
-        params.language = [language UTF8String];
+        params.language = strdup([language UTF8String]);
     } else {
-        params.language = "auto";
+        params.language = strdup("auto");
     }
     
     params.n_threads        = 4;
@@ -84,6 +83,11 @@
     params.no_context       = true;
     
     int ret = sonor_full(ctx, params, samples, count);
+    
+    if (params.language) {
+        free((void *)params.language);
+    }
+    
     if (ret != 0) {
         NSLog(@"Failed to process audio");
         return @"";

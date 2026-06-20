@@ -31,10 +31,10 @@ struct ModeCard: View {
                 return t("Performs pure 1:1 transcription of your speech, without any corrections or AI editing.")
             case "Text Smoothing", "Wygładzanie tekstu":
                 return t("Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.")
-            case "Formal Email", "Formalny e-mail":
-                return t("Automatically transforms loose thoughts into professional, elegant, and official business correspondence. Ideal for writing emails quickly.")
-            case "Structured Note", "Ustrukturyzowana notatka":
-                return t("Reorganizes dictated thoughts into an extremely neat text note. Uses spacing, indents, and traditional lists (e.g. 1., 2. or -).")
+            case "Formal Style", "Styl formalny":
+                return t("Automatically transforms loose thoughts into professional, elegant, and official style. Ideal for formal communication.")
+            case "Casual Style", "Luźny styl":
+                return t("Transforms text into a casual, relaxed, and conversational style with natural colloquialisms. Ideal for friendly communication.")
             case "Edit & Create", "Edycja i tworzenie":
                 return t("Acts as an expert editor. It perfectly executes your spoken instructions to edit, rewrite, or generate brand new texts. Ideal for creating custom content on the fly.")
             default:

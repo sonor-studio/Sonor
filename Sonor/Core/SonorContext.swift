@@ -18,8 +18,9 @@ public class SonorContext: ObservableObject, @unchecked Sendable {
             self.isTranscribing = true
         }
         let result = await Task.detached(priority: .userInitiated) {
-            return audioSamples.withUnsafeBufferPointer { ptr in
-                guard let baseAddress = ptr.baseAddress else { return "" }
+            var mutableSamples = audioSamples
+            return mutableSamples.withUnsafeMutableBufferPointer { buffer in
+                guard let baseAddress = buffer.baseAddress else { return "" }
                 return wrapper.transcribeAudioBuffer(UnsafeMutablePointer(mutating: baseAddress), count: Int32(audioSamples.count), language: language)
             }
         }.value

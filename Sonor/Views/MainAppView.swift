@@ -6,20 +6,6 @@ import UniformTypeIdentifiers
 import Carbon
 import Charts
 
-enum ProcessingMode: String, CaseIterable, Identifiable {
-    case raw = "Dyktowanie"
-    case cleanup = "Poprawianie"
-    case formal = "Formalny"
-    var id: String { self.rawValue }
-    var description: String {
-        switch self {
-        case .raw: return "Wkleja tekst dokładnie tak, jak usłyszał go Sonor, bez użycia modelu LLM."
-        case .cleanup: return "Układa wypowiedź ładnie i schludnie. Dodaje interpunkcję, poprawia błędy i luki. Zachowuje oryginalny sens, styl i proporcje."
-        case .formal: return "Zmienia styl wypowiedzi na formalny. Nie zmienia znaczenia i nie dodaje nowego sensu ani nie usuwa treści."
-        }
-    }
-}
-
 enum SettingsTab: String {
     case home = "Dom"
     case modes = "Asystenci"
@@ -39,7 +25,6 @@ struct MainAppView: View {
     @Environment(\.colorScheme) var colorScheme
     @ObservedObject var localizer = LocalizationManager.shared
     @State private var selectedTab: SettingsTab = .home
-    @AppStorage("processingMode") private var processingMode: ProcessingMode = .raw
     @AppStorage("appTheme") private var appTheme = "system"
     var effectiveColorScheme: ColorScheme {
         if appTheme == "dark" {
@@ -87,35 +72,47 @@ struct MainAppView: View {
             .navigationSplitViewColumnWidth(min: 220, ideal: 250, max: 300)
         } detail: {
             HStack(spacing: 0) {
-                TextField("", text: .constant(""))
-                    .textFieldStyle(.plain)
-                    .frame(width: 0, height: 0)
-                    .focused($isDummyFocused)
-                    .offset(x: -1000, y: -1000)
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        switch selectedTab {
-                        case .home:
-                            StatisticsView()
-                        case .modes:
-                            ModesSettingsView(modes: $modes, selectedModeID: $selectedModeID, isShowingSidePanel: $isShowingSidePanel, isPremium: authManager.isLoggedIn && authManager.accountTier == "premium", showLoginSheet: $showLoginSheet)
-                        case .dictionary:
-                            DictionarySettingsView(showLoginSheet: $showLoginSheet)
-                        case .snippets:
-                            SnippetsSettingsView(showLoginSheet: $showLoginSheet)
-                        case .models:
-                            ModelsSettingsView()
-                        case .settings:
-                            GeneralSettingsView()
+                VStack(spacing: 0) {
+                    TextField("", text: .constant(""))
+                        .textFieldStyle(.plain)
+                        .frame(width: 0, height: 0)
+                        .focused($isDummyFocused)
+                        .offset(x: -1000, y: -1000)
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 20) {
+                            switch selectedTab {
+                            case .home:
+                                StatisticsView()
+                            case .modes:
+                                ModesSettingsView(modes: $modes, selectedModeID: $selectedModeID, isShowingSidePanel: $isShowingSidePanel, isPremium: authManager.isLoggedIn && authManager.accountTier == "premium", showLoginSheet: $showLoginSheet)
+                            case .dictionary:
+                                DictionarySettingsView(showLoginSheet: $showLoginSheet)
+                            case .snippets:
+                                SnippetsSettingsView(showLoginSheet: $showLoginSheet)
+                            case .models:
+                                ModelsSettingsView()
+                            case .settings:
+                                GeneralSettingsView()
+                            }
+                            Spacer()
                         }
-                        Spacer()
+                        .padding(.top, 52)
+                        .padding(.horizontal, 30)
+                        .padding(.bottom, 30)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
                     }
-                    .padding(.top, 52)
-                    .padding(.horizontal, 30)
-                    .padding(.bottom, 30)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .ignoresSafeArea(edges: .top)
+                    
+                    if selectedTab == .modes {
+                        Text(t("AI may generate inaccurate information. Please verify important details. Note that language models generally perform best when working with English."))
+                            .font(.system(size: 10))
+                            .foregroundColor(.secondary.opacity(0.6))
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 15)
+                            .padding(.top, 5)
+                    }
                 }
-                .ignoresSafeArea(edges: .top)
                 
                 if selectedTab == .modes && (authManager.isLoggedIn || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Raw Output" || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Zwykły output"), modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) != nil {
                     ModeEditorView(modes: $modes, selectedModeID: $selectedModeID)

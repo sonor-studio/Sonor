@@ -130,15 +130,33 @@ class AudioManager: ObservableObject {
             return samples
         }
     }
+    /// Physically stops the audio engine to release the microphone lock and remove the yellow privacy dot.
+    func pauseRecording() {
+        guard !isPaused else { return }
+        isPaused = true
+        NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: audioEngine)
+        if isTapInstalled {
+            audioEngine?.inputNode.removeTap(onBus: 0)
+            isTapInstalled = false
+        }
+        audioEngine?.stop()
+        audioEngine = nil
+        DispatchQueue.main.async {
+            self.audioLevel = 0.0
+        }
+    }
+    
+    /// Recreates the audio engine and resumes recording, keeping the previously accumulated samples.
+    func resumeRecording() throws {
+        guard isPaused else { return }
+        isPaused = false
+        try startRecording(clearSamples: false)
+    }
+
     /// Receives raw buffers from the audio engine, calculates UI volume levels,
     /// and performs format conversion into `accumulatedSamples`.
     private func processAudio(buffer: AVAudioPCMBuffer) {
-        if isPaused {
-            DispatchQueue.main.async {
-                self.audioLevel = 0.0
-            }
-            return
-        }
+        if isPaused { return }
         autoreleasepool {
             if let channelData = buffer.floatChannelData?[0] {
                 let length = Int(buffer.frameLength)

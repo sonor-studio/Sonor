@@ -51,6 +51,42 @@ struct ModelsSettingsView: View {
                     }
                 )
             }
+            
+            Spacer().frame(height: 24)
+            
+            VStack(spacing: 12) {
+                HStack(spacing: 16) {
+                    Rectangle()
+                        .fill(LinearGradient(gradient: Gradient(colors: [.clear, .secondary.opacity(0.3)]), startPoint: .leading, endPoint: .trailing))
+                        .frame(height: 1)
+                    
+                    Text(t("Coming Soon"))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .tracking(3)
+                        .foregroundStyle(
+                            LinearGradient(
+                                colors: [.primary.opacity(0.9), .secondary.opacity(0.8)],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .textCase(.uppercase)
+                    
+                    Rectangle()
+                        .fill(LinearGradient(gradient: Gradient(colors: [.secondary.opacity(0.3), .clear]), startPoint: .leading, endPoint: .trailing))
+                        .frame(height: 1)
+                }
+                .padding(.horizontal, 40)
+                
+                Text(t("We are constantly expanding our ecosystem. Future updates will bring a wider selection of advanced AI models tailored to your workflow."))
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(.secondary.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(4)
+                    .padding(.horizontal, 32)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 24)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .sheet(isPresented: $showLoginSheet) {

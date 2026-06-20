@@ -2236,16 +2236,27 @@ public class LocalizationManager: ObservableObject {
             "Digite o texto com o teclado. O cronômetro se ativará automaticamente com o primeiro caractere.", 
             "首先，使用键盘重新输入显示的文本。当您开始打字时，计时器将自动启动。", 
         ],
-        "Formal Email": [
-            "Formal Email", 
-            "Formalny e-mail", 
-            "Formelle E-Mail", 
-            "Correo formal", 
-            "E-mail formel", 
-            "E-mail formale", 
-            "フォーマルメール", 
-            "E-mail formal", 
-            "正式电子邮件", 
+        "Formal Style": [
+            "Formal Style", 
+            "Styl formalny", 
+            "Formeller Stil", 
+            "Estilo formal", 
+            "Style formel", 
+            "Stile formale", 
+            "フォーマルなスタイル", 
+            "Estilo formal", 
+            "正式风格", 
+        ],
+        "Casual Style": [
+            "Casual Style",
+            "Luźny styl",
+            "Lockerer Stil",
+            "Estilo informal",
+            "Style décontracté",
+            "Stile informale",
+            "カジュアルなスタイル",
+            "Estilo casual",
+            "休闲风格",
         ],
         "Free account": [
             "Free account", 
@@ -4732,6 +4743,61 @@ public class LocalizationManager: ObservableObject {
             "理解しました",
             "Entendido",
             "我明白了"
+        ],
+        "Automatically transforms loose thoughts into professional, elegant, and official style. Ideal for formal communication.": [
+            "Automatically transforms loose thoughts into professional, elegant, and official style. Ideal for formal communication.",
+            "Automatycznie przekształca luźne myśli w profesjonalny, elegancki i oficjalny styl. Idealny do formalnej komunikacji.",
+            "Verwandelt lose Gedanken automatisch in einen professionellen, eleganten und offiziellen Stil. Ideal für die formelle Kommunikation.",
+            "Transforma automáticamente pensamientos sueltos en un estilo profesional, elegante y oficial. Ideal para comunicación formal.",
+            "Transforme automatiquement les pensées vagues en un style professionnel, élégant et officiel. Idéal pour la communication formelle.",
+            "Trasforma automaticamente pensieri sciolti in uno stile professionale, elegante e ufficiale. Ideale per la comunicazione formale.",
+            "まとまらない考えを自動的にプロフェッショナルでエレガント、そして公式なスタイルに変換します。フォーマルなコミュニケーションに最適です。",
+            "Transforma automaticamente pensamentos soltos em um estilo profissional, elegante e oficial. Ideal para comunicação formal.",
+            "自动将随意的想法转化为专业、优雅和正式的风格。非常适合正式沟通。"
+        ],
+        "Transforms text into a casual, relaxed, and conversational style with natural colloquialisms. Ideal for friendly communication.": [
+            "Transforms text into a casual, relaxed, and conversational style with natural colloquialisms. Ideal for friendly communication.",
+            "Przekształca tekst w swobodny, zrelaksowany i konwersacyjny styl z naturalnymi kolokwializmami. Idealny do przyjaznej komunikacji.",
+            "Verwandelt Text in einen lässigen, entspannten und konversationsmäßigen Stil mit natürlichen umgangssprachlichen Ausdrücken. Ideal für freundschaftliche Kommunikation.",
+            "Transforma el texto en un estilo casual, relajado y conversacional con coloquialismos naturales. Ideal para la comunicación amistosa.",
+            "Transforme le texte en un style décontracté, détendu et conversationnel avec des expressions familières naturelles. Idéal pour une communication amicale.",
+            "Trasforma il testo in uno stile informale, rilassato e colloquiale con espressioni gergali naturali. Ideale per una comunicazione amichevole.",
+            "テキストをカジュアルでリラックスした会話スタイルに変換し、自然な口語表現を交えます。親しみやすいコミュニケーションに最適です。",
+            "Transforma o texto em um estilo casual, relaxado e conversacional com coloquialismos naturais. Ideal para comunicação amigável.",
+            "将文本转换为随意、轻松和对话的风格，并使用自然的口语。非常适合友好的交流。"
+        ],
+        "AI may generate inaccurate information. Please verify important details. Note that language models generally perform best when working with English.": [
+            "AI may generate inaccurate information. Please verify important details. Note that language models generally perform best when working with English.",
+            "AI może generować niedokładne informacje. Zawsze weryfikuj ważne szczegóły. Pamiętaj też, że modele językowe zazwyczaj działają najlepiej, pracując z językiem angielskim.",
+            "KI kann ungenaue Informationen erzeugen. Bitte überprüfen Sie wichtige Details. Beachten Sie, dass Sprachmodelle am besten funktionieren, wenn sie mit Englisch arbeiten.",
+            "La IA puede generar información inexacta. Verifique los detalles importantes. Tenga en cuenta que los modelos de lenguaje funcionan mejor cuando trabajan con inglés.",
+            "L'IA peut générer des informations inexactes. Veuillez vérifier les détails importants. Notez que les modèles de langage fonctionnent généralement mieux avec l'anglais.",
+            "L'IA può generare informazioni inaccurate. Si prega di verificare i dettagli importanti. Si noti che i modelli linguistici funzionano meglio quando lavorano con l'inglese.",
+            "AIは不正確な情報を生成する可能性があります。重要な詳細はご確認ください。なお、言語モデルは通常、英語を扱う際に最も高いパフォーマンスを発揮します。",
+            "A IA pode gerar informações imprecisas. Verifique os detalhes importantes. Observe que os modelos de linguagem funcionam melhor ao trabalhar com inglês.",
+            "AI可能会生成不准确的信息。请验证重要细节。请注意，语言模型在处理英语时通常表现最佳。"
+        ],
+        "Coming Soon": [
+            "Coming Soon", 
+            "Wkrótce", 
+            "Demnächst", 
+            "Próximamente", 
+            "Bientôt", 
+            "Prossimamente", 
+            "近日公開", 
+            "Em breve", 
+            "即将推出"
+        ],
+        "We are constantly expanding our ecosystem. Future updates will bring a wider selection of advanced AI models tailored to your workflow.": [
+            "We are constantly expanding our ecosystem. Future updates will bring a wider selection of advanced AI models tailored to your workflow.", 
+            "Nieustannie rozwijamy nasz ekosystem. Przyszłe aktualizacje przyniosą szerszy wybór zaawansowanych modeli AI, dopasowanych do Twoich potrzeb.", 
+            "Wir erweitern unser Ökosystem stetig. Zukünftige Updates bringen eine größere Auswahl an fortschrittlichen KI-Modellen.", 
+            "Ampliamos constantemente nuestro ecosistema. Próximas actualizaciones traerán una selección más amplia de modelos de IA avanzados.", 
+            "Nous élargissons constamment notre écosystème. De futures mises à jour apporteront un plus grand choix de modèles d'IA avancés.", 
+            "Stiamo costantemente espandendo il nostro ecosistema. I futuri aggiornamenti porteranno una più ampia selezione di modelli di IA avanzati.", 
+            "我々は常にエコシステムを拡大しています。今後のアップデートにより、より高度なAIモデルの選択肢が増える予定です。", 
+            "Estamos constantemente expandindo nosso ecossistema. Atualizações futuras trarão uma seleção mais ampla de modelos de IA avançados.", 
+            "我们不断扩展我们的生态系统。未来的更新将带来更广泛的高级AI模型选择。"
         ]
     ]
 
