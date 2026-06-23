@@ -92,53 +92,36 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                 return defaults
             }
         }
-        let oldBuiltInNames = ["Poprawianie", "Formalny"]
-        modes.removeAll(where: { oldBuiltInNames.contains($0.name) && ($0.isBuiltIn == true) })
-        let markdownNoteNames = ["Notatka markdown", "Notatka Markdown", "Markdown Note"]
-        modes.removeAll(where: { markdownNoteNames.contains($0.name) })
-        if let index = modes.firstIndex(where: { $0.name == "Zwykły output" || $0.name == "Raw Output" }) {
-            modes[index].name = "Raw Output"
-            modes[index].isBuiltIn = true
-            modes[index].prompt = ""
-        } else {
-            if !modes.contains(where: { $0.name == "Raw Output" }) {
-                modes.insert(defaults[0], at: 0)
-            }
-        }
-        if let index = modes.firstIndex(where: { $0.name == "Wygładzanie tekstu" || $0.name == "Text Smoothing" }) {
-            modes[index].name = "Text Smoothing"
-            modes[index].isBuiltIn = true
-            modes[index].prompt = defaults[1].prompt
-        } else {
-            if !modes.contains(where: { $0.name == "Text Smoothing" }) {
-                modes.insert(defaults[1], at: min(modes.count, 1))
-            }
-        }
-        if let index = modes.firstIndex(where: { $0.name == "Formalny e-mail" || $0.name == "Formal Email" || $0.name == "Styl formalny" || $0.name == "Formal Style" }) {
-            modes[index].name = "Formal Style"
-            modes[index].isBuiltIn = true
-            modes[index].prompt = defaults[2].prompt
-        } else {
-            if !modes.contains(where: { $0.name == "Formal Style" }) {
-                modes.insert(defaults[2], at: min(modes.count, 2))
-            }
-        }
-        if let index = modes.firstIndex(where: { $0.name == "Luźny styl" || $0.name == "Casual Style" }) {
-            modes[index].name = "Casual Style"
-            modes[index].isBuiltIn = true
-            modes[index].prompt = defaults[3].prompt
-        } else {
-            if !modes.contains(where: { $0.name == "Casual Style" }) {
-                modes.insert(defaults[3], at: min(modes.count, 3))
-            }
-        }
-        if let index = modes.firstIndex(where: { $0.name == "Edycja i tworzenie" || $0.name == "Edit & Create" }) {
-            modes[index].name = "Edit & Create"
-            modes[index].isBuiltIn = true
-            modes[index].prompt = defaults[4].prompt
-        } else {
-            if !modes.contains(where: { $0.name == "Edit & Create" }) {
-                modes.insert(defaults[4], at: min(modes.count, 4))
+        let deprecatedNames = ["Poprawianie", "Formalny", "Strukturyzowana notatka", "Structured Note", "Notatka markdown", "Notatka Markdown", "Markdown Note"]
+        modes.removeAll(where: { deprecatedNames.contains($0.name) })
+        
+        let aliases: [String: [String]] = [
+            "Raw Output": ["Zwykły output"],
+            "Text Smoothing": ["Wygładzanie tekstu"],
+            "Formal Style": ["Formalny e-mail", "Formal Email", "Styl formalny"],
+            "Casual Style": ["Luźny styl"],
+            "Edit & Create": ["Edycja i tworzenie"]
+        ]
+        
+        for (defaultIndex, defaultMode) in defaults.enumerated() {
+            let targetName = defaultMode.name
+            var namesToMatch = aliases[targetName] ?? []
+            namesToMatch.append(targetName)
+            
+            let matchingIndices = modes.indices.filter { namesToMatch.contains(modes[$0].name) }
+            
+            if let firstIndex = matchingIndices.first {
+                modes[firstIndex].name = targetName
+                modes[firstIndex].isBuiltIn = true
+                modes[firstIndex].prompt = defaultMode.prompt
+                
+                // Remove all subsequent duplicates
+                for duplicateIndex in matchingIndices.dropFirst().reversed() {
+                    modes.remove(at: duplicateIndex)
+                }
+            } else {
+                let insertIndex = min(modes.count, defaultIndex)
+                modes.insert(defaultMode, at: insertIndex)
             }
         }
         for i in 0..<modes.count {

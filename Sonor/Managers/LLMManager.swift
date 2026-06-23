@@ -32,7 +32,7 @@ final class LLMManager {
 
 
 
-    func cleanStream(text: String, systemPrompt: String, onToken: @escaping (String) -> Void) async -> String {
+    func cleanStream(text: String, systemPrompt: String, onToken: @escaping (String) -> Bool) async -> String {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return text }
         if systemPrompt.isEmpty { return text }
 
@@ -47,12 +47,16 @@ final class LLMManager {
                     break
                 }
                 fullText += token
-                onToken(token)
+                let shouldContinue = onToken(token)
+                if !shouldContinue {
+                    break
+                }
             }
             await session.clear()
             MLX.Memory.clearCache()
             return fullText
         } catch {
+            print("[LLMManager] cleanStream caught error: \(error)")
             return text
         }
     }
@@ -65,6 +69,7 @@ final class LLMManager {
             let _ = try await session.respond(to: "Say \"hello\" and return {\"result\": \"ok\"}")
             isReady = true
         } catch {
+            print("[LLMManager] ensureModelWarmed caught error: \(error)")
         }
     }
 

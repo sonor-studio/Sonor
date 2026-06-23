@@ -44,7 +44,7 @@ class AssistantWorkflowService {
         }
         
         // willPaste: only paste if a text field was actually found — same behavior regardless of fallbackToClipboard
-        let willPaste = isTextFieldDetected
+        var willPaste = isTextFieldDetected
         
         // willFallbackToClipboard: copy text to clipboard when no field found, only if user enabled this option
         let willFallbackToClipboard = !isTextFieldDetected && (selectedMode.fallbackToClipboard == true)
@@ -97,17 +97,32 @@ class AssistantWorkflowService {
             
             if Task.isCancelled { return }
             
-            let statusLabel: String
+            let modeLabel: String
             if selectedMode.name == "Text Smoothing" {
-                statusLabel = "Text Smoothing"
+                modeLabel = "Text Smoothing"
             } else if selectedMode.name == "Formal Style" {
-                statusLabel = "Formal Style"
+                modeLabel = "Formal Style"
             } else if selectedMode.name == "Casual Style" {
-                statusLabel = "Casual Style"
+                modeLabel = "Casual Style"
             } else {
-                statusLabel = "Modifying"
+                modeLabel = "Modifying"
             }
-            onStatusChange(statusLabel)
+            
+            var isGenerating = true
+            let noFieldLabel = LocalizationManager.shared.translate("No text field detected")
+            let generatingLabel = LocalizationManager.shared.translate("Generating...")
+            
+            if !isTextFieldDetected {
+                onStatusChange(noFieldLabel)
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 1_500_000_000)
+                    if isGenerating {
+                        onStatusChange(generatingLabel)
+                    }
+                }
+            } else {
+                onStatusChange(modeLabel)
+            }
             
             let systemPrompt = buildSystemPrompt(selectedMode: selectedMode, detectedLanguage: detectedLang)
             if Task.isCancelled { return }
@@ -130,6 +145,8 @@ class AssistantWorkflowService {
             
             var didStartStreaming = false
             var fullGeneratedText = ""
+            var streamedText = ""
+            let initialWillPaste = willPaste
             
             _ = await LLMManager.shared.cleanStream(text: correctedText, systemPrompt: systemPrompt) { token in
                 fullGeneratedText += token
@@ -139,20 +156,60 @@ class AssistantWorkflowService {
                         if willPaste {
                             onStatusChange("Streaming")
                         } else {
-                            onStatusChange("Generating...")
+                            onStatusChange(generatingLabel)
                         }
                     }
                 }
                 if willPaste {
-                    DispatchQueue.global(qos: .userInteractive).async {
-                        PasteManager.shared.typeTextToken(token: token, targetPID: pid)
+                    let isActive = NSRunningApplication(processIdentifier: pid)?.isActive ?? false
+                    let stillFocused = isActive && PasteManager.shared.isTextFieldFocused(pid: pid)
+                    
+                    if !stillFocused {
+                        willPaste = false
+                        Task { @MainActor in
+                            onStatusChange(noFieldLabel)
+                            
+                            // Schedule changing back to generatingLabel after 1.5 seconds if still generating
+                            try? await Task.sleep(nanoseconds: 1_500_000_000)
+                            if isGenerating {
+                                onStatusChange(generatingLabel)
+                            }
+                        }
+                    } else {
+                        streamedText += token
+                        DispatchQueue.global(qos: .userInteractive).async {
+                            PasteManager.shared.typeTextToken(token: token, targetPID: pid)
+                        }
                     }
                 }
+                return true
             }
+            isGenerating = false
             if Task.isCancelled { return }
             
-            // Play Error sound if no text field was detected (regardless of fallbackToClipboard setting)
-            if !isTextFieldDetected {
+            if let frontApp = NSWorkspace.shared.frontmostApplication,
+               frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
+                pid = frontApp.processIdentifier
+            }
+            
+            let finalIsActive = NSRunningApplication(processIdentifier: pid)?.isActive ?? false
+            let finalFocused = finalIsActive && PasteManager.shared.isTextFieldFocused(pid: pid)
+            let willDoFinalPaste = finalFocused && (!initialWillPaste || !willPaste)
+            
+            if willDoFinalPaste {
+                var textToPaste = fullGeneratedText
+                if initialWillPaste && !streamedText.isEmpty {
+                    if let currentFieldText = PasteManager.shared.readFocusedTextField(pid: pid), currentFieldText.contains(streamedText) {
+                        textToPaste = String(fullGeneratedText.dropFirst(streamedText.count))
+                    }
+                }
+                if !textToPaste.isEmpty {
+                    DispatchQueue.global(qos: .userInteractive).async {
+                        PasteManager.shared.typeTextDirectly(text: textToPaste, targetPID: pid)
+                    }
+                }
+            } else if !finalFocused && !willPaste {
+                // Play Error sound if no text field was detected at the end
                 if willFallbackToClipboard {
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(fullGeneratedText, forType: .string)
@@ -165,7 +222,7 @@ class AssistantWorkflowService {
             }
             
             MessageMemoryManager.shared.saveMessage(fullGeneratedText)
-            if willPaste {
+            if finalFocused || initialWillPaste {
                 await MainActor.run {
                     onAutoLearnTrigger(pid, fullGeneratedText)
                 }
@@ -175,7 +232,10 @@ class AssistantWorkflowService {
         await MainActor.run {
             onStatusChange("Done!")
         }
-        if willPaste {
+        
+        let finalIsActiveForSound = NSRunningApplication(processIdentifier: pid)?.isActive ?? false
+        let finalFocusedForSound = finalIsActiveForSound && PasteManager.shared.isTextFieldFocused(pid: pid)
+        if finalFocusedForSound || willPaste {
             await SoundPlayer.shared.playSound(named: "End")
         }
     }
@@ -229,7 +289,7 @@ class AssistantWorkflowService {
         finalBasePrompt = finalBasePrompt.replacingOccurrences(of: "CRITICAL: Detect the language of the input text and respond in the EXACT SAME language. Reply ONLY with the final text, without any conversational filler, introductory, or concluding remarks.", with: "")
         
         if let lang = selectedMode.language, lang != "auto" {
-            universalLanguageRule = "\n\nCRITICAL OVERRIDE: You MUST translate the final text into the following language: \(lang). Respond ONLY in \(lang) and no other language."
+            universalLanguageRule = "\n\nCRITICAL OVERRIDE: Regardless of ANY prior instructions or specific mode rules, you MUST translate and output the final text exclusively in \(lang). If any other language was requested earlier, IGNORE IT. Respond ONLY in \(lang)."
         } else {
             universalLanguageRule = "\n\nCRITICAL RULE: Do not change the language of the text unless explicitly requested in the SPECIFIC MODE RULES or user instruction."
         }

@@ -99,7 +99,28 @@ class PasteManager {
     func isTextFieldFocused(pid: pid_t) -> Bool {
         guard AXIsProcessTrusted() else { return true } 
         let element = getFocusedAXElement(pid: pid)
+        
+        if element == nil {
+            if let app = NSRunningApplication(processIdentifier: pid),
+               let bundleID = app.bundleIdentifier {
+                if bundleID == "com.apple.finder" || bundleID == "com.apple.dock" {
+                    return false
+                }
+            }
+        }
+        
         return isElementTextField(element)
+    }
+
+    func readFocusedTextField(pid: pid_t) -> String? {
+        guard AXIsProcessTrusted() else { return nil }
+        guard let element = getFocusedAXElement(pid: pid) else { return nil }
+        
+        var currentValue: AnyObject?
+        if AXUIElementCopyAttributeValue(element, kAXValueAttribute as CFString, &currentValue) == .success {
+            return currentValue as? String
+        }
+        return nil
     }
 
 
@@ -224,13 +245,34 @@ class PasteManager {
             return
         }
         let source = CGEventSource(stateID: .combinedSessionState)
-        let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true)
-        let utf16Chars = Array(token.utf16)
-        utf16Chars.withUnsafeBufferPointer { buffer in
-            if let ptr = buffer.baseAddress {
-                event?.keyboardSetUnicodeString(stringLength: utf16Chars.count, unicodeString: ptr)
+        
+        // Split token by newlines and handle them with Shift+Enter to prevent submitting forms in chat apps
+        let components = token.components(separatedBy: .newlines)
+        for (index, component) in components.enumerated() {
+            if index > 0 {
+                // Type Shift+Enter for the newline boundary
+                let enterDown = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: true)
+                let enterUp = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: false)
+                enterDown?.flags = .maskShift
+                enterUp?.flags = .maskShift
+                
+                enterDown?.post(tap: .cghidEventTap)
+                Thread.sleep(forTimeInterval: 0.01)
+                enterUp?.post(tap: .cghidEventTap)
+                Thread.sleep(forTimeInterval: 0.01)
+            }
+            
+            if !component.isEmpty {
+                let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true)
+                let utf16Chars = Array(component.utf16)
+                utf16Chars.withUnsafeBufferPointer { buffer in
+                    if let ptr = buffer.baseAddress {
+                        event?.keyboardSetUnicodeString(stringLength: utf16Chars.count, unicodeString: ptr)
+                    }
+                }
+                event?.post(tap: .cghidEventTap)
+                Thread.sleep(forTimeInterval: 0.01)
             }
         }
-        event?.post(tap: .cghidEventTap)
     }
 }
