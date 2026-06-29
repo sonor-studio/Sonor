@@ -27,7 +27,7 @@ struct ModeCard: View {
     private var descriptionText: String {
         if mode.isBuiltInMode {
             switch mode.name {
-            case "Raw Output", "Zwykły output":
+            case "Pure Text", "Czysty tekst":
                 return t("Performs pure 1:1 transcription of your speech, without any corrections or AI editing.")
             case "Text Smoothing", "Wygładzanie tekstu":
                 return t("Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.")

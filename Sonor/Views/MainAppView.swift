@@ -114,7 +114,7 @@ struct MainAppView: View {
                     }
                 }
                 
-                if selectedTab == .modes && (authManager.isLoggedIn || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Raw Output" || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Zwykły output"), modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) != nil {
+                if selectedTab == .modes && (authManager.isLoggedIn || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Pure Text" || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Czysty tekst"), modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) != nil {
                     ModeEditorView(modes: $modes, selectedModeID: $selectedModeID)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }

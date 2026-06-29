@@ -324,7 +324,7 @@ struct ModeEditorView: View {
                             }
                         }
 
-                        if modeBinding.wrappedValue.name != "Raw Output" && modeBinding.wrappedValue.name != "Zwykły output" {
+                        if modeBinding.wrappedValue.name != "Pure Text" && modeBinding.wrappedValue.name != "Czysty tekst" {
                             HStack {
                                 Text(t("Language"))
                                     .font(.system(size: 12))
@@ -376,7 +376,7 @@ struct ModeEditorView: View {
                                     .font(.system(size: 14, weight: .semibold))
                                 let description: String = {
                                     switch modeBinding.wrappedValue.name {
-                                    case "Raw Output", "Zwykły output":
+                                    case "Pure Text", "Czysty tekst":
                                         return t("Performs pure 1:1 transcription of your speech, without any corrections or AI editing.")
                                     case "Text Smoothing", "Wygładzanie tekstu":
                                         return t("Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.")

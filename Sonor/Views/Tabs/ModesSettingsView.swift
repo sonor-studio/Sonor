@@ -60,7 +60,7 @@ struct ModesSettingsView: View {
             }
             ScrollView {
                 VStack(spacing: 15) {
-                    if let rawOutput = modes.first(where: { $0.name == "Raw Output" }) ?? modes.first(where: { $0.name == "Zwykły output" }) {
+                    if let rawOutput = modes.first(where: { $0.name == "Pure Text" }) ?? modes.first(where: { $0.name == "Czysty tekst" }) {
                         ModeCard(
                             mode: rawOutput,
                             isSelected: selectedModeID == rawOutput.id.uuidString,
@@ -116,7 +116,7 @@ struct ModesSettingsView: View {
                         .padding(.top, 10)
                     } else {
                         LazyVGrid(columns: columns, spacing: 15) {
-                            ForEach(modes.filter { $0.name != "Raw Output" && $0.name != "Zwykły output" }) { mode in
+                            ForEach(modes.filter { $0.name != "Pure Text" && $0.name != "Czysty tekst" }) { mode in
                                 ModeCard(
                                     mode: mode,
                                     isSelected: selectedModeID == mode.id.uuidString,

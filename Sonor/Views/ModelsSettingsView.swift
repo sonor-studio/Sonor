@@ -138,6 +138,8 @@ struct ModelCard: View {
     let title: String
     let description: String
     let state: DownloadState
+    var isActive: Bool? = nil
+    var onSetActive: (() -> Void)? = nil
     var requiresLogin: Bool = false
     var onLogin: (() -> Void)? = nil
     let onDownload: () -> Void
@@ -254,6 +256,28 @@ struct ModelCard: View {
                     }
                 case .downloaded:
                     HStack(spacing: 12) {
+                        if let isActive = isActive, let onSetActive = onSetActive {
+                            if isActive {
+                                Text(t("Active"))
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.green)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.green.opacity(0.1))
+                                    .cornerRadius(6)
+                            } else {
+                                Button(action: onSetActive) {
+                                    Text(t("Set Active"))
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 6)
+                                        .background(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05))
+                                        .cornerRadius(6)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
                         Button(action: onUninstall) {
                             Text(t("Uninstall"))
                                 .font(.system(size: 13, weight: .medium))

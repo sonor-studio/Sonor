@@ -24,9 +24,7 @@ final class LLMManager {
     static let shared = LLMManager()
 
     private var modelContainer: ModelContainer?
-    private var chatSession: ChatSession?
     private(set) var isReady = false
-    private var generationTask: Task<ChatSession, Error>?
 
     private init() {}
 
@@ -56,7 +54,6 @@ final class LLMManager {
             MLX.Memory.clearCache()
             return fullText
         } catch {
-            print("[LLMManager] cleanStream caught error: \(error)")
             return text
         }
     }
@@ -69,37 +66,41 @@ final class LLMManager {
             let _ = try await session.respond(to: "Say \"hello\" and return {\"result\": \"ok\"}")
             isReady = true
         } catch {
-            print("[LLMManager] ensureModelWarmed caught error: \(error)")
         }
     }
 
     func releaseModel() {
-        self.chatSession = nil
         self.modelContainer = nil
         self.isReady = false
         MLX.Memory.clearCache()
     }
 
-    private func getSession() async throws -> ChatSession {
-        if let session = self.chatSession { return session }
-        if let task = generationTask { return try await task.value }
+    private var containerTask: Task<ModelContainer, Error>?
+
+    private func getContainer() async throws -> ModelContainer {
+        if let container = self.modelContainer { return container }
+        if let task = containerTask { return try await task.value }
 
         let task = Task {
-            let config = ModelConfiguration(id: "mlx-community/gemma-3-4b-it-qat-4bit")
+            let config = ModelConfiguration(id: ModelManager.shared.gemmaModelId)
             let container = try await LLMModelFactory.shared.loadContainer(
                 from: NativeHubDownloader(downloadBase: ModelManager.shared.modelsDirectory),
                 using: #huggingFaceTokenizerLoader(),
                 configuration: config
             )
-            let params = GenerateParameters(temperature: 0.3)
-            let session = ChatSession(container, instructions: "", generateParameters: params)
-            return session
+            return container
         }
-        self.generationTask = task
-        let session = try await task.value
-        self.chatSession = session
-        self.generationTask = nil
-        return session
+        self.containerTask = task
+        let container = try await task.value
+        self.modelContainer = container
+        self.containerTask = nil
+        return container
+    }
+
+    private func getSession() async throws -> ChatSession {
+        let container = try await getContainer()
+        let params = GenerateParameters(temperature: 0.7)
+        return ChatSession(container, instructions: "", generateParameters: params)
     }
 
 

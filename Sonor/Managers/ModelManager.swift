@@ -19,11 +19,12 @@ final class ModelManager: ObservableObject {
     static let shared = ModelManager()
     @Published var whisperState: DownloadState = .notDownloaded
     @Published var gemmaState: DownloadState = .notDownloaded
+    
     @Published var showModelsRequiredModal = false
     @Published var downloadError: String? = nil
     @Published var showDownloadErrorModal = false
     let modelsDirectory: URL
-    private let gemmaModelId = "mlx-community/gemma-3-4b-it-qat-4bit"
+    let gemmaModelId = "mlx-community/gemma-3-4b-it-qat-4bit"
     private let whisperModelId = "ggerganov/whisper.cpp"
     private let whisperFilename = "ggml-large-v3-turbo-q5_0.bin"
     private var gemmaDownloadTask: Task<Void, Never>?
@@ -98,19 +99,23 @@ final class ModelManager: ObservableObject {
         } else {
             whisperState = .notDownloaded
         }
+        gemmaState = checkGemmaState(repoId: gemmaModelId, totalKey: "GemmaTotalExpectedBytes", downloadedKey: "GemmaTotalDownloadedBytes", defaultThreshold: 2_000_000_000, maxExpectedSize: 3_000_000_000.0)
+    }
+
+    private func checkGemmaState(repoId: String, totalKey: String, downloadedKey: String, defaultThreshold: Int64, maxExpectedSize: Double) -> DownloadState {
         let api = HubApi(downloadBase: modelsDirectory, cache: nil)
-        let repo = Hub.Repo(id: gemmaModelId)
+        let repo = Hub.Repo(id: repoId)
         let gemmaDir = api.localRepoLocation(repo)
         let gemmaExists = FileManager.default.fileExists(atPath: gemmaDir.path)
         if gemmaExists {
-            let savedTotal = UserDefaults.standard.object(forKey: "GemmaTotalExpectedBytes") as? Int64
-            let savedDownloaded = UserDefaults.standard.object(forKey: "GemmaTotalDownloadedBytes") as? Int64
+            let savedTotal = UserDefaults.standard.object(forKey: totalKey) as? Int64
+            let savedDownloaded = UserDefaults.standard.object(forKey: downloadedKey) as? Int64
             if let total = savedTotal, let downloaded = savedDownloaded, total > 0 {
                 if downloaded >= total {
-                    gemmaState = .downloaded
+                    return .downloaded
                 } else {
                     let progress = min(Double(downloaded) / Double(total), 0.99)
-                    gemmaState = .paused(progress: progress)
+                    return .paused(progress: progress)
                 }
             } else {
                 if let files = try? FileManager.default.contentsOfDirectory(atPath: gemmaDir.path), !files.isEmpty {
@@ -122,18 +127,18 @@ final class ModelManager: ObservableObject {
                             totalSize += s
                         }
                     }
-                    if totalSize > 2_000_000_000 {
-                        gemmaState = .downloaded
+                    if totalSize > defaultThreshold {
+                        return .downloaded
                     } else {
-                        let progress = min(Double(totalSize) / 3_000_000_000.0, 0.99)
-                        gemmaState = .paused(progress: progress)
+                        let progress = min(Double(totalSize) / maxExpectedSize, 0.99)
+                        return .paused(progress: progress)
                     }
                 } else {
-                    gemmaState = .notDownloaded
+                    return .notDownloaded
                 }
             }
         } else {
-            gemmaState = .notDownloaded
+            return .notDownloaded
         }
     }
     /// Initiates or resumes the download of the Whisper model.
@@ -223,6 +228,7 @@ final class ModelManager: ObservableObject {
         if case .downloading = gemmaState {
             pauseGemmaDownload()
         }
+
     }
     func uninstallWhisper() {
         cancelWhisperDownload()
@@ -350,6 +356,9 @@ final class ModelManager: ObservableObject {
         cleanupGemmaFiles()
         gemmaState = .notDownloaded
     }
+
+
+
     private func aggressivelyDeleteDirectory(at url: URL, retries: Int = 10, delay: TimeInterval = 0.1) {
         let fm = FileManager.default
         guard fm.fileExists(atPath: url.path) else { return }
@@ -430,12 +439,16 @@ final class WhisperDownloader: NSObject, URLSessionDataDelegate {
     private var expectedLength: Int64 = 0
     private var downloadedBytes: Int64 = 0
     private var isCancelled = false
+    private var firstFailureTime: Date?
+    private var currentDownloadURL: URL?
+    
     init(destinationURL: URL) {
         self.destinationURL = destinationURL
         self.incompleteURL = destinationURL.deletingLastPathComponent().appendingPathComponent(destinationURL.lastPathComponent + ".incomplete")
         super.init()
     }
     func start(from url: URL, progress: @escaping (Double) -> Void, completion: @escaping (Result<URL, Error>) -> Void) {
+        self.currentDownloadURL = url
         self.progressCallback = progress
         self.completionCallback = completion
         if isCancelled { return }
@@ -534,8 +547,23 @@ final class WhisperDownloader: NSObject, URLSessionDataDelegate {
             if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
                 return
             }
+            if nsError.domain == NSURLErrorDomain, let url = currentDownloadURL {
+                let now = Date()
+                if firstFailureTime == nil {
+                    firstFailureTime = now
+                }
+                if now.timeIntervalSince(firstFailureTime!) <= 5.0 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        if !self.isCancelled {
+                            self.start(from: url, progress: self.progressCallback!, completion: self.completionCallback!)
+                        }
+                    }
+                    return
+                }
+            }
             completionCallback?(.failure(error))
         } else {
+            firstFailureTime = nil
             do {
                 let fileManager = FileManager.default
                 if fileManager.fileExists(atPath: destinationURL.path) {
@@ -566,14 +594,18 @@ final class GemmaDownloader: NSObject, URLSessionDataDelegate {
     private var totalExpectedBytes: Int64 = 0
     private var totalDownloadedBytes: Int64 = 0
     private var currentFileDownloadedBytes: Int64 = 0
-    private var currentFileExpectedBytes: Int64 = 0
-    private let defaultsKeyTotalBytes = "GemmaTotalExpectedBytes"
-    private let defaultsKeyDownloadedBytes = "GemmaTotalDownloadedBytes"
+private var currentFileExpectedBytes: Int64 = 0
+    private let defaultsKeyTotalBytes: String
+    private let defaultsKeyDownloadedBytes: String
     private var lastUserDefaultsSaveTime: Date = Date()
     private var isCancelled = false
-    init(modelsDirectory: URL, repoId: String) {
+    private var firstFailureTime: Date?
+    
+    init(modelsDirectory: URL, repoId: String, totalBytesKey: String = "GemmaTotalExpectedBytes", downloadedBytesKey: String = "GemmaTotalDownloadedBytes") {
         self.modelsDirectory = modelsDirectory
         self.repoId = repoId
+        self.defaultsKeyTotalBytes = totalBytesKey
+        self.defaultsKeyDownloadedBytes = downloadedBytesKey
         self.api = HubApi(downloadBase: modelsDirectory, cache: nil, useBackgroundSession: false)
         super.init()
     }
@@ -753,8 +785,23 @@ final class GemmaDownloader: NSObject, URLSessionDataDelegate {
             if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
                 return
             }
+            if nsError.domain == NSURLErrorDomain {
+                let now = Date()
+                if firstFailureTime == nil {
+                    firstFailureTime = now
+                }
+                if now.timeIntervalSince(firstFailureTime!) <= 5.0 {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        if !self.isCancelled {
+                            self.downloadNextFile()
+                        }
+                    }
+                    return
+                }
+            }
             completionCallback?(.failure(error))
         } else {
+            firstFailureTime = nil
             do {
                 let fileManager = FileManager.default
                 if let dest = currentDestinationURL, let inc = currentIncompleteURL {

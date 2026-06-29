@@ -36,7 +36,6 @@ class AppController: NSObject, ObservableObject {
                 do {
                     try audioManager.resumeRecording()
                 } catch {
-                    print("Failed to resume recording: \(error)")
                 }
             }
         }
@@ -213,7 +212,7 @@ class AppController: NSObject, ObservableObject {
             }
             let selectedMode: VoiceMode
             if !AuthManager.shared.isLoggedIn {
-                selectedMode = availableModes.first(where: { $0.name == "Raw Output" }) ?? VoiceMode.defaults.first!
+                selectedMode = availableModes.first(where: { $0.name == "Pure Text" }) ?? VoiceMode.defaults.first!
                 self.currentMode = selectedMode
             } else {
                 selectedMode = currentMode ?? availableModes.first ?? VoiceMode.defaults.first!
