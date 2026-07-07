@@ -17,12 +17,18 @@ class MediaControlService {
     /// Mutes the system volume if the selected behavior demands it.
     /// - Parameter behavior: Defines whether audio should be kept or muted during recording.
     func pauseMultimedia(behavior: AudioBehavior) {
+        let isCurrentlyUnmuting = (unmuteWorkItem != nil)
+        
         unmuteWorkItem?.cancel()
         unmuteWorkItem = nil
         
+        let isAlreadyManagingMute = (self.activeAudioBehavior == .mute) || isCurrentlyUnmuting
         self.activeAudioBehavior = behavior
+        
         if behavior == .mute {
-            self.wasMutedBeforeRecording = getSystemMute()
+            if !isAlreadyManagingMute {
+                self.wasMutedBeforeRecording = getSystemMute()
+            }
             if !self.wasMutedBeforeRecording {
                 setSystemMuteAppleScript(true)
             }
@@ -33,7 +39,13 @@ class MediaControlService {
     /// started recording, it leaves it muted to respect the user's prior state.
     /// - Parameter delay: Delay before unmuting, allowing audio drivers to settle.
     func resumeMultimedia(delay: TimeInterval = 0.5) {
+        let wasMuting = (self.activeAudioBehavior == .mute)
         self.activeAudioBehavior = nil
+        
+        // If we didn't actively mute the system for this session, we have nothing to restore.
+        if !wasMuting {
+            return
+        }
         
         if self.wasMutedBeforeRecording {
             return
@@ -43,12 +55,10 @@ class MediaControlService {
         let item = DispatchWorkItem { [weak self] in
             guard let self = self else { return }
             
-            // Hybrid approach: wait an extra 0.5s (so 1.0s total) for the driver to recover
             Thread.sleep(forTimeInterval: 0.5)
             
-            // Bombard the system with 'unmute' commands 5 times over 1 second (every 0.2s)
-            for i in 1...5 {
-                if self.unmuteWorkItem?.isCancelled == true {
+            for _ in 1...5 {
+                if self.activeAudioBehavior != nil {
                     return
                 }
                 
@@ -62,37 +72,15 @@ class MediaControlService {
     
 
     
-    /// Uses CoreAudio to check the current hardware mute status of the default output device.
-    /// We do this nonisolated because CoreAudio calls can be executed on background threads.
+    /// Uses AppleScript to check the system's global mute status.
+    /// This is more reliable than CoreAudio for Bluetooth devices, external DACs, and modern Macs.
     nonisolated private func getSystemMute() -> Bool {
-        var defaultOutputDeviceID = AudioDeviceID(0)
-        var defaultOutputDeviceIDSize = UInt32(MemoryLayout.size(ofValue: defaultOutputDeviceID))
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        
-        let status = AudioObjectGetPropertyData(
-            AudioObjectID(kAudioObjectSystemObject),
-            &address,
-            0,
-            nil,
-            &defaultOutputDeviceIDSize,
-            &defaultOutputDeviceID
-        )
-        
-        if status == noErr {
-            var muteVal: UInt32 = 0
-            var muteSize = UInt32(MemoryLayout.size(ofValue: muteVal))
-            var muteAddress = AudioObjectPropertyAddress(
-                mSelector: kAudioDevicePropertyMute,
-                mScope: kAudioDevicePropertyScopeOutput,
-                mElement: kAudioObjectPropertyElementMain
-            )
-            if AudioObjectHasProperty(defaultOutputDeviceID, &muteAddress) {
-                AudioObjectGetPropertyData(defaultOutputDeviceID, &muteAddress, 0, nil, &muteSize, &muteVal)
-                return muteVal != 0
+        let scriptStr = "output muted of (get volume settings) or output volume of (get volume settings) = 0"
+        var error: NSDictionary?
+        if let script = NSAppleScript(source: scriptStr) {
+            let result = script.executeAndReturnError(&error)
+            if error == nil {
+                return result.booleanValue
             }
         }
         return false

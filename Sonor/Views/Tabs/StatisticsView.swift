@@ -272,7 +272,8 @@ struct StatisticsView: View {
     }
     private var totalSavedTime: Double {
         let typingTimeSeconds = (Double(totalWords) / 40.0) * 60.0
-        return max(0.0, typingTimeSeconds - totalSpeakingTime)
+        let theoreticalSpeakingTimeSeconds = (Double(totalWords) / 140.0) * 60.0
+        return max(0.0, typingTimeSeconds - theoreticalSpeakingTimeSeconds)
     }
     private var averageSpeechSpeed: Double {
         guard totalSpeakingTime > 0 else { return 0 }

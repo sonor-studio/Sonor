@@ -44,7 +44,7 @@ struct VoiceMode: Identifiable, Codable, Equatable {
     }
     static let defaults: [VoiceMode] = [
         VoiceMode(name: "Pure Text", prompt: "", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
-        VoiceMode(name: "Text Smoothing", prompt: "You are an intelligent note-taker. Your job is to rewrite chaotic voice memos into clear, professional, yet naturally sounding messages.\nRULES:\nRESOLVE CONTRADICTIONS: If the speaker changes their mind (e.g., \"6 people... wait, 4\" or \"all evening... actually until 8\"), write ONLY the absolute final decision. Ignore abandoned ideas.\n2. **THE DYNAMIC STRUCTURE:** \n   - Start with an introductory sentence keeping the speaker's original framing.\n   - LIST CONDITION: If (and ONLY if) there are distinct action items, rules, or sequential steps, use a numbered list (1. 2. 3.). If the text is just a general thought, statement, or observation without actionable steps, DO NOT create a list at all. Just write standard paragraphs.\n   - End with a normal closing sentence ONLY if the speaker gave a final thought.\nPRESERVE ORIGINAL TONE: Maintain the user's casual or direct tone. Do not make it sound like a stiff corporate email (e.g., avoid adding \"Here is what we decided\").\nZERO HALLUCINATIONS: Do not invent polite sign-offs (like \"Let me know if you have questions\") unless the speaker actually said them. DO NOT start your response with \"Here is the text\" or any filler words.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
+        VoiceMode(name: "Text Smoothing", prompt: "Your task is to clean up, smooth, and format the provided voice transcript. \n\n1. REMOVE NOISE: Fix grammar, remove filler words, and COMPLETELY DELETE abandoned ideas (only keep the final decision).\n2. FORMATTING: If the text naturally contains multiple tasks, steps, or items, format them as a clear vertical list. Otherwise, use highly readable paragraphs.\n\nCRITICAL RULE: NEVER add new information, IT solutions, or AI filler. Output EXACTLY and ONLY the final polished text.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
         VoiceMode(name: "Formal Style", prompt: "Rewrite the following text into a professional, elegant, and formal style.\nCRITICAL RULE: Do NOT transform regular text into an email. Intelligently detect if the provided text is already formatted as an email. If it is NOT an email, strictly preserve its original format without adding any email-specific elements like greetings or farewells. If it IS an email, simply elevate its tone to be more formal while keeping its existing structure.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
         VoiceMode(name: "Casual Style", prompt: "Rewrite the raw text into a casual, relaxed, and conversational style. \nYou may use common colloquialisms, but do not exaggerate or make it sound unnatural. Keep it friendly and laid-back.\n\nCRITICAL RULES:\n1. FORMAT INTEGRITY: \n   - IF the input text includes a subject, greeting, or sign-off, maintain an e-mail/message structure. However, make these elements casual too (e.g., change \"Dear Team\" to \"Hey everyone\", or \"Sincerely\" to \"Cheers\" / \"Best\").\n   - IF the input text is a note or general statement without greetings, do NOT add a subject, greeting, or sign-off.\n2. CONCISENESS: Return ONLY the rewritten text. No introductions, no explanations, and no filler text.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "dictation", isBuiltIn: true),
         VoiceMode(name: "Edit & Create", prompt: "Act as an expert copywriter. Execute the user's command to create new content or edit existing context, ensuring a highly professional and appropriate tone.", boundAppBundleIDs: [], audioBehavior: .keep, assistantType: "edit", isBuiltIn: true)
@@ -127,6 +127,21 @@ struct VoiceMode: Identifiable, Codable, Equatable {
         for i in 0..<modes.count {
             if modes[i].audioBehavior == .pause {
                 modes[i].audioBehavior = .mute
+            }
+        }
+        
+        modes.sort { mode1, mode2 in
+            let index1 = defaults.firstIndex(where: { $0.name == mode1.name })
+            let index2 = defaults.firstIndex(where: { $0.name == mode2.name })
+            
+            if let i1 = index1, let i2 = index2 {
+                return i1 < i2
+            } else if index1 != nil {
+                return true
+            } else if index2 != nil {
+                return false
+            } else {
+                return false
             }
         }
         

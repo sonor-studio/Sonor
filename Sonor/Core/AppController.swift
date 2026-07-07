@@ -83,6 +83,9 @@ class AppController: NSObject, ObservableObject {
                 }
             }
         }
+        NotificationCenter.default.addObserver(forName: NSNotification.Name("AppWillTerminate"), object: nil, queue: .main) { _ in
+            _ = self.audioManager.stopRecording()
+        }
     }
     private func setupHotkey() {
         HotkeyManager.shared.onHotkeyDown = { [weak self] in
@@ -495,6 +498,8 @@ class AppController: NSObject, ObservableObject {
 
 
     func quitApp() {
+        self.cancelRecording()
+        _ = self.audioManager.stopRecording()
         NSApplication.shared.terminate(nil)
     }
     func startAutoLearnTracking(targetPID: pid_t, originalText: String) {

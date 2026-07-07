@@ -10,6 +10,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             AuthManager.shared.handleDeepLink(url)
         }
     }
+    
+    func applicationWillTerminate(_ notification: Notification) {
+        NotificationCenter.default.post(name: NSNotification.Name("AppWillTerminate"), object: nil)
+    }
 }
 
 @main

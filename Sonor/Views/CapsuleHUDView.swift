@@ -169,7 +169,7 @@ struct CapsuleHUDView: View {
                             controller.currentMode?.id == mode.id ? Color.primary.opacity(0.2) :
                             (hoveredModeID == mode.id ? Color.primary.opacity(0.1) : Color.clear)
                         )
-                        .cornerRadius(6)
+                        .cornerRadius(8)
                         .contentShape(Rectangle())
                         .onHover { isHovered in
                             if isHovered {
@@ -233,7 +233,7 @@ struct CapsuleHUDView: View {
                         .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
                         .padding(.horizontal, isUndone ? 0 : 10)
                         .frame(width: isUndone ? 24 : nil, height: 24)
-                        .background(Color.primary)
+                        .background(effectiveColorScheme == .dark ? Color.white : Color.black)
                         .clipShape(Capsule())
                     }
                                     .buttonStyle(NoAnimButtonStyle())
@@ -299,7 +299,7 @@ struct CapsuleHUDView: View {
                         .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
                         .padding(.horizontal, isCopied ? 0 : 10)
                         .frame(width: isCopied ? 24 : nil, height: 24)
-                        .background(Color.primary)
+                        .background(effectiveColorScheme == .dark ? Color.white : Color.black)
                         .clipShape(Capsule())
                     }
                                     .buttonStyle(NoAnimButtonStyle())

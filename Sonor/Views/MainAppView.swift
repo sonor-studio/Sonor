@@ -287,7 +287,8 @@ struct MainAppView: View {
         let totalWords = stats.reduce(0) { $0 + $1.wordCount }
         let totalSpeakingTime = stats.reduce(0) { $0 + $1.duration }
         let typingTimeSeconds = (Double(totalWords) / 40.0) * 60.0
-        let savedSeconds = max(0.0, typingTimeSeconds - totalSpeakingTime)
+        let theoreticalSpeakingTimeSeconds = (Double(totalWords) / 140.0) * 60.0
+        let savedSeconds = max(0.0, typingTimeSeconds - theoreticalSpeakingTimeSeconds)
         let savedHours = savedSeconds / 3600.0
         let thresholds = [10, 50, 100, 200, 500, 1000]
         for threshold in thresholds.sorted(by: <) {
