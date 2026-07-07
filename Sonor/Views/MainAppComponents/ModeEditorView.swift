@@ -269,6 +269,7 @@ struct ModeEditorView: View {
                                     }
                                     .buttonStyle(.plain)
                                 }
+                                .padding(.horizontal, 4)
                                 HStack(spacing: 0) {
                                     Button(action: {
                                         modeBinding.wrappedValue.assistantType = "dictation"
@@ -305,6 +306,8 @@ struct ModeEditorView: View {
                                     RoundedRectangle(cornerRadius: 8)
                                         .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.clear)
                                 )
+                                .padding(.horizontal, 4)
+                                .padding(.bottom, 4)
                             }
                         }
                         if modeBinding.wrappedValue.assistantType == "edit" {
@@ -374,6 +377,7 @@ struct ModeEditorView: View {
                             if modeBinding.wrappedValue.isBuiltInMode {
                                 Text(t("Built-in Assistant Description"))
                                     .font(.system(size: 14, weight: .semibold))
+                                    .padding(.horizontal, 4)
                                 let description: String = {
                                     switch modeBinding.wrappedValue.name {
                                     case "Pure Text", "Czysty tekst":
@@ -400,9 +404,12 @@ struct ModeEditorView: View {
                                         RoundedRectangle(cornerRadius: 8)
                                             .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.clear)
                                     )
+                                    .padding(.horizontal, 4)
+                                    .padding(.bottom, 4)
                             } else {
                                 Text(t("AI Prompt"))
                                     .font(.system(size: 14, weight: .semibold))
+                                    .padding(.horizontal, 4)
                                 ZStack(alignment: .topLeading) {
                                     TextEditor(text: modeBinding.prompt)
                                         .font(.system(size: 13))
@@ -423,6 +430,8 @@ struct ModeEditorView: View {
                                             .allowsHitTesting(false)
                                     }
                                 }
+                                .padding(.horizontal, 4)
+                                .padding(.bottom, 4)
                             }
                         }
                         VStack(alignment: .leading, spacing: 8) {

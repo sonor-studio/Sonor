@@ -15,10 +15,9 @@ struct CustomToggleStyle: ToggleStyle {
                         .padding(2)
                         .offset(x: configuration.isOn ? 10 : -10)
                 )
+                .animation(.spring(response: 0.2, dampingFraction: 0.7), value: configuration.isOn)
                 .onTapGesture {
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
-                        configuration.isOn.toggle()
-                    }
+                    configuration.isOn.toggle()
                 }
         }
     }

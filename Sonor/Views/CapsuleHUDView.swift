@@ -316,7 +316,7 @@ struct CapsuleHUDView: View {
             .frame(width: 284, height: 40)
             .contentShape(RoundedRectangle(cornerRadius: 20))
             .clipShape(RoundedRectangle(cornerRadius: 20))
-            .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+            .safeGlassEffect(cornerRadius: 20)
             .onAppear {
                 isCopied = false
                 copyProgress = 1.0
@@ -407,6 +407,7 @@ struct CapsuleHUDView: View {
                             }
                         }
                     }
+                    .padding(.bottom, 8)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
                     .zIndex(1)
                 }
@@ -540,33 +541,21 @@ struct CapsuleHUDView: View {
     }
 }
 
+
+
 struct GlassModifier: ViewModifier {
     var cornerRadius: CGFloat
-    var opacity: Double = 0.5
+    var opacity: Double = 1.0
     var colorScheme: ColorScheme
+    
     func body(content: Content) -> some View {
-        let isDark = colorScheme == .dark
         content
-            .background(
-                ZStack {
-                    ActiveVisualEffectView(
-                        material: .popover,
-                        blendingMode: .behindWindow,
-                        state: .active,
-                        cornerRadius: cornerRadius,
-                        colorScheme: colorScheme
-                    )
-                    
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill((isDark ? Color.black.opacity(opacity * 0.3) : Color.white.opacity(opacity * 0.5)))
-                }
-            )
-            .overlay(RoundedRectangle(cornerRadius: cornerRadius).stroke((isDark ? Color.white : Color.black).opacity(0.15), lineWidth: 0.5))
+            .safeGlassEffect(cornerRadius: cornerRadius)
     }
 }
 
 extension View {
-    func glass(cornerRadius: CGFloat = 20, opacity: Double = 0.5, colorScheme: ColorScheme) -> some View {
+    func glass(cornerRadius: CGFloat = 20, opacity: Double = 1.0, colorScheme: ColorScheme) -> some View {
         self.modifier(GlassModifier(cornerRadius: cornerRadius, opacity: opacity, colorScheme: colorScheme))
     }
 }
