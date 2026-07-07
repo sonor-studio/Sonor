@@ -2,7 +2,10 @@
 
 > **Privacy-First, On-Device Voice Intelligence for macOS.**
 
-Sonor is a modern, minimalist macOS application designed for high-performance voice-to-text transcription and intelligent text processing—running **100% locally and offline** on your device. Powered by `whisper.cpp` with Apple Silicon Metal acceleration and local LLMs (Gemma), your audio and data never leave your Mac.
+Sonor is a modern, minimalist macOS application designed for high-performance voice-to-text transcription and intelligent text processing—running **100% locally and offline** on your device. Powered by `whisper.cpp` with 
+Apple Silicon Metal acceleration and local LLMs (Gemma), your audio and data never leave your Mac.
+
+<img width="1280" height="720" alt="2" src="https://github.com/user-attachments/assets/98c5b5db-fe1a-44bf-9bf1-b4fb3ffd6e45" />
 
 ---
 
@@ -13,6 +16,9 @@ Sonor is a modern, minimalist macOS application designed for high-performance vo
 * **Model Manager:** Built-in dashboard to easily download, manage, and delete Whisper and Gemma models directly inside the app.
 * **Productivity Suite:** Advanced history management (collapsible layouts), custom Snippets, Assistants, and custom Dictionaries.
 * **Speech Analytics:** Track your voice metrics with real-time stats and an innovative Speaking Rate (WPM) chart.
+
+<img width="1280" height="720" alt="6" src="https://github.com/user-attachments/assets/1bd1303f-2cdc-449d-b4f5-2da91c1bb1ec" />
+
 
 ## 🛠️ Tech Stack
 
@@ -39,6 +45,8 @@ Because this is an independent open-source release without a paid Apple Develope
 6. Confirm with your Mac password or Touch ID.
 
 *Note: This configuration is a one-time process. Once approved, Sonor will launch instantly every time.*
+
+<img width="1108" height="720" alt="1" src="https://github.com/user-attachments/assets/9d9e289b-eb32-45fb-af9a-d721cdef5a2d" />
 
 ---
 
