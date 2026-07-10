@@ -25,6 +25,84 @@ public class LocalizationManager: ObservableObject {
         }
     }
     private let translations: [String: [String]] = [
+        "Permissions Required": [
+            "Permissions Required",
+            "Wymagane uprawnienia",
+            "Erforderliche Berechtigungen",
+            "Permisos Requeridos",
+            "Autorisations requises",
+            "Autorizzazioni richieste",
+            "必要な権限",
+            "Permissões Necessárias",
+            "所需权限"
+        ],
+        "Sonor requires the following permissions to function correctly. The application will be locked until all required permissions are granted.": [
+            "Sonor requires the following permissions to function correctly. The application will be locked until all required permissions are granted.",
+            "Sonor wymaga następujących uprawnień do poprawnego działania. Aplikacja będzie zablokowana do czasu ich nadania.",
+            "Sonor benötigt die folgenden Berechtigungen, um ordnungsgemäß zu funktionieren. Die Anwendung bleibt gesperrt, bis alle erforderlichen Berechtigungen erteilt wurden.",
+            "Sonor requiere los siguientes permisos para funcionar correctamente. La aplicación estará bloqueada hasta que se otorguen todos los permisos necesarios.",
+            "Sonor nécessite les autorisations suivantes pour fonctionner correctement. L'application sera verrouillée jusqu'à ce que toutes les autorisations requises soient accordées.",
+            "Sonor richiede le seguenti autorizzazioni per funzionare correttamente. L'applicazione sarà bloccata fino a quando non verranno concesse tutte le autorizzazioni necessarie.",
+            "Sonorが正しく機能するには、以下の権限が必要です。必要な権限がすべて付与されるまで、アプリケーションはロックされます。",
+            "Sonor requer as seguintes permissões para funcionar corretamente. O aplicativo ficará bloqueado até que todas as permissões necessárias sejam concedidas.",
+            "Sonor需要以下权限才能正常运行。在授予所有必需的权限之前，应用程序将被锁定。"
+        ],
+        "Required to capture your voice for transcription.": [
+            "Required to capture your voice for transcription.",
+            "Wymagane do rejestrowania głosu w celu transkrypcji.",
+            "Erforderlich, um Ihre Stimme für die Transkription aufzuzeichnen.",
+            "Requerido para capturar su voz para la transcripción.",
+            "Requis pour capturer votre voix pour la transcription.",
+            "Richiesto per catturare la tua voce per la trascrizione.",
+            "文字起こしのために音声を録音するのに必要です。",
+            "Necessário para capturar sua voz para transcrição.",
+            "捕获您的声音以进行转录所需。"
+        ],
+        "Required to automatically paste your transcribed text into other applications and support hotkeys.": [
+            "Required to automatically paste your transcribed text into other applications and support hotkeys.",
+            "Wymagane do automatycznego wklejania transkrybowanego tekstu do innych aplikacji oraz obsługi skrótów klawiszowych.",
+            "Erforderlich, um Ihren transkribierten Text automatisch in andere Anwendungen einzufügen und Tastenkombinationen zu unterstützen.",
+            "Requerido para pegar automáticamente su texto transcrito en otras aplicaciones y admitir atajos de teclado.",
+            "Requis pour coller automatiquement votre texte transcrit dans d'autres applications et prendre en charge les raccourcis clavier.",
+            "Richiesto per incollare automaticamente il testo trascritto in altre applicazioni e supportare le scorciatoie da tastiera.",
+            "文字起こしされたテキストを他のアプリケーションに自動的に貼り付け、ホットキーをサポートするために必要です。",
+            "Necessário para colar automaticamente seu texto transcrito em outros aplicativos e dar suporte a teclas de atalho.",
+            "需要自动将您的转录文本粘贴到其他应用程序并支持热键。"
+        ],
+        "Quit Application": [
+            "Quit Application",
+            "Zakończ aplikację",
+            "Anwendung beenden",
+            "Salir de la aplicación",
+            "Quitter l'application",
+            "Esci dall'applicazione",
+            "アプリケーションを終了する",
+            "Sair do aplicativo",
+            "退出申请"
+        ],
+        "Microphone": [
+            "Microphone",
+            "Mikrofon",
+            "Mikrofon",
+            "Micrófono",
+            "Microphone",
+            "Microfono",
+            "マイク",
+            "Microfone",
+            "麦克风"
+        ],
+        "Accessibility": [
+            "Accessibility",
+            "Dostępność",
+            "Bedienungshilfen",
+            "Accesibilidad",
+            "Accessibilité",
+            "Accessibilità",
+            "アクセシビリティ",
+            "Acessibilidade",
+            "无障碍"
+        ],
+
         "No text field detected": [
             "No text field detected",
             "Nie wykryto pola tekstowego",
@@ -102,7 +180,8 @@ public class LocalizationManager: ObservableObject {
             "Este atalho já está em uso por outra ação.",
             "此快捷键已被其他操作使用。"
         ],
-        "Change Assistant": [
+
+"Change Assistant": [
             "Change Assistant", 
             "Zmień asystenta", 
             "Assistenten wechseln", 
@@ -4678,16 +4757,16 @@ public class LocalizationManager: ObservableObject {
             "Em breve", 
             "即将推出"
         ],
-        "We are constantly expanding our ecosystem. Future updates will bring a wider selection of advanced AI models tailored to your workflow.": [
-            "We are constantly expanding our ecosystem. Future updates will bring a wider selection of advanced AI models tailored to your workflow.", 
-            "Nieustannie rozwijamy nasz ekosystem. Przyszłe aktualizacje przyniosą szerszy wybór zaawansowanych modeli AI, dopasowanych do Twoich potrzeb.", 
-            "Wir erweitern unser Ökosystem stetig. Zukünftige Updates bringen eine größere Auswahl an fortschrittlichen KI-Modellen.", 
-            "Ampliamos constantemente nuestro ecosistema. Próximas actualizaciones traerán una selección más amplia de modelos de IA avanzados.", 
-            "Nous élargissons constamment notre écosystème. De futures mises à jour apporteront un plus grand choix de modèles d'IA avancés.", 
-            "Stiamo costantemente espandendo il nostro ecosistema. I futuri aggiornamenti porteranno una più ampia selezione di modelli di IA avanzati.", 
-            "我々は常にエコシステムを拡大しています。今後のアップデートにより、より高度なAIモデルの選択肢が増える予定です。", 
-            "Estamos constantemente expandindo nosso ecossistema. Atualizações futuras trarão uma seleção mais ampla de modelos de IA avançados.", 
-            "我们不断扩展我们的生态系统。未来的更新将带来更广泛的高级AI模型选择。"
+        "Sonor is constantly evolving. Future updates will bring a wider selection of advanced AI models tailored to your workflow.": [
+            "Sonor is constantly evolving. Future updates will bring a wider selection of advanced AI models tailored to your workflow.", 
+            "Sonor jest nieustannie rozwijany. Przyszłe aktualizacje przyniosą szerszy wybór zaawansowanych modeli AI, dopasowanych do Twoich potrzeb.", 
+            "Sonor wird stetig weiterentwickelt. Zukünftige Updates bringen eine größere Auswahl an fortschrittlichen KI-Modellen.", 
+            "Sonor está en constante desarrollo. Próximas actualizaciones traerán una selección más amplia de modelos de IA avanzados.", 
+            "Sonor est en développement constant. De futures mises à jour apporteront un plus grand choix de modèles d'IA avancés.", 
+            "Sonor è in costante sviluppo. I futuri aggiornamenti porteranno una più ampia selezione di modelli di IA avanzati.", 
+            "Sonorは常に進化しています。今後のアップデートにより、より高度なAIモデルの選択肢が増える予定です。", 
+            "O Sonor está em constante desenvolvimento. Atualizações futuras trarão uma seleção mais ampla de modelos de IA avançados.", 
+            "Sonor不断在发展。未来的更新将带来更广泛的高级AI模型选择。"
         ]
     ]
 

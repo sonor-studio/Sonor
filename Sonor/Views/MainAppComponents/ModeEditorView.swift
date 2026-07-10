@@ -306,8 +306,8 @@ struct ModeEditorView: View {
                                     RoundedRectangle(cornerRadius: 8)
                                         .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.clear)
                                 )
-                                .padding(.horizontal, 4)
-                                .padding(.bottom, 4)
+                                .padding(.horizontal, 8)
+                                .padding(.bottom, 8)
                             }
                         }
                         if modeBinding.wrappedValue.assistantType == "edit" {
@@ -404,8 +404,8 @@ struct ModeEditorView: View {
                                         RoundedRectangle(cornerRadius: 8)
                                             .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.clear)
                                     )
-                                    .padding(.horizontal, 4)
-                                    .padding(.bottom, 4)
+                                    .padding(.horizontal, 8)
+                                    .padding(.bottom, 8)
                             } else {
                                 Text(t("AI Prompt"))
                                     .font(.system(size: 14, weight: .semibold))
@@ -430,8 +430,8 @@ struct ModeEditorView: View {
                                             .allowsHitTesting(false)
                                     }
                                 }
-                                .padding(.horizontal, 4)
-                                .padding(.bottom, 4)
+                                .padding(.horizontal, 8)
+                                .padding(.bottom, 8)
                             }
                         }
                         VStack(alignment: .leading, spacing: 8) {

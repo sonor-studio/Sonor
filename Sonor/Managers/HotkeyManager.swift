@@ -1,5 +1,6 @@
 import Foundation
 import AppKit
+import AVFoundation
 
 
 func eventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
@@ -54,9 +55,12 @@ class HotkeyManager {
     
     func checkPermissions() {
         let trusted = AXIsProcessTrusted()
+        let hasMic = (AVCaptureDevice.authorizationStatus(for: .audio) == .authorized)
         let hasTap = self.eventTap != nil
         
-        if trusted {
+        let allGranted = trusted && hasMic
+        
+        if allGranted {
             self.hasNotifiedMissingPermissions = false
             if !hasTap {
                 self.startListening()
@@ -68,14 +72,17 @@ class HotkeyManager {
                 self.stopListening()
             }
             
+            
             if !self.hasNotifiedMissingPermissions {
                 self.hasNotifiedMissingPermissions = true
-                NotificationCenter.default.post(name: Notification.Name("AccessibilityPermissionRevoked"), object: nil)
+                NotificationCenter.default.post(name: Notification.Name("PermissionsRevoked"), object: nil)
                 
                 DispatchQueue.main.async {
-                    let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-                    let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
-                    WindowManager.shared.openAccessibilityPermissionWindow()
+                    if !trusted {
+                        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+                        let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+                    }
+                    WindowManager.shared.openPermissionsWindow()
                 }
             }
         }

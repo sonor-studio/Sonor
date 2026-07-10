@@ -78,7 +78,7 @@ struct ModelsSettingsView: View {
                 }
                 .padding(.horizontal, 40)
                 
-                Text(t("We are constantly expanding our ecosystem. Future updates will bring a wider selection of advanced AI models tailored to your workflow."))
+                Text(t("Sonor is constantly evolving. Future updates will bring a wider selection of advanced AI models tailored to your workflow."))
                     .font(.system(size: 13, weight: .regular))
                     .foregroundColor(.secondary.opacity(0.85))
                     .multilineTextAlignment(.center)

@@ -48,9 +48,6 @@ struct MainAppView: View {
     @State private var isShowingOnboardingSheet = false
     @State private var isShowingThankYouSheet = false
     @State private var isShowingMilestoneSheet = false
-    @State private var isShowingMicPermissionSheet = false
-    @State private var isShowingAccessibilityPermissionSheet = false
-    @State private var isShowingChangelogSheet = false
     @State private var milestoneHoursForSheet = 10
     @ObservedObject private var modelManager = ModelManager.shared
     @ObservedObject private var networkMonitor = NetworkMonitor.shared
@@ -129,58 +126,15 @@ struct MainAppView: View {
                 isShowingOnboardingSheet = true
             }
             checkTimeSavedMilestones()
-            
-            if !AXIsProcessTrusted() {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    NotificationCenter.default.post(name: Notification.Name("ShowAccessibilityPermissionView"), object: nil)
-                }
-            }
-            
-            let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? ""
-            let lastSeenVersion = UserDefaults.standard.string(forKey: "lastSeenChangelogVersion") ?? ""
-            let hasChangelogFeatures = !ChangelogLocalization.shared.getFeatures().isEmpty
-            
-            if !lastSeenVersion.isEmpty && lastSeenVersion != currentVersion && hasChangelogFeatures {
-                isShowingChangelogSheet = true
-                UserDefaults.standard.set(currentVersion, forKey: "lastSeenChangelogVersion")
-            } else if lastSeenVersion.isEmpty || (!hasChangelogFeatures && lastSeenVersion != currentVersion) {
-                UserDefaults.standard.set(currentVersion, forKey: "lastSeenChangelogVersion")
-            }
         }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowThankYouView"))) { _ in
             isShowingThankYouSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowMicPermissionView"))) { _ in
-            isShowingAccessibilityPermissionSheet = false
-            isShowingMicPermissionSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowAccessibilityPermissionView"))) { _ in
-            isShowingMicPermissionSheet = false
-            isShowingAccessibilityPermissionSheet = true
-        }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HidePermissionViews"))) { _ in
-            isShowingMicPermissionSheet = false
-            isShowingAccessibilityPermissionSheet = false
         }
         .sheet(isPresented: $isShowingThankYouSheet) {
             ThankYouView(onComplete: {
                 isShowingThankYouSheet = false
             })
             .preferredColorScheme(effectiveColorScheme)
-        }
-        .sheet(isPresented: $isShowingChangelogSheet) {
-            ChangelogView(onComplete: {
-                isShowingChangelogSheet = false
-            })
-            .preferredColorScheme(effectiveColorScheme)
-        }
-        .sheet(isPresented: $isShowingMicPermissionSheet) {
-            MicrophonePermissionExplanationView()
-                .preferredColorScheme(effectiveColorScheme)
-        }
-        .sheet(isPresented: $isShowingAccessibilityPermissionSheet) {
-            AccessibilityPermissionExplanationView()
-                .preferredColorScheme(effectiveColorScheme)
         }
         .sheet(isPresented: $isShowingOnboardingSheet) {
             OnboardingView(onComplete: {

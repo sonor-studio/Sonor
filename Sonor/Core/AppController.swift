@@ -75,7 +75,7 @@ class AppController: NSObject, ObservableObject {
                 self?.sonorContext = nil
             }
         }
-        NotificationCenter.default.addObserver(forName: Notification.Name("AccessibilityPermissionRevoked"), object: nil, queue: .main) { _ in
+        NotificationCenter.default.addObserver(forName: Notification.Name("PermissionsRevoked"), object: nil, queue: .main) { _ in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 if self.isRecording || self.isCurrentlyProcessing {
@@ -170,23 +170,20 @@ class AppController: NSObject, ObservableObject {
             stopRecordingAndTranscribe()
         } else {
             let isTrusted = AXIsProcessTrusted()
-            if !isTrusted {
-                
-                let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
-                let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
-                WindowManager.shared.openAccessibilityPermissionWindow()
-                return
-            }
-            
             let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
-            if authStatus == .denied || authStatus == .restricted {
-                WindowManager.shared.openMicrophonePermissionWindow()
+            
+            if !isTrusted || authStatus == .denied || authStatus == .restricted {
+                if !isTrusted {
+                    let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+                    let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+                }
+                WindowManager.shared.openPermissionsWindow()
                 return
             } else if authStatus == .notDetermined {
                 AVCaptureDevice.requestAccess(for: AVMediaType.audio) { granted in
                     Task { @MainActor in
                         if !granted {
-                            WindowManager.shared.openMicrophonePermissionWindow()
+                            WindowManager.shared.openPermissionsWindow()
                         } else {
                             self.toggleRecording()
                         }

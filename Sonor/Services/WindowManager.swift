@@ -1,6 +1,7 @@
 import Foundation
 import AppKit
 import SwiftUI
+import AVFoundation
 
 @MainActor
 class WindowManager {
@@ -9,6 +10,7 @@ class WindowManager {
     var hudWindow: NSPanel?
     private var settingsWindow: NSWindow?
     private var supportWindow: NSWindow?
+    private var permissionsWindow: NSWindow?
     
     private init() {}
     
@@ -55,9 +57,24 @@ class WindowManager {
         hudWindow?.orderOut(nil)
     }
     
+    func closeAllWindows() {
+        hudWindow?.close()
+        settingsWindow?.close()
+        supportWindow?.close()
+        permissionsWindow?.close()
+    }
+    
     private var hasShownSupportWindowThisSession = false
 
     func openSettings(showSupportWindow: Bool = true) {
+        let trusted = AXIsProcessTrusted()
+        let hasMic = (AVCaptureDevice.authorizationStatus(for: .audio) == .authorized)
+        if !trusted || !hasMic {
+            self.openPermissionsWindow()
+            return
+        }
+
+        
         if let window = settingsWindow {
             window.styleMask.insert(.fullSizeContentView)
             window.titlebarAppearsTransparent = true
@@ -147,24 +164,60 @@ class WindowManager {
     
 
     
-    func openMicrophonePermissionWindow() {
-        self.openSettings(showSupportWindow: false)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            NotificationCenter.default.post(name: Notification.Name("ShowMicPermissionView"), object: nil)
+    func openPermissionsWindow() {
+        self.settingsWindow?.close()
+        self.supportWindow?.close()
+        
+        if let window = permissionsWindow {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: true)
+            return
         }
-    }
-    
-    func openAccessibilityPermissionWindow() {
-        self.openSettings(showSupportWindow: false)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-            NotificationCenter.default.post(name: Notification.Name("ShowAccessibilityPermissionView"), object: nil)
+        
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 400),
+            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Sonor - Wymagane uprawnienia"
+        window.center()
+        window.contentView = NSHostingView(rootView: PermissionsExplanationView())
+        window.isReleasedWhenClosed = false
+        window.backgroundColor = .windowBackgroundColor
+        window.isOpaque = true
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        window.standardWindowButton(.closeButton)?.isHidden = false
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = false
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+        window.isMovableByWindowBackground = true
+        
+        self.permissionsWindow = window
+        
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.permissionsWindow = nil
+                self?.updateActivationPolicy()
+            }
         }
+        
+        NotificationCenter.default.addObserver(forName: Notification.Name("HidePermissionViews"), object: nil, queue: .main) { [weak self] _ in
+            self?.permissionsWindow?.close()
+            self?.openSettings()
+        }
+        
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: true)
+        window.makeKeyAndOrderFront(nil)
     }
     
     func updateActivationPolicy() {
         let isSettingsVisible = settingsWindow?.isVisible == true
         let isSupportVisible = supportWindow?.isVisible == true
-        if !isSettingsVisible && !isSupportVisible {
+        let isPermissionsVisible = permissionsWindow?.isVisible == true
+        if !isSettingsVisible && !isSupportVisible && !isPermissionsVisible {
             NSApp.setActivationPolicy(.accessory)
         }
     }
