@@ -25,6 +25,83 @@ public class LocalizationManager: ObservableObject {
         }
     }
     private let translations: [String: [String]] = [
+        "What's new in version %@": [
+            "What's new in version %@",
+            "Co nowego w wersji %@",
+            "Was gibt es Neues in Version %@",
+            "Novedades en la versión %@",
+            "Nouveautés de la version %@",
+            "Novità nella versione %@",
+            "バージョン %@ の新機能",
+            "O que há de novo na versão %@",
+            "版本 %@ 的新增功能"
+        ],
+        "New Notification Window": [
+            "New Notification Window",
+            "Nowe okno powiadomień",
+            "Neues Benachrichtigungsfenster",
+            "Nueva ventana de notificaciones",
+            "Nouvelle fenêtre de notifications",
+            "Nuova finestra di notifiche",
+            "新しい通知ウィンドウ",
+            "Nova janela de notificações",
+            "新的通知窗口"
+        ],
+        "From now on, all updates will be presented in a new, readable, and aesthetic format.": [
+            "From now on, all updates will be presented in a new, readable, and aesthetic format.",
+            "Od teraz wszystkie nowości w aplikacji będą prezentowane w nowym, czytelnym i estetycznym formacie.",
+            "Ab sofort werden alle Updates in einem neuen, gut lesbaren und ästhetischen Format präsentiert.",
+            "A partir de ahora, todas las actualizaciones se presentarán en un formato nuevo, legible y estético.",
+            "Désormais, toutes les mises à jour seront présentées dans un nouveau format lisible et esthétique.",
+            "Da ora in poi, tutti gli aggiornamenti saranno presentati in un formato nuovo, leggibile ed estetico.",
+            "今後、すべてのアップデートは新しく読みやすく美しい形式で提示されます。",
+            "A partir de agora, todas as atualizações serão apresentadas num formato novo, legível e estético.",
+            "从现在开始，所有更新都将以一种新的、可读的且美观的格式呈现。"
+        ],
+        "Mandatory Updates": [
+            "Mandatory Updates",
+            "Obowiązkowe aktualizacje",
+            "Obligatorische Updates",
+            "Actualizaciones obligatorias",
+            "Mises à jour obligatoires",
+            "Aggiornamenti obbligatori",
+            "必須のアップデート",
+            "Atualizações obrigatórias",
+            "强制更新"
+        ],
+        "Older, unsupported app versions will display a clear message about the need to update.": [
+            "Older, unsupported app versions will display a clear message about the need to update.",
+            "Starsze, niewspierane już wersje aplikacji będą wyświetlać jasny komunikat o konieczności aktualizacji.",
+            "Ältere, nicht mehr unterstützte App-Versionen zeigen eine klare Meldung über die Notwendigkeit eines Updates.",
+            "Las versiones más antiguas y no compatibles de la aplicación mostrarán un mensaje claro sobre la necesidad de actualizar.",
+            "Les anciennes versions de l'application qui ne sont plus prises en charge afficheront un message clair sur la nécessité de mettre à jour.",
+            "Le versioni precedenti non supportate dell'app mostreranno un chiaro messaggio sulla necessità di eseguire l'aggiornamento.",
+            "サポートされなくなった古いアプリのバージョンには、アップデートの必要性に関する明確なメッセージが表示されます。",
+            "As versões mais antigas e não suportadas da aplicação exibirão uma mensagem clara sobre a necessidade de atualização.",
+            "不再受支持的旧应用版本将显示关于需要更新的清晰消息。"
+        ],
+        "Performance Improvements": [
+            "Performance Improvements",
+            "Poprawa wydajności",
+            "Leistungsverbesserungen",
+            "Mejoras de rendimiento",
+            "Amélioration des performances",
+            "Miglioramenti delle prestazioni",
+            "パフォーマンスの向上",
+            "Melhorias de desempenho",
+            "性能改进"
+        ],
+        "The app now runs even faster thanks to background process optimizations.": [
+            "The app now runs even faster thanks to background process optimizations.",
+            "Aplikacja działa teraz jeszcze szybciej dzięki optymalizacji procesów działających w tle.",
+            "Die App läuft jetzt dank Optimierungen von Hintergrundprozessen noch schneller.",
+            "La aplicación ahora funciona aún más rápido gracias a las optimizaciones de los procesos en segundo plano.",
+            "L'application s'exécute désormais encore plus rapidement grâce aux optimisations des processus en arrière-plan.",
+            "L'app ora funziona ancora più velocemente grazie alle ottimizzazioni dei processi in background.",
+            "バックグラウンドプロセスの最適化により、アプリの動作がさらに高速になりました。",
+            "A aplicação agora funciona ainda mais rápido graças às otimizações dos processos em segundo plano.",
+            "得益于后台进程的优化，应用程序现在的运行速度甚至更快。"
+        ],
         "Permissions Required": [
             "Permissions Required",
             "Wymagane uprawnienia",
@@ -181,6 +258,94 @@ public class LocalizationManager: ObservableObject {
             "此快捷键已被其他操作使用。"
         ],
 
+        "Intelligent Streaming": [
+            "Intelligent Streaming",
+            "Inteligentne Przesyłanie Tekstu",
+            "Intelligentes Streaming",
+            "Transmisión Inteligente",
+            "Streaming Intelligent",
+            "Streaming Intelligente",
+            "スマートストリーミング",
+            "Streaming Inteligente",
+            "智能流传输"
+        ],
+        "Generation shifts to the background if the field loses focus, and smartly appends only missing text when resumed.": [
+            "Generation shifts to the background if the field loses focus, and smartly appends only missing text when resumed.",
+            "Generowanie przechodzi w tło po utracie fokusu i sprytnie dołącza tylko brakujący tekst po wznowieniu.",
+            "Die Generierung läuft im Hintergrund weiter, wenn das Feld den Fokus verliert, und fügt beim Fortsetzen nur fehlenden Text ein.",
+            "La generación pasa al fondo si el campo pierde el foco, y añade inteligentemente solo el texto faltante al reanudarse.",
+            "La génération passe en arrière-plan si le champ perd le focus, et ajoute intelligemment uniquement le texte manquant à la reprise.",
+            "La generazione passa in background se il campo perde il focus e aggiunge in modo intelligente solo il testo mancante alla ripresa.",
+            "フィールドのフォーカスが外れると生成がバックグラウンドに移行し、再開時に不足しているテキストのみをスマートに追加します。",
+            "A geração vai para o fundo se o campo perder o foco e adiciona de forma inteligente apenas o texto ausente ao ser retomada.",
+            "如果失去焦点，生成将转移到后台，并在恢复时智能地仅附加缺失的文本。"
+        ],
+        "Revamped Assistants": [
+            "Revamped Assistants",
+            "Odświeżeni Asystenci",
+            "Überarbeitete Assistenten",
+            "Asistentes Renovados",
+            "Assistants Repensés",
+            "Assistenti Rinnovati",
+            "アシスタントの刷新",
+            "Assistentes Renovados",
+            "重制的助手"
+        ],
+        "A completely overhauled prompt architecture with new 'Casual Style' and 'Formal Style' assistants.": [
+            "A completely overhauled prompt architecture with new 'Casual Style' and 'Formal Style' assistants.",
+            "Całkowicie przebudowana architektura promptów z nowymi asystentami 'Casual Style' i 'Formal Style'.",
+            "Eine komplett überarbeitete Prompt-Architektur mit neuen 'Casual Style'- und 'Formal Style'-Assistenten.",
+            "Una arquitectura de prompts completamente renovada con nuevos asistentes 'Casual Style' y 'Formal Style'.",
+            "Une architecture de prompt entièrement repensée avec de nouveaux assistants 'Casual Style' e 'Formal Style'.",
+            "Un'architettura dei prompt completamente rinnovata con nuovi assistenti 'Casual Style' e 'Formal Style'.",
+            "新しい「Casual Style」および「Formal Style」アシスタントを備えた、完全に刷新されたプロンプトアーキテクチャ。",
+            "Uma arquitetura de prompt completamente reformulada com novos assistentes 'Casual Style' e 'Formal Style'.",
+            "具有全新“休闲风格”和“正式风格”助手的完全重新设计的提示词架构。"
+        ],
+        "Resilient Downloads": [
+            "Resilient Downloads",
+            "Odporne Pobieranie",
+            "Robuste Downloads",
+            "Descargas Resistentes",
+            "Téléchargements Fiables",
+            "Download Resilienti",
+            "回復力のあるダウンロード",
+            "Downloads Resilientes",
+            "弹性下载"
+        ],
+        "Model downloads now automatically retry during minor network connection drops.": [
+            "Model downloads now automatically retry during minor network connection drops.",
+            "Pobieranie modeli teraz automatycznie wznawia się podczas drobnych przerw w połączeniu sieciowym.",
+            "Modell-Downloads werden jetzt bei kleinen Netzwerkunterbrechungen automatisch wiederholt.",
+            "Las descargas de modelos ahora se reintentan automáticamente durante pequeñas caídas de conexión de red.",
+            "Les téléchargements de modèles reprennent désormais automatiquement lors de petites coupures de réseau.",
+            "I download dei modelli ora vengono ritentati automaticamente in caso di piccole interruzioni di rete.",
+            "モデルのダウンロードは、小規模なネットワーク接続の切断時に自動的に再試行されるようになりました。",
+            "Os downloads de modelos agora tentam novamente de forma automática durante pequenas quedas de conexão de rede.",
+            "模型下载现在会在小规模网络连接中断期间自动重试。"
+        ],
+        "Permissions & UI Polish": [
+            "Permissions & UI Polish",
+            "Uprawnienia i Poprawki UI",
+            "Berechtigungen & UI-Feinschliff",
+            "Permisos y Mejoras de Interfaz",
+            "Permissions et Esthétique UI",
+            "Permessi e Ritocchi UI",
+            "権限とUIの洗練",
+            "Permissões e Polimento de UI",
+            "权限和界面优化"
+        ],
+        "Strict new permissions onboarding window, draggable overlays, and smoother animations.": [
+            "Strict new permissions onboarding window, draggable overlays, and smoother animations.",
+            "Nowe, rygorystyczne okno uprawnień, przeciągane nakładki i płynniejsze animacje.",
+            "Strenges neues Fenster für Berechtigungen, ziehbare Overlays und flüssigere Animationen.",
+            "Nueva y estricta ventana de permisos, superposiciones arrastrables y animaciones más fluidas.",
+            "Nouvelle fenêtre stricte de permissions, fenêtres flottantes déplaçables et animations plus fluides.",
+            "Nuova e rigorosa finestra dei permessi, overlay trascinabili e animazioni più fluide.",
+            "厳格な新しい権限設定ウィンドウ、ドラッグ可能なオーバーレイ、およびより滑らかなアニメーション。",
+            "Nova e rigorosa janela de permissões, sobreposições arrastáveis e animações mais suaves.",
+            "严格的新权限设置窗口、可拖动叠加层以及更流畅的动画。"
+        ],
 "Change Assistant": [
             "Change Assistant", 
             "Zmień asystenta", 

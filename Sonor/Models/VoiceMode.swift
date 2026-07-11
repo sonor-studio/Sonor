@@ -39,7 +39,7 @@ struct VoiceMode: Identifiable, Codable, Equatable {
         if isBuiltIn == true {
             return true
         }
-        let builtInNames = ["Pure Text", "Text Smoothing", "Formal Style", "Casual Style", "Edit & Create", "Czysty tekst", "Wygładzanie tekstu", "Styl formalny", "Luźny styl", "Edycja i tworzenie"]
+        let builtInNames = ["Pure Text", "Text Smoothing", "Formal Style", "Casual Style", "Edit & Create"]
         return builtInNames.contains(name)
     }
     static let defaults: [VoiceMode] = [

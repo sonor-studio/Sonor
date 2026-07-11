@@ -39,6 +39,18 @@ struct SonorApp: App {
         NSApplication.shared.mainMenu = mainMenu
         UserDefaults.standard.set(false, forKey: "isIncognitoMode")
         UpdateManager.shared.checkForUpdates()
+        let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
+        let lastSeenVersion = UserDefaults.standard.string(forKey: "lastSeenVersion") ?? "0.0.0"
+        if currentVersion != lastSeenVersion {
+            UserDefaults.standard.set(currentVersion, forKey: "lastSeenVersion")
+            let isReturningUser = lastSeenVersion != "0.0.0" || UserDefaults.standard.bool(forKey: "hasSeenOnboardingLocally")
+            if isReturningUser {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    WindowManager.shared.openChangelogWindow()
+                }
+            }
+        }
+
     }
     var body: some Scene {
         menuBarExtraScene

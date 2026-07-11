@@ -1,0 +1,1054 @@
+commit cfd9d7187bd13794e6b914edf454f48f8d28c176
+Author: sonor-studio <sonor.app.studio.com>
+Date:   Wed Jul 8 18:10:31 2026 +0200
+
+    feat: enforce strict permissions flow and update translations
+    
+    - Introduced a dedicated permissions onboarding window on the first app launch.
+    - Changed missing permissions behavior: the app now blocks usage and opens the permissions window instead of showing a non-blocking warning.
+    - Updated localization files to reflect a modified text string.
+
+diff --git a/Sonor/Core/AppController.swift b/Sonor/Core/AppController.swift
+index db30baec..160c63e4 100644
+--- a/Sonor/Core/AppController.swift
++++ b/Sonor/Core/AppController.swift
+@@ -75,7 +75,7 @@ class AppController: NSObject, ObservableObject {
+                 self?.sonorContext = nil
+             }
+         }
+-        NotificationCenter.default.addObserver(forName: Notification.Name("AccessibilityPermissionRevoked"), object: nil, queue: .main) { _ in
++        NotificationCenter.default.addObserver(forName: Notification.Name("PermissionsRevoked"), object: nil, queue: .main) { _ in
+             Task { @MainActor [weak self] in
+                 guard let self = self else { return }
+                 if self.isRecording || self.isCurrentlyProcessing {
+@@ -170,23 +170,20 @@ class AppController: NSObject, ObservableObject {
+             stopRecordingAndTranscribe()
+         } else {
+             let isTrusted = AXIsProcessTrusted()
+-            if !isTrusted {
+-                
+-                let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+-                let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+-                WindowManager.shared.openAccessibilityPermissionWindow()
+-                return
+-            }
+-            
+             let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+-            if authStatus == .denied || authStatus == .restricted {
+-                WindowManager.shared.openMicrophonePermissionWindow()
++            
++            if !isTrusted || authStatus == .denied || authStatus == .restricted {
++                if !isTrusted {
++                    let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
++                    let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
++                }
++                WindowManager.shared.openPermissionsWindow()
+                 return
+             } else if authStatus == .notDetermined {
+                 AVCaptureDevice.requestAccess(for: AVMediaType.audio) { granted in
+                     Task { @MainActor in
+                         if !granted {
+-                            WindowManager.shared.openMicrophonePermissionWindow()
++                            WindowManager.shared.openPermissionsWindow()
+                         } else {
+                             self.toggleRecording()
+                         }
+diff --git a/Sonor/Core/SonorApp.swift b/Sonor/Core/SonorApp.swift
+index fe1ccd69..c94b2162 100644
+--- a/Sonor/Core/SonorApp.swift
++++ b/Sonor/Core/SonorApp.swift
+@@ -1,5 +1,6 @@
+ import SwiftUI
+ import Sparkle
++import Combine
+ 
+ class AppDelegate: NSObject, NSApplicationDelegate {
+     func applicationDidFinishLaunching(_ notification: Notification) {
+@@ -15,16 +16,68 @@ class AppDelegate: NSObject, NSApplicationDelegate {
+     func applicationWillTerminate(_ notification: Notification) {
+         NotificationCenter.default.post(name: NSNotification.Name("AppWillTerminate"), object: nil)
+     }
++    
++    func applicationSupportsSecureRestorableState(_ app: NSApplication) -> Bool {
++        return false
++    }
++}
++class SonorUpdaterDelegate: NSObject, SPUUpdaterDelegate, ObservableObject {
++    static let shared = SonorUpdaterDelegate()
++    
++    @Published var isCriticalUpdatePending = false
++    @Published var isUpdateCheckComplete = false
++    
++    private override init() {
++        super.init()
++    }
++
++    func updater(_ updater: SPUUpdater, didFindValidUpdate item: SUAppcastItem) {
++        if item.isCriticalUpdate {
++            DispatchQueue.main.async {
++                self.isCriticalUpdatePending = true
++                WindowManager.shared.closeAllWindows()
++                
++                // Dodatkowo wymuś zamknięcie wszelkich innych okien nie należących do Sparkle
++                for window in NSApplication.shared.windows {
++                    let className = NSStringFromClass(type(of: window))
++                    let title = window.title
++                    if !className.contains("SUUpdate") && !title.lowercased().contains("update") && !title.lowercased().contains("aktualizac") {
++                        window.close()
++                    }
++                }
++            }
++        }
++    }
++    
++    func updater(_ updater: SPUUpdater, didFinishUpdateCycleFor updateCheck: SPUUpdateCheck, error: Error?) {
++        DispatchQueue.main.async {
++            self.isUpdateCheckComplete = true
++            if !self.isCriticalUpdatePending {
++                // Skoro już wiemy, że nie ma krytycznej aktualizacji, możemy bezpiecznie sprawdzić uprawnienia
++                HotkeyManager.shared.checkPermissions()
++            }
++        }
++    }
++    
++    func updater(_ updater: SPUUpdater, didAbortWithError error: Error) {
++        if isCriticalUpdatePending {
++            DispatchQueue.main.async {
++                NSApplication.shared.terminate(nil)
++            }
++        }
++    }
+ }
+ 
+ @main
+ struct SonorApp: App {
+     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+     @StateObject private var controller = AppController()
++    @StateObject private var updaterDelegate = SonorUpdaterDelegate.shared
+     private let updaterController: SPUStandardUpdaterController
+ 
+     init() {
+-        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: nil, userDriverDelegate: nil)
++        updaterController = SPUStandardUpdaterController(startingUpdater: true, updaterDelegate: SonorUpdaterDelegate.shared, userDriverDelegate: nil)
++        
+         NSApplication.shared.setActivationPolicy(.accessory)
+         let mainMenu = NSMenu()
+         let appMenuItem = NSMenuItem()
+@@ -42,6 +95,9 @@ struct SonorApp: App {
+         mainMenu.addItem(editMenuItem)
+         NSApplication.shared.mainMenu = mainMenu
+         UserDefaults.standard.set(false, forKey: "isIncognitoMode")
++        
++        // Wymusza sprawdzenie w tle od razu przy każdym uruchomieniu
++        updaterController.updater.checkForUpdatesInBackground()
+     }
+     var body: some Scene {
+         menuBarExtraScene
+@@ -53,16 +109,33 @@ struct SonorApp: App {
+     }
+     @ViewBuilder
+     private var menuContent: some View {
+-        Button(t("Check for Updates...")) {
+-            updaterController.checkForUpdates(nil)
+-        }
+-        Divider()
+-        Button(t("Settings")) {
+-            WindowManager.shared.openSettings()
+-        }
+-        Divider()
+-        Button(t("Quit")) {
+-            controller.quitApp()
++        if !updaterDelegate.isUpdateCheckComplete {
++            Text(t("Checking for updates..."))
++            Divider()
++            Button(t("Quit")) {
++                NSApplication.shared.terminate(nil)
++            }
++        } else if updaterDelegate.isCriticalUpdatePending {
++            Text(t("Update Required!"))
++            Button(t("Install Update")) {
++                updaterController.checkForUpdates(nil)
++            }
++            Divider()
++            Button(t("Quit")) {
++                NSApplication.shared.terminate(nil)
++            }
++        } else {
++            Button(t("Check for Updates...")) {
++                updaterController.checkForUpdates(nil)
++            }
++            Divider()
++            Button(t("Settings")) {
++                WindowManager.shared.openSettings()
++            }
++            Divider()
++            Button(t("Quit")) {
++                controller.quitApp()
++            }
+         }
+     }
+ }
+diff --git a/Sonor/Info.plist b/Sonor/Info.plist
+index 85c014be..93d68f84 100644
+--- a/Sonor/Info.plist
++++ b/Sonor/Info.plist
+@@ -2,6 +2,18 @@
+ <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+ <plist version="1.0">
+ <dict>
++	<key>CFBundleLocalizations</key>
++	<array>
++		<string>en</string>
++		<string>pl</string>
++		<string>de</string>
++		<string>es</string>
++		<string>fr</string>
++		<string>it</string>
++		<string>ja</string>
++		<string>pt</string>
++		<string>zh</string>
++	</array>
+ 	<key>CFBundleURLTypes</key>
+ 	<array>
+ 		<dict>
+@@ -17,9 +29,11 @@
+ 	</array>
+ 	<key>Privacy - Accessibility Usage Description</key>
+ 	<string>Sonor requires accessibility permissions to detect your global dictation hotkeys and to seamlessly stream the transcribed text directly into your active text fields.</string>
++	<key>SUEnableAutomaticChecks</key>
++	<true/>
++	<key>SUFeedURL</key>
++	<string>https://raw.githubusercontent.com/sonor-studio/Sonor/main/appcast.xml?v=129</string>
+ 	<key>SUPublicEDKey</key>
+ 	<string>ZRkr3Aoyu60tNoHafmZ1IDHkNnvVlNJCbJtRUcNLYDI=</string>
+-	<key>SUFeedURL</key>
+-	<string>https://raw.githubusercontent.com/sonor-studio/Sonor/main/appcast.xml</string>
+ </dict>
+ </plist>
+diff --git a/Sonor/Managers/HotkeyManager.swift b/Sonor/Managers/HotkeyManager.swift
+index a7f93abb..ab492f60 100644
+--- a/Sonor/Managers/HotkeyManager.swift
++++ b/Sonor/Managers/HotkeyManager.swift
+@@ -1,5 +1,6 @@
+ import Foundation
+ import AppKit
++import AVFoundation
+ 
+ 
+ func eventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent, refcon: UnsafeMutableRawPointer?) -> Unmanaged<CGEvent>? {
+@@ -54,9 +55,12 @@ class HotkeyManager {
+     
+     func checkPermissions() {
+         let trusted = AXIsProcessTrusted()
++        let hasMic = (AVCaptureDevice.authorizationStatus(for: .audio) == .authorized)
+         let hasTap = self.eventTap != nil
+         
+-        if trusted {
++        let allGranted = trusted && hasMic
++        
++        if allGranted {
+             self.hasNotifiedMissingPermissions = false
+             if !hasTap {
+                 self.startListening()
+@@ -68,14 +72,20 @@ class HotkeyManager {
+                 self.stopListening()
+             }
+             
++            if !SonorUpdaterDelegate.shared.isUpdateCheckComplete {
++                return
++            }
++            
+             if !self.hasNotifiedMissingPermissions {
+                 self.hasNotifiedMissingPermissions = true
+-                NotificationCenter.default.post(name: Notification.Name("AccessibilityPermissionRevoked"), object: nil)
++                NotificationCenter.default.post(name: Notification.Name("PermissionsRevoked"), object: nil)
+                 
+                 DispatchQueue.main.async {
+-                    let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
+-                    let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
+-                    WindowManager.shared.openAccessibilityPermissionWindow()
++                    if !trusted {
++                        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
++                        let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
++                    }
++                    WindowManager.shared.openPermissionsWindow()
+                 }
+             }
+         }
+diff --git a/Sonor/Managers/LocalizationManager.swift b/Sonor/Managers/LocalizationManager.swift
+index 16256b69..cf69a829 100644
+--- a/Sonor/Managers/LocalizationManager.swift
++++ b/Sonor/Managers/LocalizationManager.swift
+@@ -25,6 +25,84 @@ public class LocalizationManager: ObservableObject {
+         }
+     }
+     private let translations: [String: [String]] = [
++        "Permissions Required": [
++            "Permissions Required",
++            "Wymagane uprawnienia",
++            "Erforderliche Berechtigungen",
++            "Permisos Requeridos",
++            "Autorisations requises",
++            "Autorizzazioni richieste",
++            "必要な権限",
++            "Permissões Necessárias",
++            "所需权限"
++        ],
++        "Sonor requires the following permissions to function correctly. The application will be locked until all required permissions are granted.": [
++            "Sonor requires the following permissions to function correctly. The application will be locked until all required permissions are granted.",
++            "Sonor wymaga następujących uprawnień do poprawnego działania. Aplikacja będzie zablokowana do czasu ich nadania.",
++            "Sonor benötigt die folgenden Berechtigungen, um ordnungsgemäß zu funktionieren. Die Anwendung bleibt gesperrt, bis alle erforderlichen Berechtigungen erteilt wurden.",
++            "Sonor requiere los siguientes permisos para funcionar correctamente. La aplicación estará bloqueada hasta que se otorguen todos los permisos necesarios.",
++            "Sonor nécessite les autorisations suivantes pour fonctionner correctement. L'application sera verrouillée jusqu'à ce que toutes les autorisations requises soient accordées.",
++            "Sonor richiede le seguenti autorizzazioni per funzionare correttamente. L'applicazione sarà bloccata fino a quando non verranno concesse tutte le autorizzazioni necessarie.",
++            "Sonorが正しく機能するには、以下の権限が必要です。必要な権限がすべて付与されるまで、アプリケーションはロックされます。",
++            "Sonor requer as seguintes permissões para funcionar corretamente. O aplicativo ficará bloqueado até que todas as permissões necessárias sejam concedidas.",
++            "Sonor需要以下权限才能正常运行。在授予所有必需的权限之前，应用程序将被锁定。"
++        ],
++        "Required to capture your voice for transcription.": [
++            "Required to capture your voice for transcription.",
++            "Wymagane do rejestrowania głosu w celu transkrypcji.",
++            "Erforderlich, um Ihre Stimme für die Transkription aufzuzeichnen.",
++            "Requerido para capturar su voz para la transcripción.",
++            "Requis pour capturer votre voix pour la transcription.",
++            "Richiesto per catturare la tua voce per la trascrizione.",
++            "文字起こしのために音声を録音するのに必要です。",
++            "Necessário para capturar sua voz para transcrição.",
++            "捕获您的声音以进行转录所需。"
++        ],
++        "Required to automatically paste your transcribed text into other applications and support hotkeys.": [
++            "Required to automatically paste your transcribed text into other applications and support hotkeys.",
++            "Wymagane do automatycznego wklejania transkrybowanego tekstu do innych aplikacji oraz obsługi skrótów klawiszowych.",
++            "Erforderlich, um Ihren transkribierten Text automatisch in andere Anwendungen einzufügen und Tastenkombinationen zu unterstützen.",
++            "Requerido para pegar automáticamente su texto transcrito en otras aplicaciones y admitir atajos de teclado.",
++            "Requis pour coller automatiquement votre texte transcrit dans d'autres applications et prendre en charge les raccourcis clavier.",
++            "Richiesto per incollare automaticamente il testo trascritto in altre applicazioni e supportare le scorciatoie da tastiera.",
++            "文字起こしされたテキストを他のアプリケーションに自動的に貼り付け、ホットキーをサポートするために必要です。",
++            "Necessário para colar automaticamente seu texto transcrito em outros aplicativos e dar suporte a teclas de atalho.",
++            "需要自动将您的转录文本粘贴到其他应用程序并支持热键。"
++        ],
++        "Quit Application": [
++            "Quit Application",
++            "Zakończ aplikację",
++            "Anwendung beenden",
++            "Salir de la aplicación",
++            "Quitter l'application",
++            "Esci dall'applicazione",
++            "アプリケーションを終了する",
++            "Sair do aplicativo",
++            "退出申请"
++        ],
++        "Microphone": [
++            "Microphone",
++            "Mikrofon",
++            "Mikrofon",
++            "Micrófono",
++            "Microphone",
++            "Microfono",
++            "マイク",
++            "Microfone",
++            "麦克风"
++        ],
++        "Accessibility": [
++            "Accessibility",
++            "Dostępność",
++            "Bedienungshilfen",
++            "Accesibilidad",
++            "Accessibilité",
++            "Accessibilità",
++            "アクセシビリティ",
++            "Acessibilidade",
++            "无障碍"
++        ],
++
+         "No text field detected": [
+             "No text field detected",
+             "Nie wykryto pola tekstowego",
+@@ -102,7 +180,29 @@ public class LocalizationManager: ObservableObject {
+             "Este atalho já está em uso por outra ação.",
+             "此快捷键已被其他操作使用。"
+         ],
+-        "Change Assistant": [
++                        "Checking for updates...": [
++            "Checking for updates...",
++            "Sprawdzanie aktualizacji...",
++            "Suche nach Updates...",
++            "Buscando actualizaciones...",
++            "Recherche de mises à jour...",
++            "Verifica aggiornamenti in corso...",
++            "アップデートを確認中...",
++            "Procurando por atualizações...",
++            "正在检查更新..."
++        ],
++"Check for Updates...": [
++            "Check for Updates...",
++            "Sprawdź uaktualnienia...",
++            "Nach Updates suchen...",
++            "Buscar actualizaciones...",
++            "Rechercher les mises à jour...",
++            "Verifica aggiornamenti...",
++            "アップデートを確認...",
++            "Verificar atualizações...",
++            "检查更新..."
++        ],
++"Change Assistant": [
+             "Change Assistant", 
+             "Zmień asystenta", 
+             "Assistenten wechseln", 
+@@ -4678,16 +4778,16 @@ public class LocalizationManager: ObservableObject {
+             "Em breve", 
+             "即将推出"
+         ],
+-        "We are constantly expanding our ecosystem. Future updates will bring a wider selection of advanced AI models tailored to your workflow.": [
+-            "We are constantly expanding our ecosystem. Future updates will bring a wider selection of advanced AI models tailored to your workflow.", 
+-            "Nieustannie rozwijamy nasz ekosystem. Przyszłe aktualizacje przyniosą szerszy wybór zaawansowanych modeli AI, dopasowanych do Twoich potrzeb.", 
+-            "Wir erweitern unser Ökosystem stetig. Zukünftige Updates bringen eine größere Auswahl an fortschrittlichen KI-Modellen.", 
+-            "Ampliamos constantemente nuestro ecosistema. Próximas actualizaciones traerán una selección más amplia de modelos de IA avanzados.", 
+-            "Nous élargissons constamment notre écosystème. De futures mises à jour apporteront un plus grand choix de modèles d'IA avancés.", 
+-            "Stiamo costantemente espandendo il nostro ecosistema. I futuri aggiornamenti porteranno una più ampia selezione di modelli di IA avanzati.", 
+-            "我々は常にエコシステムを拡大しています。今後のアップデートにより、より高度なAIモデルの選択肢が増える予定です。", 
+-            "Estamos constantemente expandindo nosso ecossistema. Atualizações futuras trarão uma seleção mais ampla de modelos de IA avançados.", 
+-            "我们不断扩展我们的生态系统。未来的更新将带来更广泛的高级AI模型选择。"
++        "Sonor is constantly evolving. Future updates will bring a wider selection of advanced AI models tailored to your workflow.": [
++            "Sonor is constantly evolving. Future updates will bring a wider selection of advanced AI models tailored to your workflow.", 
++            "Sonor jest nieustannie rozwijany. Przyszłe aktualizacje przyniosą szerszy wybór zaawansowanych modeli AI, dopasowanych do Twoich potrzeb.", 
++            "Sonor wird stetig weiterentwickelt. Zukünftige Updates bringen eine größere Auswahl an fortschrittlichen KI-Modellen.", 
++            "Sonor está en constante desarrollo. Próximas actualizaciones traerán una selección más amplia de modelos de IA avanzados.", 
++            "Sonor est en développement constant. De futures mises à jour apporteront un plus grand choix de modèles d'IA avancés.", 
++            "Sonor è in costante sviluppo. I futuri aggiornamenti porteranno una più ampia selezione di modelli di IA avanzati.", 
++            "Sonorは常に進化しています。今後のアップデートにより、より高度なAIモデルの選択肢が増える予定です。", 
++            "O Sonor está em constante desenvolvimento. Atualizações futuras trarão uma seleção mais ampla de modelos de IA avançados.", 
++            "Sonor不断在发展。未来的更新将带来更广泛的高级AI模型选择。"
+         ]
+     ]
+ 
+diff --git a/Sonor/Services/WindowManager.swift b/Sonor/Services/WindowManager.swift
+index 83dee4aa..29a54acf 100644
+--- a/Sonor/Services/WindowManager.swift
++++ b/Sonor/Services/WindowManager.swift
+@@ -1,6 +1,7 @@
+ import Foundation
+ import AppKit
+ import SwiftUI
++import AVFoundation
+ 
+ @MainActor
+ class WindowManager {
+@@ -9,6 +10,7 @@ class WindowManager {
+     var hudWindow: NSPanel?
+     private var settingsWindow: NSWindow?
+     private var supportWindow: NSWindow?
++    private var permissionsWindow: NSWindow?
+     
+     private init() {}
+     
+@@ -55,9 +57,28 @@ class WindowManager {
+         hudWindow?.orderOut(nil)
+     }
+     
++    func closeAllWindows() {
++        hudWindow?.close()
++        settingsWindow?.close()
++        supportWindow?.close()
++        permissionsWindow?.close()
++    }
++    
+     private var hasShownSupportWindowThisSession = false
+ 
+     func openSettings(showSupportWindow: Bool = true) {
++        if !SonorUpdaterDelegate.shared.isUpdateCheckComplete || SonorUpdaterDelegate.shared.isCriticalUpdatePending {
++            return
++        }
++        
++        let trusted = AXIsProcessTrusted()
++        let hasMic = (AVCaptureDevice.authorizationStatus(for: .audio) == .authorized)
++        if !trusted || !hasMic {
++            self.openPermissionsWindow()
++            return
++        }
++
++        
+         if let window = settingsWindow {
+             window.styleMask.insert(.fullSizeContentView)
+             window.titlebarAppearsTransparent = true
+@@ -108,6 +129,10 @@ class WindowManager {
+     }
+     
+     func openSupportWindow() {
++        if !SonorUpdaterDelegate.shared.isUpdateCheckComplete || SonorUpdaterDelegate.shared.isCriticalUpdatePending {
++            return
++        }
++        
+         if let window = supportWindow {
+             window.makeKeyAndOrderFront(nil)
+             NSApp.setActivationPolicy(.regular)
+@@ -147,24 +172,64 @@ class WindowManager {
+     
+ 
+     
+-    func openMicrophonePermissionWindow() {
+-        self.openSettings(showSupportWindow: false)
+-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+-            NotificationCenter.default.post(name: Notification.Name("ShowMicPermissionView"), object: nil)
++    func openPermissionsWindow() {
++        if !SonorUpdaterDelegate.shared.isUpdateCheckComplete || SonorUpdaterDelegate.shared.isCriticalUpdatePending {
++            return
+         }
+-    }
+-    
+-    func openAccessibilityPermissionWindow() {
+-        self.openSettings(showSupportWindow: false)
+-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+-            NotificationCenter.default.post(name: Notification.Name("ShowAccessibilityPermissionView"), object: nil)
++        
++        self.settingsWindow?.close()
++        self.supportWindow?.close()
++        
++        if let window = permissionsWindow {
++            window.makeKeyAndOrderFront(nil)
++            NSApp.setActivationPolicy(.regular)
++            NSApp.activate(ignoringOtherApps: true)
++            return
+         }
++        
++        let window = NSWindow(
++            contentRect: NSRect(x: 0, y: 0, width: 520, height: 400),
++            styleMask: [.titled, .closable, .miniaturizable, .fullSizeContentView],
++            backing: .buffered,
++            defer: false
++        )
++        window.title = "Sonor - Wymagane uprawnienia"
++        window.center()
++        window.contentView = NSHostingView(rootView: PermissionsExplanationView())
++        window.isReleasedWhenClosed = false
++        window.backgroundColor = .windowBackgroundColor
++        window.isOpaque = true
++        window.titlebarAppearsTransparent = true
++        window.titleVisibility = .hidden
++        window.standardWindowButton(.closeButton)?.isHidden = false
++        window.standardWindowButton(.miniaturizeButton)?.isHidden = false
++        window.standardWindowButton(.zoomButton)?.isHidden = true
++        window.isMovableByWindowBackground = true
++        
++        self.permissionsWindow = window
++        
++        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
++            DispatchQueue.main.async {
++                self?.permissionsWindow = nil
++                self?.updateActivationPolicy()
++            }
++        }
++        
++        NotificationCenter.default.addObserver(forName: Notification.Name("HidePermissionViews"), object: nil, queue: .main) { [weak self] _ in
++            self?.permissionsWindow?.close()
++            self?.openSettings()
++        }
++        
++        NSApp.setActivationPolicy(.regular)
++        NSApp.activate(ignoringOtherApps: true)
++        window.makeKeyAndOrderFront(nil)
+     }
+     
+     func updateActivationPolicy() {
+         let isSettingsVisible = settingsWindow?.isVisible == true
+         let isSupportVisible = supportWindow?.isVisible == true
+-        if !isSettingsVisible && !isSupportVisible {
++        let isPermissionsVisible = permissionsWindow?.isVisible == true
++        if !isSettingsVisible && !isSupportVisible && !isPermissionsVisible {
+             NSApp.setActivationPolicy(.accessory)
+         }
+     }
+diff --git a/Sonor/Sonor.entitlements b/Sonor/Sonor.entitlements
+index 04b89125..85ce5189 100644
+--- a/Sonor/Sonor.entitlements
++++ b/Sonor/Sonor.entitlements
+@@ -2,13 +2,13 @@
+ <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+ <plist version="1.0">
+ <dict>
++	<key>com.apple.security.cs.disable-library-validation</key>
++	<true/>
+ 	<key>com.apple.security.device.audio-input</key>
+ 	<true/>
+ 	<key>com.apple.security.get-task-allow</key>
+ 	<true/>
+ 	<key>com.apple.security.temporary-exception.accessibility</key>
+ 	<true/>
+-	<key>com.apple.security.cs.disable-library-validation</key>
+-	<true/>
+ </dict>
+ </plist>
+diff --git a/Sonor/Views/MainAppComponents/ModeEditorView.swift b/Sonor/Views/MainAppComponents/ModeEditorView.swift
+index 9fb4f708..9cf0a7d5 100644
+--- a/Sonor/Views/MainAppComponents/ModeEditorView.swift
++++ b/Sonor/Views/MainAppComponents/ModeEditorView.swift
+@@ -306,8 +306,8 @@ struct ModeEditorView: View {
+                                     RoundedRectangle(cornerRadius: 8)
+                                         .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.clear)
+                                 )
+-                                .padding(.horizontal, 4)
+-                                .padding(.bottom, 4)
++                                .padding(.horizontal, 8)
++                                .padding(.bottom, 8)
+                             }
+                         }
+                         if modeBinding.wrappedValue.assistantType == "edit" {
+@@ -404,8 +404,8 @@ struct ModeEditorView: View {
+                                         RoundedRectangle(cornerRadius: 8)
+                                             .fill(colorScheme == .dark ? Color.white.opacity(0.05) : Color.clear)
+                                     )
+-                                    .padding(.horizontal, 4)
+-                                    .padding(.bottom, 4)
++                                    .padding(.horizontal, 8)
++                                    .padding(.bottom, 8)
+                             } else {
+                                 Text(t("AI Prompt"))
+                                     .font(.system(size: 14, weight: .semibold))
+@@ -430,8 +430,8 @@ struct ModeEditorView: View {
+                                             .allowsHitTesting(false)
+                                     }
+                                 }
+-                                .padding(.horizontal, 4)
+-                                .padding(.bottom, 4)
++                                .padding(.horizontal, 8)
++                                .padding(.bottom, 8)
+                             }
+                         }
+                         VStack(alignment: .leading, spacing: 8) {
+diff --git a/Sonor/Views/MainAppView.swift b/Sonor/Views/MainAppView.swift
+index bcb0e3ae..d1f0a0a7 100644
+--- a/Sonor/Views/MainAppView.swift
++++ b/Sonor/Views/MainAppView.swift
+@@ -48,8 +48,6 @@ struct MainAppView: View {
+     @State private var isShowingOnboardingSheet = false
+     @State private var isShowingThankYouSheet = false
+     @State private var isShowingMilestoneSheet = false
+-    @State private var isShowingMicPermissionSheet = false
+-    @State private var isShowingAccessibilityPermissionSheet = false
+     @State private var milestoneHoursForSheet = 10
+     @ObservedObject private var modelManager = ModelManager.shared
+     @ObservedObject private var networkMonitor = NetworkMonitor.shared
+@@ -128,42 +126,16 @@ struct MainAppView: View {
+                 isShowingOnboardingSheet = true
+             }
+             checkTimeSavedMilestones()
+-            
+-            if !AXIsProcessTrusted() {
+-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+-                    NotificationCenter.default.post(name: Notification.Name("ShowAccessibilityPermissionView"), object: nil)
+-                }
+-            }
+         }
+         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowThankYouView"))) { _ in
+             isShowingThankYouSheet = true
+         }
+-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowMicPermissionView"))) { _ in
+-            isShowingAccessibilityPermissionSheet = false
+-            isShowingMicPermissionSheet = true
+-        }
+-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowAccessibilityPermissionView"))) { _ in
+-            isShowingMicPermissionSheet = false
+-            isShowingAccessibilityPermissionSheet = true
+-        }
+-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("HidePermissionViews"))) { _ in
+-            isShowingMicPermissionSheet = false
+-            isShowingAccessibilityPermissionSheet = false
+-        }
+         .sheet(isPresented: $isShowingThankYouSheet) {
+             ThankYouView(onComplete: {
+                 isShowingThankYouSheet = false
+             })
+             .preferredColorScheme(effectiveColorScheme)
+         }
+-        .sheet(isPresented: $isShowingMicPermissionSheet) {
+-            MicrophonePermissionExplanationView()
+-                .preferredColorScheme(effectiveColorScheme)
+-        }
+-        .sheet(isPresented: $isShowingAccessibilityPermissionSheet) {
+-            AccessibilityPermissionExplanationView()
+-                .preferredColorScheme(effectiveColorScheme)
+-        }
+         .sheet(isPresented: $isShowingOnboardingSheet) {
+             OnboardingView(onComplete: {
+                 isShowingOnboardingSheet = false
+diff --git a/Sonor/Views/ModelsSettingsView.swift b/Sonor/Views/ModelsSettingsView.swift
+index 7daf6e36..77c620c3 100644
+--- a/Sonor/Views/ModelsSettingsView.swift
++++ b/Sonor/Views/ModelsSettingsView.swift
+@@ -78,7 +78,7 @@ struct ModelsSettingsView: View {
+                 }
+                 .padding(.horizontal, 40)
+                 
+-                Text(t("We are constantly expanding our ecosystem. Future updates will bring a wider selection of advanced AI models tailored to your workflow."))
++                Text(t("Sonor is constantly evolving. Future updates will bring a wider selection of advanced AI models tailored to your workflow."))
+                     .font(.system(size: 13, weight: .regular))
+                     .foregroundColor(.secondary.opacity(0.85))
+                     .multilineTextAlignment(.center)
+diff --git a/Sonor/Views/Overlays/AccessibilityPermissionExplanationView.swift b/Sonor/Views/Overlays/AccessibilityPermissionExplanationView.swift
+deleted file mode 100644
+index 254f227b..00000000
+--- a/Sonor/Views/Overlays/AccessibilityPermissionExplanationView.swift
++++ /dev/null
+@@ -1,104 +0,0 @@
+-import SwiftUI
+-
+-struct AccessibilityPermissionExplanationView: View {
+-    @Environment(\.dismiss) var dismiss
+-    @Environment(\.colorScheme) var colorScheme
+-    @ObservedObject private var localizer = LocalizationManager.shared
+-    
+-    var body: some View {
+-        VStack(spacing: 0) {
+-            Spacer()
+-                .frame(height: 30)
+-            VStack(spacing: 12) {
+-                Image(systemName: "figure.roll")
+-                    .font(.system(size: 40))
+-                    .foregroundColor(colorScheme == .dark ? .white : .black)
+-                Text(t("Accessibility Access Required"))
+-                    .font(.system(size: 20, weight: .bold))
+-                    .foregroundColor(.primary)
+-                    .multilineTextAlignment(.center)
+-            }
+-            .padding(.bottom, 24)
+-            
+-            VStack(alignment: .leading, spacing: 16) {
+-                Text(t("Sonor needs Accessibility access to automatically paste your transcribed text. Without it, the application cannot function properly."))
+-                    .font(.system(size: 11))
+-                    .foregroundColor(.secondary)
+-                    .multilineTextAlignment(.center)
+-                    .lineSpacing(2)
+-                    .padding(.horizontal, 8)
+-                    .padding(.bottom, 16)
+-                    .frame(maxWidth: .infinity, alignment: .center)
+-                    .fixedSize(horizontal: false, vertical: true)
+-                
+-                let steps = [
+-                    (icon: "gearshape.fill", title: t("1. Open System Settings"), description: ""),
+-                    (icon: "lock.shield.fill", title: t("2. Go to Privacy & Security"), description: ""),
+-                    (icon: "figure.walk.circle.fill", title: t("3. Select Accessibility"), description: ""),
+-                    (icon: "switch.2", title: t("4. Turn on the switch next to Sonor"), description: "")
+-                ]
+-                
+-                ForEach(steps, id: \.title) { step in
+-                    HStack(alignment: .top, spacing: 10) {
+-                        Image(systemName: step.icon)
+-                            .font(.system(size: 14, weight: .semibold))
+-                            .foregroundColor(colorScheme == .dark ? .white : .black)
+-                            .frame(width: 18)
+-                        VStack(alignment: .leading, spacing: 2) {
+-                            Text(step.title)
+-                                .font(.system(size: 12, weight: .bold))
+-                                .foregroundColor(.primary)
+-                            if !step.description.isEmpty {
+-                                Text(step.description)
+-                                    .font(.system(size: 11))
+-                                    .foregroundColor(.secondary)
+-                                    .lineSpacing(2)
+-                                    .fixedSize(horizontal: false, vertical: true)
+-                            }
+-                        }
+-                    }
+-                }
+-            }
+-            .padding(.horizontal, 24)
+-            
+-            Spacer()
+-            
+-            HStack(spacing: 12) {
+-                Button(action: {
+-                    dismiss()
+-                }) {
+-                    Text(t("Cancel"))
+-                        .font(.system(size: 13, weight: .bold))
+-                        .foregroundColor(colorScheme == .dark ? .white : .black)
+-                        .frame(width: 100)
+-                        .padding(.vertical, 12)
+-                        .background(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05))
+-                        .cornerRadius(8)
+-                }
+-                .buttonStyle(.plain)
+-                .focusable(false)
+-
+-                Button(action: {
+-                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+-                        NSWorkspace.shared.open(url)
+-                    }
+-                    dismiss()
+-                }) {
+-                    Text(t("Open Settings"))
+-                        .font(.system(size: 13, weight: .bold))
+-                        .foregroundColor(colorScheme == .dark ? .black : .white)
+-                        .frame(width: 200)
+-                        .padding(.vertical, 12)
+-                        .background(colorScheme == .dark ? Color.white : Color.black)
+-                        .cornerRadius(8)
+-                }
+-                .buttonStyle(.plain)
+-                .focusable(false)
+-                .keyboardShortcut(.defaultAction)
+-            }
+-            .padding(.bottom, 24)
+-        }
+-        .frame(width: 440, height: 480)
+-        .background(colorScheme == .dark ? Color.black : Color.white)
+-    }
+-}
+diff --git a/Sonor/Views/Overlays/MicrophonePermissionExplanationView.swift b/Sonor/Views/Overlays/MicrophonePermissionExplanationView.swift
+deleted file mode 100644
+index 70b7dc0f..00000000
+--- a/Sonor/Views/Overlays/MicrophonePermissionExplanationView.swift
++++ /dev/null
+@@ -1,104 +0,0 @@
+-import SwiftUI
+-
+-struct MicrophonePermissionExplanationView: View {
+-    @Environment(\.dismiss) var dismiss
+-    @Environment(\.colorScheme) var colorScheme
+-    @ObservedObject private var localizer = LocalizationManager.shared
+-    
+-    var body: some View {
+-        VStack(spacing: 0) {
+-            Spacer()
+-                .frame(height: 30)
+-            VStack(spacing: 12) {
+-                Image(systemName: "mic.slash.fill")
+-                    .font(.system(size: 40))
+-                    .foregroundColor(colorScheme == .dark ? .white : .black)
+-                Text(t("Microphone Access Required"))
+-                    .font(.system(size: 20, weight: .bold))
+-                    .foregroundColor(.primary)
+-                    .multilineTextAlignment(.center)
+-            }
+-            .padding(.bottom, 24)
+-            
+-            VStack(alignment: .leading, spacing: 16) {
+-                Text(t("Sonor needs access to your microphone to capture your voice. Without it, the application cannot function."))
+-                    .font(.system(size: 11))
+-                    .foregroundColor(.secondary)
+-                    .multilineTextAlignment(.center)
+-                    .lineSpacing(2)
+-                    .padding(.horizontal, 8)
+-                    .padding(.bottom, 16)
+-                    .frame(maxWidth: .infinity, alignment: .center)
+-                    .fixedSize(horizontal: false, vertical: true)
+-                
+-                let steps = [
+-                    (icon: "gearshape.fill", title: t("1. Open System Settings"), description: ""),
+-                    (icon: "lock.shield.fill", title: t("2. Go to Privacy & Security"), description: ""),
+-                    (icon: "mic.fill", title: t("3. Select Microphone"), description: ""),
+-                    (icon: "switch.2", title: t("4. Turn on the switch next to Sonor"), description: "")
+-                ]
+-                
+-                ForEach(steps, id: \.title) { step in
+-                    HStack(alignment: .top, spacing: 10) {
+-                        Image(systemName: step.icon)
+-                            .font(.system(size: 14, weight: .semibold))
+-                            .foregroundColor(colorScheme == .dark ? .white : .black)
+-                            .frame(width: 18)
+-                        VStack(alignment: .leading, spacing: 2) {
+-                            Text(step.title)
+-                                .font(.system(size: 12, weight: .bold))
+-                                .foregroundColor(.primary)
+-                            if !step.description.isEmpty {
+-                                Text(step.description)
+-                                    .font(.system(size: 11))
+-                                    .foregroundColor(.secondary)
+-                                    .lineSpacing(2)
+-                                    .fixedSize(horizontal: false, vertical: true)
+-                            }
+-                        }
+-                    }
+-                }
+-            }
+-            .padding(.horizontal, 24)
+-            
+-            Spacer()
+-            
+-            HStack(spacing: 12) {
+-                Button(action: {
+-                    dismiss()
+-                }) {
+-                    Text(t("Cancel"))
+-                        .font(.system(size: 13, weight: .bold))
+-                        .foregroundColor(colorScheme == .dark ? .white : .black)
+-                        .frame(width: 100)
+-                        .padding(.vertical, 12)
+-                        .background(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05))
+-                        .cornerRadius(8)
+-                }
+-                .buttonStyle(.plain)
+-                .focusable(false)
+-
+-                Button(action: {
+-                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
+-                        NSWorkspace.shared.open(url)
+-                    }
+-                    dismiss()
+-                }) {
+-                    Text(t("Open Settings"))
+-                        .font(.system(size: 13, weight: .bold))
+-                        .foregroundColor(colorScheme == .dark ? .black : .white)
+-                        .frame(width: 200)
+-                        .padding(.vertical, 12)
+-                        .background(colorScheme == .dark ? Color.white : Color.black)
+-                        .cornerRadius(8)
+-                }
+-                .buttonStyle(.plain)
+-                .focusable(false)
+-                .keyboardShortcut(.defaultAction)
+-            }
+-            .padding(.bottom, 24)
+-        }
+-        .frame(width: 440, height: 480)
+-        .background(colorScheme == .dark ? Color.black : Color.white)
+-    }
+-}
+diff --git a/Sonor/Views/Overlays/PermissionsExplanationView.swift b/Sonor/Views/Overlays/PermissionsExplanationView.swift
+new file mode 100644
+index 00000000..49e54759
+--- /dev/null
++++ b/Sonor/Views/Overlays/PermissionsExplanationView.swift
+@@ -0,0 +1,142 @@
++import SwiftUI
++import AVFoundation
++import AppKit
++import Combine
++
++struct PermissionsExplanationView: View {
++    @Environment(\.colorScheme) var colorScheme
++    @ObservedObject private var localizer = LocalizationManager.shared
++    
++    @State private var hasAccessibility = false
++    @State private var hasMicrophone = false
++    
++    let timer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
++    
++    var body: some View {
++        VStack(spacing: 24) {
++            VStack(spacing: 12) {
++                Image(systemName: "shield.lefthalf.filled")
++                    .font(.system(size: 40))
++                    .foregroundColor(colorScheme == .dark ? .white : .black)
++                Text(t("Permissions Required"))
++                    .font(.system(size: 20, weight: .bold))
++                    .foregroundColor(.primary)
++                    .multilineTextAlignment(.center)
++            }
++            .padding(.top, 30)
++            
++            Text(t("Sonor requires the following permissions to function correctly. The application will be locked until all required permissions are granted."))
++                .font(.system(size: 12))
++                .foregroundColor(.secondary)
++                .multilineTextAlignment(.center)
++                .lineSpacing(2)
++                .padding(.horizontal, 24)
++                .fixedSize(horizontal: false, vertical: true)
++            
++            VStack(alignment: .leading, spacing: 20) {
++                permissionRow(
++                    icon: "mic.fill",
++                    title: t("Microphone"),
++                    description: t("Required to capture your voice for transcription."),
++                    isGranted: hasMicrophone,
++                    action: {
++                        if AVCaptureDevice.authorizationStatus(for: .audio) == .notDetermined {
++                            AVCaptureDevice.requestAccess(for: .audio) { _ in }
++                        } else {
++                            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
++                                NSWorkspace.shared.open(url)
++                            }
++                        }
++                    }
++                )
++                
++                permissionRow(
++                    icon: "figure.roll",
++                    title: t("Accessibility"),
++                    description: t("Required to automatically paste your transcribed text into other applications and support hotkeys."),
++                    isGranted: hasAccessibility,
++                    action: {
++                        let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
++                        let _ = AXIsProcessTrustedWithOptions(options as CFDictionary)
++                        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
++                            NSWorkspace.shared.open(url)
++                        }
++                    }
++                )
++            }
++            .padding(.horizontal, 24)
++            .padding(.top, 10)
++            
++            Spacer()
++        }
++        .frame(width: 520, height: 400)
++        .background(colorScheme == .dark ? Color.black : Color.white)
++        .onAppear {
++            checkPermissions()
++        }
++        .onReceive(timer) { _ in
++            checkPermissions()
++        }
++    }
++    
++    private func checkPermissions() {
++        let currentMic = (AVCaptureDevice.authorizationStatus(for: .audio) == .authorized)
++        if hasMicrophone != currentMic {
++            hasMicrophone = currentMic
++        }
++        
++        let currentAx = AXIsProcessTrusted()
++        if hasAccessibility != currentAx {
++            hasAccessibility = currentAx
++        }
++        
++        if hasMicrophone && hasAccessibility {
++            NotificationCenter.default.post(name: Notification.Name("HidePermissionViews"), object: nil)
++        }
++    }
++    
++    private func permissionRow(icon: String, title: String, description: String, isGranted: Bool, action: @escaping () -> Void) -> some View {
++        HStack(alignment: .center, spacing: 14) {
++            Image(systemName: icon)
++                .font(.system(size: 20, weight: .regular))
++                .foregroundColor(colorScheme == .dark ? .white : .black)
++                .frame(width: 24)
++                
++            VStack(alignment: .leading, spacing: 4) {
++                Text(title)
++                    .font(.system(size: 13, weight: .bold))
++                    .foregroundColor(.primary)
++                
++                Text(description)
++                    .font(.system(size: 11))
++                    .foregroundColor(.secondary)
++                    .lineSpacing(2)
++                    .fixedSize(horizontal: false, vertical: true)
++            }
++            
++            Spacer()
++            
++            if isGranted {
++                Image(systemName: "checkmark.circle.fill")
++                    .foregroundColor(colorScheme == .dark ? .white : .black)
++                    .font(.system(size: 18))
++                    .padding(.trailing, 8)
++            } else {
++                Button(action: action) {
++                    Text(t("Open Settings"))
++                        .font(.system(size: 11, weight: .semibold))
++                        .foregroundColor(colorScheme == .dark ? .black : .white)
++                        .padding(.horizontal, 14)
++                        .padding(.vertical, 8)
++                        .background(colorScheme == .dark ? Color.white : Color.black)
++                        .cornerRadius(6)
++                }
++                .buttonStyle(.plain)
++                .focusable(false)
++            }
++        }
++        .padding(16)
++        .background(colorScheme == .dark ? Color.white.opacity(0.05) : Color.black.opacity(0.03))
++        .cornerRadius(10)
++    }
++}

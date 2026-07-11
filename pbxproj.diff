@@ -1,0 +1,127 @@
+diff --git a/Sonor.xcodeproj/project.pbxproj b/Sonor.xcodeproj/project.pbxproj
+index f06eb6c5..28d8e1a0 100644
+--- a/Sonor.xcodeproj/project.pbxproj
++++ b/Sonor.xcodeproj/project.pbxproj
+@@ -21,6 +21,7 @@
+ 		D6534C6F29F8B7E2B6DA47D2 /* Hub in Frameworks */ = {isa = PBXBuildFile; productRef = AF07F2F8533D00DF95F0205C /* Hub */; };
+ 		D9C0161012AA64376FF682C3 /* libggml-metal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ECDC90A23855A924F67A28E5 /* libggml-metal.a */; };
+ 		DA1A18BC76D9C0AAE959D6C7 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 8B63F6402F23B2F22D0DAB23 /* Tokenizers */; };
++		FA8D50BD2FFD951A004A9658 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = FA8D50BC2FFD951A004A9658 /* Sparkle */; };
+ /* End PBXBuildFile section */
+ 
+ /* Begin PBXContainerItemProxy section */
+@@ -150,6 +151,7 @@
+ 				D6534C6F29F8B7E2B6DA47D2 /* Hub in Frameworks */,
+ 				DA1A18BC76D9C0AAE959D6C7 /* Tokenizers in Frameworks */,
+ 				62FDD38207C55F4EDC46CAC1 /* libcommon.a in Frameworks */,
++				FA8D50BD2FFD951A004A9658 /* Sparkle in Frameworks */,
+ 				20AD0982A184F56E02F13629 /* libggml-blas.a in Frameworks */,
+ 				D9C0161012AA64376FF682C3 /* libggml-metal.a in Frameworks */,
+ 				C0559876D8BD50DD812A8D0F /* libggml-base.a in Frameworks */,
+@@ -331,6 +333,7 @@
+ 				A443AD55CB178B6FA2B4E2F3 /* MLXHuggingFace */,
+ 				AF07F2F8533D00DF95F0205C /* Hub */,
+ 				8B63F6402F23B2F22D0DAB23 /* Tokenizers */,
++				FA8D50BC2FFD951A004A9658 /* Sparkle */,
+ 			);
+ 			productName = Sonor;
+ 			productReference = FA21F5512FA973670030EE83 /* Sonor.app */;
+@@ -414,6 +417,7 @@
+ 				BBA881AD0739DBB04827434D /* XCRemoteSwiftPackageReference "mlx-swift" */,
+ 				96BA1D70BB01DA0DC5715BD9 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
+ 				E7AAB071A01BC180627CA7CA /* XCRemoteSwiftPackageReference "swift-transformers" */,
++				FA8D50BB2FFD9505004A9658 /* XCRemoteSwiftPackageReference "Sparkle" */,
+ 			);
+ 			preferredProjectObjectVersion = 77;
+ 			productRefGroup = FA21F5522FA973670030EE83 /* Products */;
+@@ -623,10 +627,20 @@
+ 				CODE_SIGN_STYLE = Automatic;
+ 				COMBINE_HIDPI_IMAGES = YES;
+ 				CURRENT_PROJECT_VERSION = 1;
+-				DEVELOPMENT_TEAM = 6F78X5RA6P;
+-				ENABLE_APP_SANDBOX = NO;
++				DEVELOPMENT_TEAM = B8R3X8NN3X;
++				ENABLE_APP_SANDBOX = YES;
+ 				ENABLE_HARDENED_RUNTIME = YES;
++				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
++				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+ 				ENABLE_PREVIEWS = YES;
++				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
++				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
++				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
++				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
++				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
++				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
++				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
++				ENABLE_RESOURCE_ACCESS_USB = NO;
+ 				ENABLE_USER_SELECTED_FILES = readonly;
+ 				GENERATE_INFOPLIST_FILE = YES;
+ 				HEADER_SEARCH_PATHS = (
+@@ -666,7 +680,7 @@
+ 				);
+ 				MACH_O_TYPE = mh_execute;
+ 				MACOSX_DEPLOYMENT_TARGET = 14.6;
+-				MARKETING_VERSION = 0.9.0;
++				MARKETING_VERSION = 0.9.1;
+ 				MTL_HEADER_SEARCH_PATHS = "$(inherited) /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src/ggml-metal";
+ 				OTHER_LDFLAGS = (
+ 					"$(inherited)",
+@@ -701,10 +715,20 @@
+ 				CODE_SIGN_STYLE = Automatic;
+ 				COMBINE_HIDPI_IMAGES = YES;
+ 				CURRENT_PROJECT_VERSION = 1;
+-				DEVELOPMENT_TEAM = 6F78X5RA6P;
+-				ENABLE_APP_SANDBOX = NO;
++				DEVELOPMENT_TEAM = B8R3X8NN3X;
++				ENABLE_APP_SANDBOX = YES;
+ 				ENABLE_HARDENED_RUNTIME = YES;
++				ENABLE_INCOMING_NETWORK_CONNECTIONS = NO;
++				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
+ 				ENABLE_PREVIEWS = YES;
++				ENABLE_RESOURCE_ACCESS_AUDIO_INPUT = NO;
++				ENABLE_RESOURCE_ACCESS_BLUETOOTH = NO;
++				ENABLE_RESOURCE_ACCESS_CALENDARS = NO;
++				ENABLE_RESOURCE_ACCESS_CAMERA = NO;
++				ENABLE_RESOURCE_ACCESS_CONTACTS = NO;
++				ENABLE_RESOURCE_ACCESS_LOCATION = NO;
++				ENABLE_RESOURCE_ACCESS_PRINTING = NO;
++				ENABLE_RESOURCE_ACCESS_USB = NO;
+ 				ENABLE_USER_SELECTED_FILES = readonly;
+ 				GENERATE_INFOPLIST_FILE = YES;
+ 				HEADER_SEARCH_PATHS = (
+@@ -744,7 +768,7 @@
+ 				);
+ 				MACH_O_TYPE = mh_execute;
+ 				MACOSX_DEPLOYMENT_TARGET = 14.6;
+-				MARKETING_VERSION = 0.9.0;
++				MARKETING_VERSION = 0.9.1;
+ 				MTL_HEADER_SEARCH_PATHS = "$(inherited) /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src/ggml-metal";
+ 				OTHER_LDFLAGS = (
+ 					"$(inherited)",
+@@ -938,6 +962,14 @@
+ 				minimumVersion = 1.3.0;
+ 			};
+ 		};
++		FA8D50BB2FFD9505004A9658 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
++			isa = XCRemoteSwiftPackageReference;
++			repositoryURL = "https://github.com/sparkle-project/Sparkle";
++			requirement = {
++				kind = upToNextMajorVersion;
++				minimumVersion = 2.9.4;
++			};
++		};
+ /* End XCRemoteSwiftPackageReference section */
+ 
+ /* Begin XCSwiftPackageProductDependency section */
+@@ -971,6 +1003,11 @@
+ 			package = E7AAB071A01BC180627CA7CA /* XCRemoteSwiftPackageReference "swift-transformers" */;
+ 			productName = Hub;
+ 		};
++		FA8D50BC2FFD951A004A9658 /* Sparkle */ = {
++			isa = XCSwiftPackageProductDependency;
++			package = FA8D50BB2FFD9505004A9658 /* XCRemoteSwiftPackageReference "Sparkle" */;
++			productName = Sparkle;
++		};
+ /* End XCSwiftPackageProductDependency section */
+ 	};
+ 	rootObject = FA21F5492FA973670030EE83 /* Project object */;

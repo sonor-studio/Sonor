@@ -40,21 +40,16 @@ struct SafeGlassModifier: ViewModifier {
             content
                 .background(
                     ActiveVisualEffectView(
-                        material: .popover,
+                        material: isDark ? .hudWindow : .headerView,
                         blendingMode: .behindWindow,
                         state: .active,
                         cornerRadius: cornerRadius,
                         colorScheme: colorScheme
                     )
-                )
-                .background(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .fill(isDark ? Color.white.opacity(0.08) : Color.white.opacity(0.15))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .stroke((isDark ? Color.white : Color.black).opacity(0.15), lineWidth: 0.5)
-                        .allowsHitTesting(false) 
+                    .overlay(
+                        RoundedRectangle(cornerRadius: cornerRadius)
+                            .fill(isDark ? Color.black.opacity(0.1) : Color.white.opacity(0.2))
+                    )
                 )
         }
     }
