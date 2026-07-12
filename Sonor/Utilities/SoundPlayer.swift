@@ -3,10 +3,10 @@ import AVFoundation
 import AppKit
 
 @MainActor
-class SoundPlayer: NSObject, NSSoundDelegate {
+class SoundPlayer: NSObject, AVAudioPlayerDelegate {
     static let shared = SoundPlayer()
-    private var activeSounds: [NSSound] = []
-    private var continuations: [NSSound: CheckedContinuation<Void, Never>] = [:]
+    private var activePlayers: [AVAudioPlayer] = []
+    private var continuations: [AVAudioPlayer: CheckedContinuation<Void, Never>] = [:]
     private var cachedUrls: [String: URL] = [:]
     
     private override init() {
@@ -36,30 +36,30 @@ class SoundPlayer: NSObject, NSSoundDelegate {
         guard playAnySound && playSpecificSound else { return }
         
         return await withCheckedContinuation { continuation in
-            guard let url = cachedUrls[name], let sound = NSSound(contentsOf: url, byReference: true) else {
+            guard let url = cachedUrls[name], let player = try? AVAudioPlayer(contentsOf: url) else {
                 continuation.resume()
                 return
             }
             
-            sound.delegate = self
-            activeSounds.append(sound)
-            continuations[sound] = continuation
+            player.delegate = self
+            activePlayers.append(player)
+            continuations[player] = continuation
             
-            if !sound.play() {
-                activeSounds.removeAll { $0 == sound }
-                continuations.removeValue(forKey: sound)
+            if !player.play() {
+                activePlayers.removeAll { $0 == player }
+                continuations.removeValue(forKey: player)
                 continuation.resume()
             }
         }
     }
     
-    nonisolated func sound(_ sound: NSSound, didFinishPlaying flag: Bool) {
+    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
         Task { @MainActor in
-            if let continuation = continuations[sound] {
+            if let continuation = continuations[player] {
                 continuation.resume()
-                continuations.removeValue(forKey: sound)
+                continuations.removeValue(forKey: player)
             }
-            activeSounds.removeAll { $0 == sound }
+            activePlayers.removeAll { $0 == player }
         }
     }
 }
