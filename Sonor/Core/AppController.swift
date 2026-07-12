@@ -65,17 +65,17 @@ class AppController: NSObject, ObservableObject {
         self.currentMode = modes.first(where: { $0.id.uuidString == activeModeID }) ?? modes.first
 
         setupHotkey()
-        NotificationCenter.default.addObserver(forName: Notification.Name("VoiceModesUpdated"), object: nil, queue: .main) { _ in
+        NotificationCenter.default.addObserver(forName: Notification.Name("VoiceModesUpdated"), object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.reloadModes()
             }
         }
-        NotificationCenter.default.addObserver(forName: Notification.Name("ReleaseWhisperContext"), object: nil, queue: .main) { _ in
+        NotificationCenter.default.addObserver(forName: Notification.Name("ReleaseWhisperContext"), object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.sonorContext = nil
             }
         }
-        NotificationCenter.default.addObserver(forName: Notification.Name("PermissionsRevoked"), object: nil, queue: .main) { _ in
+        NotificationCenter.default.addObserver(forName: Notification.Name("PermissionsRevoked"), object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 if self.isRecording || self.isCurrentlyProcessing {
@@ -316,8 +316,8 @@ class AppController: NSObject, ObservableObject {
                     withAnimation(.easeInOut(duration: 0.3)) {
                         self.statusText = "Listening..."
                     }
-                    Task { @MainActor [weak self] in
-                        while let self = self, self.isRecording {
+                    Task { @MainActor in
+                        while self.isRecording {
                             if !self.isPaused {
                                 let level = self.audioManager.audioLevel
                                 self.audioLevel = level
@@ -329,7 +329,7 @@ class AppController: NSObject, ObservableObject {
                             try? await Task.sleep(nanoseconds: 50_000_000)
                         }
                         withAnimation {
-                            self?.audioLevels = Array(repeating: 0.01, count: 40)
+                            self.audioLevels = Array(repeating: 0.01, count: 40)
                         }
                     }
                 }
@@ -453,9 +453,13 @@ class AppController: NSObject, ObservableObject {
             }
             
             let selectedMode = await MainActor.run { return self.currentMode ?? VoiceMode.defaults.first! }
-            let configuredLanguage = selectedMode.language ?? "auto"
+            _ = selectedMode.language ?? "auto"
             // PRIVACY FIRST: The entire transcription process happens locally on the user's device using the downloaded Whisper model. No audio data is ever sent to the cloud.
-            let transcribedText = await context.transcribe(audioSamples: samples, language: "auto")
+            let snippets = UserDefaults.standard.dictionary(forKey: "snippetsEntries") as? [String: String] ?? [:]
+            let snippetKeys = Array(snippets.keys)
+            let initialPrompt = snippetKeys.isEmpty ? nil : snippetKeys.joined(separator: ", ")
+            
+            let transcribedText = await context.transcribe(audioSamples: samples, language: "auto", initialPrompt: initialPrompt)
             if Task.isCancelled {
                 self.hideHUDAfterDelay()
                 return
@@ -478,14 +482,14 @@ class AppController: NSObject, ObservableObject {
                 initialPID: self.targetAppPID,
                 targetAXElement: self.targetAXElement,
                 wasTextFieldFocusedAtStart: self.wasTextFieldFocusedAtStart,
-                onStatusChange: { [weak self] newStatus in
-                    self?.statusText = newStatus
+                onStatusChange: { newStatus in
+                    self.statusText = newStatus
                 },
-                onAutoLearnTrigger: { [weak self] targetPID, text in
-                    self?.startAutoLearnTracking(targetPID: targetPID, originalText: text)
+                onAutoLearnTrigger: { targetPID, text in
+                    self.startAutoLearnTracking(targetPID: targetPID, originalText: text)
                 },
-                onCopyNotificationTrigger: { [weak self] textToCopy in
-                    self?.showCopyNotification(text: textToCopy)
+                onCopyNotificationTrigger: { textToCopy in
+                    self.showCopyNotification(text: textToCopy)
                 }
             )
             self.hideHUDAfterDelay()

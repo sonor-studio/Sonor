@@ -72,7 +72,7 @@ struct ModeEditorView: View {
                 }
                 .padding(20)
                 .frame(width: 300)
-                .safeGlassEffect(cornerRadius: 22)
+                .safeGlassEffect(cornerRadius: NSWindow.standardCornerRadius)
                 .padding(.trailing, 8)
                 .padding(.bottom, 8)
                 .padding(.top, 8)
@@ -516,35 +516,7 @@ struct ModeEditorView: View {
                             .buttonStyle(.plain)
                             .help(t("Apply to all assistants"))
                         }
-                        HStack {
-                            Picker(t("Paste target"), selection: Binding(
-                                get: { modeBinding.wrappedValue.pasteTiming ?? "start" },
-                                set: { 
-                                    modeBinding.wrappedValue.pasteTiming = $0
-                                    saveModes()
-                                }
-                            )) {
-                                Text(t("Field focused at start")).tag("start")
-                                Text(t("Field focused at end")).tag("end")
-                            }
-                            .pickerStyle(MenuPickerStyle())
-                            .font(.system(size: 12))
-                            Button(action: {
-                                let newVal = modeBinding.wrappedValue.pasteTiming ?? "start"
-                                for i in modes.indices {
-                                    modes[i].pasteTiming = newVal
-                                }
-                                saveModes()
-                            }) {
-                                Image(systemName: "rectangle.stack")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .padding(4)
-                                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.1)))
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .help(t("Apply to all assistants"))
-                        }
+
                         HStack {
                             Toggle(t("Copy to clipboard if no text field is detected"), isOn: Binding(
                                 get: { modeBinding.wrappedValue.fallbackToClipboard ?? false },

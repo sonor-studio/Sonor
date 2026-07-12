@@ -41,6 +41,7 @@ struct GeneralSettingsView: View {
             audioSourceSection
             appSoundsSection
             autoUpdateDictionarySection
+            footerSection
         }
         .onAppear {
             setupEventMonitor()
@@ -374,6 +375,61 @@ struct GeneralSettingsView: View {
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+    @ViewBuilder
+    private var footerSection: some View {
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        VStack(spacing: 15) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(t("Made by Sonor Studio"))
+                        .font(.system(size: 14, weight: .semibold))
+                    Text("\(t("Version")) \(appVersion)")
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 6) {
+                    Link(destination: URL(string: "https://github.com/sonor-studio/Sonor")!) {
+                        Image("github_logo")
+                            .renderingMode(.template)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 28, height: 28)
+                            .foregroundColor(.primary)
+                    }
+                    .help("https://github.com/sonor-studio/Sonor")
+                    .buttonStyle(.plain)
+                }
+            }
+            
+            Divider()
+                .background(Color.white.opacity(0.05))
+            
+            HStack(alignment: .bottom) {
+                Text("© 2026 Sonor Studio. \(t("All rights reserved."))")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary.opacity(0.8))
+                
+                Spacer()
+                
+                Text(t("Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License"))
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary.opacity(0.6))
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 350, alignment: .trailing)
+            }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)

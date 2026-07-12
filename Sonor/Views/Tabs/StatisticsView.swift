@@ -259,10 +259,7 @@ struct StatisticsView: View {
         RamHistoryView(memoryManager: memoryManager, colorScheme: colorScheme)
     }
     private func loadStats() {
-        if let data = UserDefaults.standard.data(forKey: "usageStats"),
-           let decoded = try? JSONDecoder().decode([UsageStat].self, from: data) {
-            self.stats = decoded
-        }
+        self.stats = UsageTrackingService.shared.getStats()
     }
     private var totalSpeakingTime: Double {
         stats.reduce(0) { $0 + $1.duration }

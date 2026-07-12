@@ -172,7 +172,7 @@ struct MainAppView: View {
                 )
         }
         .sheet(isPresented: $isShowingProfileSheet) {
-            UserProfileView()
+            UserProfileView(isShowingProfileSheet: $isShowingProfileSheet)
                 .preferredColorScheme(effectiveColorScheme)
         }
         .sheet(isPresented: $isShowingMilestoneSheet) {
@@ -194,7 +194,7 @@ struct MainAppView: View {
             loadModes()
             updateWindowAppearance()
         }
-        .onChange(of: appTheme) { _ in
+        .onChange(of: appTheme) {
             updateWindowAppearance()
         }
         .overlay(
@@ -239,7 +239,7 @@ struct MainAppView: View {
             try? JSONDecoder().decode([UsageStat].self, from: $0)
         } ?? []
         let totalWords = stats.reduce(0) { $0 + $1.wordCount }
-        let totalSpeakingTime = stats.reduce(0) { $0 + $1.duration }
+        _ = stats.reduce(0) { $0 + $1.duration }
         let typingTimeSeconds = (Double(totalWords) / 40.0) * 60.0
         let theoreticalSpeakingTimeSeconds = (Double(totalWords) / 140.0) * 60.0
         let savedSeconds = max(0.0, typingTimeSeconds - theoreticalSpeakingTimeSeconds)

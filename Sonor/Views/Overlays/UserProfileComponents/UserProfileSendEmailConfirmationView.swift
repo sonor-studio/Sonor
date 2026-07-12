@@ -12,7 +12,7 @@ struct UserProfileSendEmailConfirmationView: View {
                 .font(.system(size: 20, weight: .bold))
                 .padding(.top, 10)
             
-            Text(t("To continue, you need to confirm your email address. A 6-digit code will be sent to your email."))
+            Text(t("To continue, you need to confirm your email address. A 6-digit code will be sent to your email. (Check your spam folder)"))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

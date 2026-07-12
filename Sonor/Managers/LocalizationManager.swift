@@ -25,6 +25,127 @@ public class LocalizationManager: ObservableObject {
         }
     }
     private let translations: [String: [String]] = [
+        "Paste Target Explanation": [
+            "Paste Target Explanation",
+            "Cel wklejania - objaśnienie",
+            "Einfügeziel-Erklärung",
+            "Explicación del objetivo de pegado",
+            "Explication de la cible de collage",
+            "Spiegazione della destinazione di incollaggio",
+            "貼り付け先の説明",
+            "Explicação do alvo de colagem",
+            "粘贴目标说明"
+        ],
+        "Checks both at the start and at the end of dictation. Priority is given to the field focused at the end, so text is always pasted where your cursor is right now. If no field is found at the end, it will safely paste into the field that was focused when you started talking. If neither had focus, it detects 'no field'.": [
+            "Checks both at the start and at the end of dictation. Priority is given to the field focused at the end, so text is always pasted where your cursor is right now. If no field is found at the end, it will safely paste into the field that was focused when you started talking. If neither had focus, it detects 'no field'.",
+            "Sprawdza aktywne pola na początku oraz na końcu dyktowania. Priorytet ma pole na końcu, dzięki czemu tekst trafia tam, gdzie aktualnie znajduje się kursor. Jeśli jednak pole nie zostanie wykryte, Sonor asekuracyjnie przywróci to, w którym kursor był na starcie.",
+            "Überprüft sowohl beim Start als auch am Ende des Diktats. Priorität hat das am Ende fokussierte Feld, sodass der Text immer dort eingefügt wird, wo sich Ihr Cursor gerade befindet. Wenn am Ende kein Feld gefunden wird, fügt es sicher in das Feld ein, das beim Start fokussiert war.",
+            "Comprueba tanto al inicio como al final del dictado. Se da prioridad al campo enfocado al final, por lo que el texto siempre se pega donde está el cursor ahora mismo. Si no se encuentra ningún campo al final, pegará de forma segura en el campo que estaba enfocado al inicio.",
+            "Vérifie à la fois au début et à la fin de la dictée. La priorité est donnée au champ ciblé à la fin, de sorte que le texte est toujours collé là où se trouve votre curseur en ce moment. Si aucun champ n'est trouvé à la fin, il collera en toute sécurité dans le champ qui était ciblé au début.",
+            "Controlla sia all'inizio che alla fine della dettatura. La priorità viene data al campo attivo alla fine, in modo che il testo venga sempre incollato dove si trova attualmente il cursore. Se non viene trovato alcun campo alla fine, incollerà in modo sicuro nel campo iniziale.",
+            "ディクテーションの開始時と終了時の両方で確認します。終了時にフォーカスされているフィールドが優先されるため、テキストは常に現在のカーソル位置に貼り付けられます。終了時にフィールドが見つからない場合は、開始時のフィールドに安全に貼り付けます。",
+            "Verifica tanto no início quanto no final do ditado. A prioridade é dada ao campo focado no final, para que o texto seja sempre colado onde seu cursor está no momento. Se nenhum campo for encontrado no final, ele colará com segurança no campo que estava focado no início.",
+            "在听写开始和结束时都会进行检查。优先考虑结束时聚焦的字段，因此文本始终粘贴在当前光标所在的位置。如果在结束时未找到字段，它将安全地粘贴到您开始说话时聚焦的字段中。"
+        ],
+        "Saves the exact text field you clicked before launching the assistant. When generating finishes, it forces the text strictly into that specific field, ignoring whatever field is active at the end.": [
+            "Saves the exact text field you clicked before launching the assistant. When generating finishes, it forces the text strictly into that specific field, ignoring whatever field is active at the end.",
+            "Zapisuje dokładne pole, w którym znajdował się kursor tuż przed uruchomieniem asystenta. Po zakończeniu transkrypcji zmusza tekst do wklejenia dokładnie w to zapisane miejsce, ignorując to, w co aktualnie klikasz.",
+            "Speichert das genaue Textfeld, auf das Sie geklickt haben, bevor Sie den Assistenten gestartet haben. Nach Abschluss der Generierung wird der Text zwingend in dieses bestimmte Feld eingefügt, unabhängig davon, welches Feld am Ende aktiv ist.",
+            "Guarda el campo de texto exacto en el que hiciste clic antes de iniciar el asistente. Al terminar la generación, fuerza el texto estrictamente en ese campo específico, ignorando cualquier campo que esté activo al final.",
+            "Enregistre le champ de texte exact sur lequel vous avez cliqué avant de lancer l'assistant. À la fin de la génération, il force le texte strictement dans ce champ spécifique, ignorant tout champ actif à la fin.",
+            "Salva l'esatto campo di testo in cui hai cliccato prima di avviare l'assistente. Al termine della generazione, forza il testo rigorosamente in quello specifico campo, ignorando qualsiasi campo sia attivo alla fine.",
+            "アシスタントを起動する前にクリックした正確なテキストフィールドを保存します。生成が終了すると、終了時にアクティブなフィールドを無視して、その特定のフィールドにテキストを強制的に入力します。",
+            "Salva o campo de texto exato no qual você clicou antes de iniciar o assistente. Ao terminar a geração, ele força o texto estritamente para aquele campo específico, ignorando qualquer campo que esteja ativo no final.",
+            "保存您在启动助手之前单击的确切文本字段。生成完成时，它将文本严格强制粘贴到该特定字段中，忽略结束时活动的任何字段。"
+        ],
+        "Ignores your initial text field entirely. It will wait for the text to be fully generated, and paste it only into the field that is active at the exact moment of pasting. If none is found at the end, it detects 'no field'.": [
+            "Ignores your initial text field entirely. It will wait for the text to be fully generated, and paste it only into the field that is active at the exact moment of pasting. If none is found at the end, it detects 'no field'.",
+            "Całkowicie ignoruje pole, w którym znajdował się kursor na początku. Odczeka na zakończenie generowania, po czym wklei tekst wyłącznie do pola, w którym kursor jest w dokładnie tej samej sekundzie co wklejanie.",
+            "Ignoriert Ihr anfängliches Textfeld vollständig. Es wartet darauf, dass der Text vollständig generiert wird, und fügt ihn nur in das Feld ein, das im genauen Moment des Einfügens aktiv ist.",
+            "Ignora por completo tu campo de texto inicial. Esperará a que el texto se genere completamente y lo pegará solo en el campo que esté activo en el momento exacto de pegar.",
+            "Ignore complètement votre champ de texte initial. Il attendra que le texte soit entièrement généré et le collera uniquement dans le champ qui est actif au moment exact du collage.",
+            "Ignora completamente il tuo campo di testo iniziale. Attenderà che il testo sia completamente generato e lo incollerà solo nel campo attivo nell'esatto momento dell'incollaggio.",
+            "初期のテキストフィールドを完全に無視します。テキストが完全に生成されるのを待ち、貼り付けの正確な瞬間にアクティブなフィールドにのみ貼り付けます。",
+            "Ignora completamente o seu campo de texto inicial. Ele esperará que o texto seja totalmente gerado e o colará apenas no campo que estiver ativo no momento exato da colagem.",
+            "完全忽略您的初始文本字段。它将等待文本完全生成，并且仅将其粘贴到粘贴确切时刻处于活动状态的字段中。"
+        ],
+        "What's new in version %@": [
+            "What's new in version %@",
+            "Co nowego w wersji %@",
+            "Was gibt es Neues in Version %@",
+            "Novedades en la versión %@",
+            "Nouveautés de la version %@",
+            "Novità nella versione %@",
+            "バージョン %@ の新機能",
+            "O que há de novo na versão %@",
+            "版本 %@ 的新增功能"
+        ],
+        "New Notification Window": [
+            "New Notification Window",
+            "Nowe okno powiadomień",
+            "Neues Benachrichtigungsfenster",
+            "Nueva ventana de notificaciones",
+            "Nouvelle fenêtre de notifications",
+            "Nuova finestra di notifiche",
+            "新しい通知ウィンドウ",
+            "Nova janela de notificações",
+            "新的通知窗口"
+        ],
+        "From now on, all updates will be presented in a new, readable, and aesthetic format.": [
+            "From now on, all updates will be presented in a new, readable, and aesthetic format.",
+            "Od teraz wszystkie nowości w aplikacji będą prezentowane w nowym, czytelnym i estetycznym formacie.",
+            "Ab sofort werden alle Updates in einem neuen, gut lesbaren und ästhetischen Format präsentiert.",
+            "A partir de ahora, todas las actualizaciones se presentarán en un formato nuevo, legible y estético.",
+            "Désormais, toutes les mises à jour seront présentées dans un nouveau format lisible et esthétique.",
+            "Da ora in poi, tutti gli aggiornamenti saranno presentati in un formato nuovo, leggibile ed estetico.",
+            "今後、すべてのアップデートは新しく読みやすく美しい形式で提示されます。",
+            "A partir de agora, todas as atualizações serão apresentadas num formato novo, legível e estético.",
+            "从现在开始，所有更新都将以一种新的、可读的且美观的格式呈现。"
+        ],
+        "Mandatory Updates": [
+            "Mandatory Updates",
+            "Obowiązkowe aktualizacje",
+            "Obligatorische Updates",
+            "Actualizaciones obligatorias",
+            "Mises à jour obligatoires",
+            "Aggiornamenti obbligatori",
+            "必須のアップデート",
+            "Atualizações obrigatórias",
+            "强制更新"
+        ],
+        "Older, unsupported app versions will display a clear message about the need to update.": [
+            "Older, unsupported app versions will display a clear message about the need to update.",
+            "Starsze, niewspierane już wersje aplikacji będą wyświetlać jasny komunikat o konieczności aktualizacji.",
+            "Ältere, nicht mehr unterstützte App-Versionen zeigen eine klare Meldung über die Notwendigkeit eines Updates.",
+            "Las versiones más antiguas y no compatibles de la aplicación mostrarán un mensaje claro sobre la necesidad de actualizar.",
+            "Les anciennes versions de l'application qui ne sont plus prises en charge afficheront un message clair sur la nécessité de mettre à jour.",
+            "Le versioni precedenti non supportate dell'app mostreranno un chiaro messaggio sulla necessità di eseguire l'aggiornamento.",
+            "サポートされなくなった古いアプリのバージョンには、アップデートの必要性に関する明確なメッセージが表示されます。",
+            "As versões mais antigas e não suportadas da aplicação exibirão uma mensagem clara sobre a necessidade de atualização.",
+            "不再受支持的旧应用版本将显示关于需要更新的清晰消息。"
+        ],
+        "Performance Improvements": [
+            "Performance Improvements",
+            "Poprawa wydajności",
+            "Leistungsverbesserungen",
+            "Mejoras de rendimiento",
+            "Amélioration des performances",
+            "Miglioramenti delle prestazioni",
+            "パフォーマンスの向上",
+            "Melhorias de desempenho",
+            "性能改进"
+        ],
+        "The app now runs even faster thanks to background process optimizations.": [
+            "The app now runs even faster thanks to background process optimizations.",
+            "Aplikacja działa teraz jeszcze szybciej dzięki optymalizacji procesów działających w tle.",
+            "Die App läuft jetzt dank Optimierungen von Hintergrundprozessen noch schneller.",
+            "La aplicación ahora funciona aún más rápido gracias a las optimizaciones de los procesos en segundo plano.",
+            "L'application s'exécute désormais encore plus rapidement grâce aux optimisations des processus en arrière-plan.",
+            "L'app ora funziona ancora più velocemente grazie alle ottimizzazioni dei processi in background.",
+            "バックグラウンドプロセスの最適化により、アプリの動作がさらに高速になりました。",
+            "A aplicação agora funciona ainda mais rápido graças às otimizações dos processos em segundo plano.",
+            "得益于后台进程的优化，应用程序现在的运行速度甚至更快。"
+        ],
         "Permissions Required": [
             "Permissions Required",
             "Wymagane uprawnienia",
@@ -181,6 +302,138 @@ public class LocalizationManager: ObservableObject {
             "此快捷键已被其他操作使用。"
         ],
 
+        "Intelligent Streaming": [
+            "Intelligent Streaming",
+            "Inteligentne Przesyłanie Tekstu",
+            "Intelligentes Streaming",
+            "Transmisión Inteligente",
+            "Streaming Intelligent",
+            "Streaming Intelligente",
+            "スマートストリーミング",
+            "Streaming Inteligente",
+            "智能流传输"
+        ],
+        "Generation shifts to the background if the field loses focus, and smartly appends only missing text when resumed.": [
+            "Generation shifts to the background if the field loses focus, and smartly appends only missing text when resumed.",
+            "Generowanie przechodzi w tło po utracie fokusu i sprytnie dołącza tylko brakujący tekst po wznowieniu.",
+            "Die Generierung läuft im Hintergrund weiter, wenn das Feld den Fokus verliert, und fügt beim Fortsetzen nur fehlenden Text ein.",
+            "La generación pasa al fondo si el campo pierde el foco, y añade inteligentemente solo el texto faltante al reanudarse.",
+            "La génération passe en arrière-plan si le champ perd le focus, et ajoute intelligemment uniquement le texte manquant à la reprise.",
+            "La generazione passa in background se il campo perde il focus e aggiunge in modo intelligente solo il testo mancante alla ripresa.",
+            "フィールドのフォーカスが外れると生成がバックグラウンドに移行し、再開時に不足しているテキストのみをスマートに追加します。",
+            "A geração vai para o fundo se o campo perder o foco e adiciona de forma inteligente apenas o texto ausente ao ser retomada.",
+            "如果失去焦点，生成将转移到后台，并在恢复时智能地仅附加缺失的文本。"
+        ],
+        "Revamped Assistants": [
+            "Revamped Assistants",
+            "Odświeżeni Asystenci",
+            "Überarbeitete Assistenten",
+            "Asistentes Renovados",
+            "Assistants Repensés",
+            "Assistenti Rinnovati",
+            "アシスタントの刷新",
+            "Assistentes Renovados",
+            "重制的助手"
+        ],
+        "A completely overhauled prompt architecture with new 'Casual Style' and 'Formal Style' assistants.": [
+            "A completely overhauled prompt architecture with new 'Casual Style' and 'Formal Style' assistants.",
+            "Całkowicie przebudowana architektura promptów z nowymi asystentami 'Casual Style' i 'Formal Style'.",
+            "Eine komplett überarbeitete Prompt-Architektur mit neuen 'Casual Style'- und 'Formal Style'-Assistenten.",
+            "Una arquitectura de prompts completamente renovada con nuevos asistentes 'Casual Style' y 'Formal Style'.",
+            "Une architecture de prompt entièrement repensée avec de nouveaux assistants 'Casual Style' e 'Formal Style'.",
+            "Un'architettura dei prompt completamente rinnovata con nuovi assistenti 'Casual Style' e 'Formal Style'.",
+            "新しい「Casual Style」および「Formal Style」アシスタントを備えた、完全に刷新されたプロンプトアーキテクチャ。",
+            "Uma arquitetura de prompt completamente reformulada com novos assistentes 'Casual Style' e 'Formal Style'.",
+            "具有全新“休闲风格”和“正式风格”助手的完全重新设计的提示词架构。"
+        ],
+        "Resilient Downloads": [
+            "Resilient Downloads",
+            "Odporne Pobieranie",
+            "Robuste Downloads",
+            "Descargas Resistentes",
+            "Téléchargements Fiables",
+            "Download Resilienti",
+            "回復力のあるダウンロード",
+            "Downloads Resilientes",
+            "弹性下载"
+        ],
+        "Model downloads now automatically retry during minor network connection drops.": [
+            "Model downloads now automatically retry during minor network connection drops.",
+            "Pobieranie modeli teraz automatycznie wznawia się podczas drobnych przerw w połączeniu sieciowym.",
+            "Modell-Downloads werden jetzt bei kleinen Netzwerkunterbrechungen automatisch wiederholt.",
+            "Las descargas de modelos ahora se reintentan automáticamente durante pequeñas caídas de conexión de red.",
+            "Les téléchargements de modèles reprennent désormais automatiquement lors de petites coupures de réseau.",
+            "I download dei modelli ora vengono ritentati automaticamente in caso di piccole interruzioni di rete.",
+            "モデルのダウンロードは、小規模なネットワーク接続の切断時に自動的に再試行されるようになりました。",
+            "Os downloads de modelos agora tentam novamente de forma automática durante pequenas quedas de conexão de rede.",
+            "模型下载现在会在小规模网络连接中断期间自动重试。"
+        ],
+        "Permissions & UI Polish": [
+            "Permissions & UI Polish",
+            "Uprawnienia i Poprawki UI",
+            "Berechtigungen & UI-Feinschliff",
+            "Permisos y Mejoras de Interfaz",
+            "Permissions et Esthétique UI",
+            "Permessi e Ritocchi UI",
+            "権限とUIの洗練",
+            "Permissões e Polimento de UI",
+            "权限和界面优化"
+        ],
+        "Strict new permissions onboarding window, draggable overlays, and smoother animations.": [
+            "Strict new permissions onboarding window, draggable overlays, and smoother animations.",
+            "Nowe, rygorystyczne okno uprawnień, przeciągane nakładki i płynniejsze animacje.",
+            "Strenges neues Fenster für Berechtigungen, ziehbare Overlays und flüssigere Animationen.",
+            "Nueva y estricta ventana de permisos, superposiciones arrastrables y animaciones más fluidas.",
+            "Nouvelle fenêtre stricte de permissions, fenêtres flottantes déplaçables et animations plus fluides.",
+            "Nuova e rigorosa finestra dei permessi, overlay trascinabili e animazioni più fluide.",
+            "厳格な新しい権限設定ウィンドウ、ドラッグ可能なオーバーレイ、およびより滑らかなアニメーション。",
+            "Nova e rigorosa janela de permissões, sobreposições arrastáveis e animações mais suaves.",
+            "严格的新权限设置窗口、可拖动叠加层以及更流畅的动画。"
+        ],
+        "Version": [
+            "Version",
+            "Wersja",
+            "Version",
+            "Versión",
+            "Version",
+            "Versione",
+            "バージョン",
+            "Versão",
+            "版本"
+        ],
+        "Made by Sonor Studio": [
+            "Made by Sonor Studio",
+            "Stworzone przez Sonor Studio",
+            "Erstellt von Sonor Studio",
+            "Hecho por Sonor Studio",
+            "Créé par Sonor Studio",
+            "Creato da Sonor Studio",
+            "Sonor Studioによる作成",
+            "Criado por Sonor Studio",
+            "由 Sonor Studio 制作"
+        ],
+        "All rights reserved.": [
+            "All rights reserved.",
+            "Wszelkie prawa zastrzeżone.",
+            "Alle Rechte vorbehalten.",
+            "Todos los derechos reservados.",
+            "Tous droits réservés.",
+            "Tutti i diritti riservati.",
+            "全著作権所有。",
+            "Todos os direitos reservados.",
+            "版权所有。"
+        ],
+        "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License": [
+            "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License",
+            "Licencja Creative Commons Uznanie autorstwa-Użycie niekomercyjne-Na tych samych warunkach 4.0 Międzynarodowa",
+            "Creative Commons Namensnennung - Nicht-kommerziell - Weitergabe unter gleichen Bedingungen 4.0 International",
+            "Licencia Pública Internacional de Creative Commons Reconocimiento-NoComercial-CompartirIgual 4.0",
+            "Licence Publique Internationale Creative Commons Attribution - Pas d'Utilisation Commerciale - Partage dans les Mêmes Conditions 4.0",
+            "Licenza Pubblica Internazionale Creative Commons Attribuzione - Non commerciale - Condividi allo stesso modo 4.0",
+            "クリエイティブ・コモンズ 表示 - 非営利 - 継承 4.0 国際 パブリック・ライセンス",
+            "Licença Pública Internacional Creative Commons Atribuição-NãoComercial-CompartilhaIgual 4.0",
+            "知识共享署名-非商业性使用-相同方式共享 4.0 国际公共许可证"
+        ],
 "Change Assistant": [
             "Change Assistant", 
             "Zmień asystenta", 
@@ -3294,6 +3547,17 @@ public class LocalizationManager: ObservableObject {
             "Escolher microfone:", 
             "选择麦克风：", 
         ],
+        "Dashboard": [
+            "Dashboard", 
+            "Panel Główny", 
+            "Dashboard", 
+            "Panel de Control", 
+            "Tableau de bord", 
+            "Pannello di controllo", 
+            "ダッシュボード", 
+            "Painel de Controle", 
+            "仪表板", 
+        ],
         "Settings": [
             "Settings", 
             "Ustawienia", 
@@ -4196,16 +4460,16 @@ public class LocalizationManager: ObservableObject {
             "Confirmar E-mail", 
             "确认电子邮件", 
         ],
-        "Please enter the 6-character confirmation code sent to your email.": [
-            "Please enter the 6-character confirmation code sent to your email.", 
-            "Proszę wpisać 6-znakowy kod potwierdzający wysłany na Twój e-mail.", 
-            "Bitte geben Sie den 6-stelligen Bestätigungscode ein, der an Ihre E-Mail gesendet wurde.", 
-            "Por favor, introduzca el código de confirmación de 6 caracteres enviado a su correo electrónico.", 
-            "Veuillez entrer le code de confirmation à 6 caractères envoyé à votre adresse e-mail.", 
-            "Inserisci il codice di conferma a 6 caratteri inviato alla tua email.", 
-            "メールに送信された6文字の確認コードを入力してください。", 
-            "Por favor, insira o código de confirmação de 6 caracteres enviado para o seu e-mail.", 
-            "请输入发送到您电子邮件的 6 字符确认代码。", 
+        "Please enter the 6-character confirmation code sent to your email. (Check your spam folder)": [
+            "Please enter the 6-character confirmation code sent to your email. (Check your spam folder)", 
+            "Proszę wpisać 6-znakowy kod potwierdzający wysłany na Twój e-mail. (Sprawdź folder spam)", 
+            "Bitte geben Sie den 6-stelligen Bestätigungscode ein, der an Ihre E-Mail gesendet wurde. (Überprüfen Sie Ihren Spam-Ordner)", 
+            "Por favor, introduzca el código de confirmación de 6 caracteres enviado a su correo electrónico. (Revisa tu carpeta de spam)", 
+            "Veuillez entrer le code de confirmation à 6 caractères envoyé à votre adresse e-mail. (Vérifiez votre dossier spam)", 
+            "Inserisci il codice di conferma a 6 caratteri inviato alla tua email. (Controlla la tua cartella spam)", 
+            "メールに送信された6文字の確認コードを入力してください。 (迷惑メールフォルダを確認してください)", 
+            "Por favor, insira o código de confirmação de 6 caracteres enviado para o seu e-mail. (Verifique sua pasta de spam)", 
+            "请输入发送到您电子邮件的 6 字符确认代码。 (检查您的垃圾邮件文件夹)", 
         ],
         "Verify": [
             "Verify", 
@@ -4229,16 +4493,16 @@ public class LocalizationManager: ObservableObject {
             "Reenviar e-mail", 
             "重新发送电子邮件", 
         ],
-        "To continue, you need to confirm your email address. A 6-digit code will be sent to your email.": [
-            "To continue, you need to confirm your email address. A 6-digit code will be sent to your email.", 
-            "Aby kontynuować, musisz potwierdzić swój adres e-mail. Na Twój e-mail zostanie wysłany 6-cyfrowy kod.", 
-            "Um fortzufahren, müssen Sie Ihre E-Mail-Adresse bestätigen. Ein 6-stelliger Code wird an Ihre E-Mail gesendet.", 
-            "Para continuar, debe confirmar su dirección de correo electrónico. Le enviaremos un código de 6 dígitos a su correo electrónico.", 
-            "Pour continuer, vous devez confirmer votre adresse e-mail. Un code à 6 chiffres sera envoyé à votre adresse e-mail.", 
-            "Per continuare, devi confermare il tuo indirizzo email. Un codice a 6 cifre verrà inviato alla tua email.", 
-            "続行するには、メールアドレスを確認する必要があります。メールに6桁のコードが送信されます。", 
-            "Para continuar, você precisa confirmar seu endereço de e-mail. Um código de 6 dígitos será enviado para o seu e-mail.", 
-            "要继续，您需要确认您的电子邮件地址。一个 6 位数的验证码已发送至您的电子邮箱。", 
+        "To continue, you need to confirm your email address. A 6-digit code will be sent to your email. (Check your spam folder)": [
+            "To continue, you need to confirm your email address. A 6-digit code will be sent to your email. (Check your spam folder)", 
+            "Aby kontynuować, musisz potwierdzić swój adres e-mail. Na Twój e-mail zostanie wysłany 6-cyfrowy kod. (Sprawdź folder spam)", 
+            "Um fortzufahren, müssen Sie Ihre E-Mail-Adresse bestätigen. Ein 6-stelliger Code wird an Ihre E-Mail gesendet. (Überprüfen Sie Ihren Spam-Ordner)", 
+            "Para continuar, debe confirmar su dirección de correo electrónico. Le enviaremos un código de 6 dígitos a su correo electrónico. (Revisa tu carpeta de spam)", 
+            "Pour continuer, vous devez confirmer votre adresse e-mail. Un code à 6 chiffres sera envoyé à votre adresse e-mail. (Vérifiez votre dossier spam)", 
+            "Per continuare, devi confermare il tuo indirizzo email. Un codice a 6 cifre verrà inviato alla tua email. (Controlla la tua cartella spam)", 
+            "続行するには、メールアドレスを確認する必要があります。メールに6桁のコードが送信されます。 (迷惑メールフォルダを確認してください)", 
+            "Para continuar, você precisa confirmar seu endereço de e-mail. Um código de 6 dígitos será enviado para o seu e-mail. (Verifique sua pasta de spam)", 
+            "要继续，您需要确认您的电子邮件地址。一个 6 位数的验证码已发送至您的电子邮箱。 (检查您的垃圾邮件文件夹)", 
         ],
         "Confirm email": [
             "Confirm email", 
@@ -4767,6 +5031,105 @@ public class LocalizationManager: ObservableObject {
             "Sonorは常に進化しています。今後のアップデートにより、より高度なAIモデルの選択肢が増える予定です。", 
             "O Sonor está em constante desenvolvimento. Atualizações futuras trarão uma seleção mais ampla de modelos de IA avançados.", 
             "Sonor不断在发展。未来的更新将带来更广泛的高级AI模型选择。"
+        ],
+        "Forgot Password?": [
+            "Forgot Password?",
+            "Zapomniałeś hasła?",
+            "Passwort vergessen?",
+            "¿Olvidaste tu contraseña?",
+            "Mot de passe oublié ?",
+            "Hai dimenticato la password?",
+            "パスワードをお忘れですか？",
+            "Esqueceu a senha?",
+            "忘记密码？"
+        ],
+        "Reset Password": [
+            "Reset Password",
+            "Zresetuj hasło",
+            "Passwort zurücksetzen",
+            "Restablecer la contraseña",
+            "Réinitialiser le mot de passe",
+            "Reimposta password",
+            "パスワードをリセット",
+            "Redefinir senha",
+            "重置密码"
+        ],
+        "Enter your email to receive a password reset code.": [
+            "Enter your email to receive a password reset code.",
+            "Wprowadź e-mail, aby otrzymać kod resetowania hasła.",
+            "Geben Sie Ihre E-Mail-Adresse ein, um einen Code zum Zurücksetzen des Passworts zu erhalten.",
+            "Introduce tu correo para recibir un código de restablecimiento.",
+            "Entrez votre e-mail pour recevoir un code de réinitialisation.",
+            "Inserisci l'email per ricevere un codice di reimpostazione.",
+            "メールアドレスを入力して、パスワードリセットコードを受け取ります。",
+            "Insira seu e-mail para receber um código de redefinição de senha.",
+            "输入您的电子邮件以接收密码重置代码。"
+        ],
+        "Enter new password": [
+            "Enter new password",
+            "Wprowadź nowe hasło",
+            "Neues Passwort eingeben",
+            "Introducir nueva contraseña",
+            "Entrez le nouveau mot de passe",
+            "Inserisci una nuova password",
+            "新しいパスワードを入力",
+            "Insira a nova senha",
+            "输入新密码"
+        ],
+        "Confirm new password": [
+            "Confirm new password",
+            "Potwierdź nowe hasło",
+            "Neues Passwort bestätigen",
+            "Confirmar nueva contraseña",
+            "Confirmez le nouveau mot de passe",
+            "Conferma la nuova password",
+            "新しいパスワードを確認",
+            "Confirme a nova senha",
+            "确认新密码"
+        ],
+        "Update Password": [
+            "Update Password",
+            "Zaktualizuj hasło",
+            "Passwort aktualisieren",
+            "Actualizar contraseña",
+            "Mettre à jour le mot de passe",
+            "Aggiorna password",
+            "パスワードを更新",
+            "Atualizar senha",
+            "更新密码"
+        ],
+        "Password updated successfully!": [
+            "Password updated successfully!",
+            "Hasło zaktualizowane pomyślnie!",
+            "Passwort erfolgreich aktualisiert!",
+            "¡Contraseña actualizada con éxito!",
+            "Mot de passe mis à jour avec succès !",
+            "Password aggiornata con successo!",
+            "パスワードが正常に更新されました！",
+            "Senha atualizada com sucesso!",
+            "密码更新成功！"
+        ],
+        "Send Code": [
+            "Send Code",
+            "Wyślij kod",
+            "Code senden",
+            "Enviar código",
+            "Envoyer le code",
+            "Invia codice",
+            "コードを送信",
+            "Enviar código",
+            "发送验证码"
+        ],
+        "Back to Login": [
+            "Back to Login",
+            "Wróć do logowania",
+            "Zurück zum Login",
+            "Volver a iniciar sesión",
+            "Retour à la connexion",
+            "Torna al login",
+            "ログインに戻る",
+            "Voltar ao login",
+            "返回登录"
         ]
     ]
 
@@ -4848,6 +5211,19 @@ public class LocalizationManager: ObservableObject {
             case "pt": return "A exclusão de conta própria está desativada no servidor."
             case "zh": return "服务器上已禁用用户自我删除。"
             default: return "User self-deletion is disabled on the server."
+            }
+        }
+        if lower.contains("abcdefghijklmnopqrstuvwxyz") || lower.contains("password should contain at least one character of each") {
+            switch appLanguage {
+            case "pl": return "Hasło musi zawierać co najmniej jedną małą literę, jedną dużą literę i jedną cyfrę."
+            case "de": return "Das Passwort muss mindestens einen Kleinbuchstaben, einen Großbuchstaben und eine Zahl enthalten."
+            case "es": return "La contraseña debe contener al menos una letra minúscula, una letra mayúscula y un número."
+            case "fr": return "Le mot de passe doit contenir au moins une lettre minuscule, une lettre majuscule et un chiffre."
+            case "it": return "La password deve contenere almeno una lettera minuscola, una lettera maiuscola e un numero."
+            case "ja": return "パスワードには、少なくとも1つの小文字、1つの大文字、および1つの数字を含める必要があります。"
+            case "pt": return "A senha deve conter pelo menos uma letra minúscula, uma letra maiúscula e um número."
+            case "zh": return "密码必须至少包含一个小写字母、一个大写字母和一个数字。"
+            default: return "Password must contain at least one lowercase letter, one uppercase letter, and one number."
             }
         }
         return translate(msg)

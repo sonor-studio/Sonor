@@ -136,7 +136,11 @@ class UserProfileViewModel: ObservableObject {
             isDeleting = true
             authManager.accountDeletionError = nil
             authManager.pendingAccountDeletion = true
-            authManager.loginWithGoogle()
+            
+            // Dispatch asynchronously so the alert can dismiss before opening the browser
+            DispatchQueue.main.async {
+                authManager.loginWithGoogle()
+            }
             return
         }
         guard !deletePassword.isEmpty else {

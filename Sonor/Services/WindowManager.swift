@@ -11,6 +11,7 @@ class WindowManager {
     private var settingsWindow: NSWindow?
     private var supportWindow: NSWindow?
     private var permissionsWindow: NSWindow?
+    private var changelogWindow: NSWindow?
     
     private init() {}
     
@@ -62,6 +63,7 @@ class WindowManager {
         settingsWindow?.close()
         supportWindow?.close()
         permissionsWindow?.close()
+        changelogWindow?.close()
     }
     
     private var hasShownSupportWindowThisSession = false
@@ -79,9 +81,9 @@ class WindowManager {
             window.styleMask.insert(.fullSizeContentView)
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
-            window.makeKeyAndOrderFront(nil)
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
             if showSupportWindow && !hasShownSupportWindowThisSession {
                 self.hasShownSupportWindowThisSession = true
                 self.openSupportWindow()
@@ -116,7 +118,7 @@ class WindowManager {
             }
         }
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: false)
+        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         if showSupportWindow && !hasShownSupportWindowThisSession {
             self.hasShownSupportWindowThisSession = true
@@ -164,6 +166,45 @@ class WindowManager {
     
 
     
+
+    func openChangelogWindow() {
+        if let window = changelogWindow {
+            window.makeKeyAndOrderFront(nil)
+            NSApp.setActivationPolicy(.regular)
+            NSApp.activate(ignoringOtherApps: false)
+            return
+        }
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 440, height: 480),
+            styleMask: [.titled, .closable, .fullSizeContentView],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = "Sonor - Aktualizacja"
+        window.center()
+        window.standardWindowButton(.closeButton)?.isHidden = false
+        window.standardWindowButton(.miniaturizeButton)?.isHidden = true
+        window.standardWindowButton(.zoomButton)?.isHidden = true
+        window.contentView = NSHostingView(rootView: ChangelogView(onComplete: { [weak self] in
+            self?.changelogWindow?.close()
+        }))
+        window.isReleasedWhenClosed = false
+        window.backgroundColor = .windowBackgroundColor
+        window.isOpaque = true
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
+        self.changelogWindow = window
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: window, queue: .main) { [weak self] _ in
+            DispatchQueue.main.async {
+                self?.changelogWindow = nil
+                self?.updateActivationPolicy()
+            }
+        }
+        NSApp.setActivationPolicy(.regular)
+        NSApp.activate(ignoringOtherApps: false)
+        window.makeKeyAndOrderFront(nil)
+    }
+
     func openPermissionsWindow() {
         self.settingsWindow?.close()
         self.supportWindow?.close()
@@ -204,8 +245,11 @@ class WindowManager {
         }
         
         NotificationCenter.default.addObserver(forName: Notification.Name("HidePermissionViews"), object: nil, queue: .main) { [weak self] _ in
-            self?.permissionsWindow?.close()
-            self?.openSettings()
+            Task { @MainActor [weak self] in
+                self?.permissionsWindow?.close()
+                self?.changelogWindow?.close()
+                self?.openSettings()
+            }
         }
         
         NSApp.setActivationPolicy(.regular)
@@ -217,7 +261,8 @@ class WindowManager {
         let isSettingsVisible = settingsWindow?.isVisible == true
         let isSupportVisible = supportWindow?.isVisible == true
         let isPermissionsVisible = permissionsWindow?.isVisible == true
-        if !isSettingsVisible && !isSupportVisible && !isPermissionsVisible {
+        let isChangelogVisible = changelogWindow?.isVisible == true
+        if !isSettingsVisible && !isSupportVisible && !isPermissionsVisible && !isChangelogVisible {
             NSApp.setActivationPolicy(.accessory)
         }
     }
