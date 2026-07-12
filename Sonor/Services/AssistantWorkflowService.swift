@@ -39,8 +39,10 @@ class AssistantWorkflowService {
         let isTextFieldDetected: Bool
         if selectedMode.pasteTiming == "start" {
             isTextFieldDetected = wasTextFieldFocusedAtStart
-        } else {
+        } else if selectedMode.pasteTiming == "end" {
             isTextFieldDetected = PasteManager.shared.isTextFieldFocused(pid: pid)
+        } else {
+            isTextFieldDetected = PasteManager.shared.isTextFieldFocused(pid: pid) || wasTextFieldFocusedAtStart
         }
         
         // willPaste: only paste if a text field was actually found — same behavior regardless of fallbackToClipboard
@@ -58,7 +60,7 @@ class AssistantWorkflowService {
             MessageMemoryManager.shared.saveMessage(correctedText)
             
             if willPaste {
-                let capturedFocusElement: AXUIElement? = (selectedMode.pasteTiming == "start") ? targetAXElement : nil
+                let capturedFocusElement: AXUIElement? = (selectedMode.pasteTiming == "start" || selectedMode.pasteTiming == "auto" || selectedMode.pasteTiming == nil) ? targetAXElement : nil
                 DispatchQueue.global(qos: .userInteractive).async {
                     PasteManager.shared.typeTextDirectly(text: correctedText, targetPID: pid, forceFocusElement: capturedFocusElement)
                     Task { @MainActor in
@@ -131,15 +133,21 @@ class AssistantWorkflowService {
                 if let targetApp = NSRunningApplication(processIdentifier: pid) {
                     targetApp.activate(options: .activateAllWindows)
                     var attempts = 0
-                    while !targetApp.isActive && attempts < 30 {
+                    while !targetApp.isActive && attempts < 10 {
                         try? await Task.sleep(nanoseconds: 50_000_000)
                         attempts += 1
                     }
-                    try? await Task.sleep(nanoseconds: 100_000_000)
                 }
-                if selectedMode.pasteTiming == "start", let element = targetAXElement {
-                    AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, true as CFTypeRef)
-                    try? await Task.sleep(nanoseconds: 50_000_000)
+                if selectedMode.pasteTiming == "start" {
+                    if let element = targetAXElement {
+                        AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, true as CFTypeRef)
+                    }
+                } else if selectedMode.pasteTiming != "end" {
+                    if !PasteManager.shared.isTextFieldFocused(pid: pid) {
+                        if let element = targetAXElement {
+                            AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, true as CFTypeRef)
+                        }
+                    }
                 }
             }
             
@@ -187,25 +195,50 @@ class AssistantWorkflowService {
             isGenerating = false
             if Task.isCancelled { return }
             
+            var finalPID = initialPID
+            var finalFocusElement: AXUIElement? = nil
+            var finalFocused = false
+            
+            var frontmostPID = initialPID
             if let frontApp = NSWorkspace.shared.frontmostApplication,
                frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
-                pid = frontApp.processIdentifier
+                frontmostPID = frontApp.processIdentifier
             }
             
-            let finalIsActive = NSRunningApplication(processIdentifier: pid)?.isActive ?? false
-            let finalFocused = finalIsActive && PasteManager.shared.isTextFieldFocused(pid: pid)
+            if selectedMode.pasteTiming == "start" {
+                finalPID = initialPID
+                finalFocusElement = targetAXElement
+                finalFocused = true
+            } else if selectedMode.pasteTiming == "end" {
+                finalPID = frontmostPID
+                finalFocused = PasteManager.shared.isTextFieldFocused(pid: finalPID)
+            } else {
+                if PasteManager.shared.isTextFieldFocused(pid: frontmostPID) {
+                    finalPID = frontmostPID
+                    finalFocused = true
+                } else if wasTextFieldFocusedAtStart {
+                    finalPID = initialPID
+                    finalFocusElement = targetAXElement
+                    finalFocused = true
+                }
+            }
+            
+            if finalFocused, let el = finalFocusElement {
+                AXUIElementSetAttributeValue(el, kAXFocusedAttribute as CFString, true as CFTypeRef)
+            }
+            
             let willDoFinalPaste = finalFocused && (!initialWillPaste || !willPaste)
             
             if willDoFinalPaste {
                 var textToPaste = fullGeneratedText
                 if initialWillPaste && !streamedText.isEmpty {
-                    if let currentFieldText = PasteManager.shared.readFocusedTextField(pid: pid), currentFieldText.contains(streamedText) {
+                    if let currentFieldText = PasteManager.shared.readFocusedTextField(pid: finalPID), currentFieldText.contains(streamedText) {
                         textToPaste = String(fullGeneratedText.dropFirst(streamedText.count))
                     }
                 }
                 if !textToPaste.isEmpty {
                     DispatchQueue.global(qos: .userInteractive).async {
-                        PasteManager.shared.typeTextDirectly(text: textToPaste, targetPID: pid)
+                        PasteManager.shared.typeTextDirectly(text: textToPaste, targetPID: finalPID, forceFocusElement: finalFocusElement)
                     }
                 }
             } else if !finalFocused && !willPaste {
@@ -224,7 +257,7 @@ class AssistantWorkflowService {
             MessageMemoryManager.shared.saveMessage(fullGeneratedText)
             if finalFocused || initialWillPaste {
                 await MainActor.run {
-                    onAutoLearnTrigger(pid, fullGeneratedText)
+                    onAutoLearnTrigger(finalPID, fullGeneratedText)
                 }
             }
         }
@@ -304,6 +337,23 @@ class AssistantWorkflowService {
         }
         
         var finalBasePrompt = basePrompt
+        
+        let dictionary = UserDefaults.standard.dictionary(forKey: "dictionaryEntries") as? [String: String] ?? [:]
+        let snippets = UserDefaults.standard.dictionary(forKey: "snippetsEntries") as? [String: String] ?? [:]
+        
+        if !dictionary.isEmpty || !snippets.isEmpty {
+            var customRules = "\n\n=== USER DICTIONARY & SNIPPETS ===\n"
+            customRules += "The user has defined custom vocabulary (dictionary) and snippet triggers. If these words appear in the text, you MUST PRESERVE THEM EXACTLY without translating, fixing spelling, or changing their form. They are used for downstream processing:\n"
+            if !dictionary.isEmpty {
+                customRules += "- DICTIONARY TERMS (do not modify): " + dictionary.keys.joined(separator: ", ") + "\n"
+            }
+            if !snippets.isEmpty {
+                customRules += "- SNIPPET TRIGGERS (do not modify): " + snippets.keys.joined(separator: ", ") + "\n"
+            }
+            customRules += "Remember: Do not change, translate, or correct these exact words under any circumstances.\n"
+            finalBasePrompt += customRules
+        }
+        
         let universalLanguageRule: String
         
         // Strip out conflicting rules from built-in prompts to avoid confusing the 4B model (for users migrating from older versions)

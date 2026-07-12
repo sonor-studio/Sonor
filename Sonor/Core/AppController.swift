@@ -455,7 +455,11 @@ class AppController: NSObject, ObservableObject {
             let selectedMode = await MainActor.run { return self.currentMode ?? VoiceMode.defaults.first! }
             _ = selectedMode.language ?? "auto"
             // PRIVACY FIRST: The entire transcription process happens locally on the user's device using the downloaded Whisper model. No audio data is ever sent to the cloud.
-            let transcribedText = await context.transcribe(audioSamples: samples, language: "auto")
+            let snippets = UserDefaults.standard.dictionary(forKey: "snippetsEntries") as? [String: String] ?? [:]
+            let snippetKeys = Array(snippets.keys)
+            let initialPrompt = snippetKeys.isEmpty ? nil : snippetKeys.joined(separator: ", ")
+            
+            let transcribedText = await context.transcribe(audioSamples: samples, language: "auto", initialPrompt: initialPrompt)
             if Task.isCancelled {
                 self.hideHUDAfterDelay()
                 return

@@ -172,7 +172,7 @@ struct MainAppView: View {
                 )
         }
         .sheet(isPresented: $isShowingProfileSheet) {
-            UserProfileView()
+            UserProfileView(isShowingProfileSheet: $isShowingProfileSheet)
                 .preferredColorScheme(effectiveColorScheme)
         }
         .sheet(isPresented: $isShowingMilestoneSheet) {

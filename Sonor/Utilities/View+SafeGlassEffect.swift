@@ -60,3 +60,12 @@ extension View {
         self.modifier(SafeGlassModifier(cornerRadius: cornerRadius))
     }
 }
+
+extension NSWindow {
+    static let standardCornerRadius: CGFloat = {
+        if let radius = NSWindow().value(forKey: "cornerRadius") as? CGFloat {
+            return radius
+        }
+        return 10.0
+    }()
+}

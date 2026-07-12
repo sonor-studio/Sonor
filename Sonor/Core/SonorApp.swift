@@ -20,6 +20,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 struct SonorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var controller = AppController()
+    @ObservedObject private var localizationManager = LocalizationManager.shared
     init() {
         NSApplication.shared.setActivationPolicy(.accessory)
         let mainMenu = NSMenu()
@@ -62,7 +63,7 @@ struct SonorApp: App {
     }
     @ViewBuilder
     private var menuContent: some View {
-        Button(t("Settings")) {
+        Button(t("Dashboard")) {
             WindowManager.shared.openSettings()
         }
         Divider()

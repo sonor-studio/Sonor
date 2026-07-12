@@ -81,9 +81,9 @@ class WindowManager {
             window.styleMask.insert(.fullSizeContentView)
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
-            window.makeKeyAndOrderFront(nil)
             NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
+            window.makeKeyAndOrderFront(nil)
             if showSupportWindow && !hasShownSupportWindowThisSession {
                 self.hasShownSupportWindowThisSession = true
                 self.openSupportWindow()
@@ -118,7 +118,7 @@ class WindowManager {
             }
         }
         NSApp.setActivationPolicy(.regular)
-        NSApp.activate(ignoringOtherApps: false)
+        NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         if showSupportWindow && !hasShownSupportWindowThisSession {
             self.hasShownSupportWindowThisSession = true

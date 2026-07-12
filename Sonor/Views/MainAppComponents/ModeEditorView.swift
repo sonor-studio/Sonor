@@ -16,6 +16,7 @@ struct ModeEditorView: View {
     @State private var showAssistantTypeInfo = false
     @State private var showRenameSheet = false
     @State private var newAssistantName = ""
+    @State private var showPasteTimingInfo = false
     
     var body: some View {
         if let index = modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) {
@@ -72,7 +73,7 @@ struct ModeEditorView: View {
                 }
                 .padding(20)
                 .frame(width: 300)
-                .safeGlassEffect(cornerRadius: 22)
+                .safeGlassEffect(cornerRadius: NSWindow.standardCornerRadius)
                 .padding(.trailing, 8)
                 .padding(.bottom, 8)
                 .padding(.top, 8)
@@ -80,6 +81,10 @@ struct ModeEditorView: View {
                 .transition(.move(edge: .trailing).combined(with: .opacity))
                 .sheet(isPresented: $showAssistantTypeInfo) {
                     AssistantTypeExplanationView()
+                        .preferredColorScheme(colorScheme)
+                }
+                .sheet(isPresented: $showPasteTimingInfo) {
+                    PasteTimingExplanationView()
                         .preferredColorScheme(colorScheme)
                 }
 
@@ -518,12 +523,13 @@ struct ModeEditorView: View {
                         }
                         HStack {
                             Picker(t("Paste target"), selection: Binding(
-                                get: { modeBinding.wrappedValue.pasteTiming ?? "start" },
+                                get: { modeBinding.wrappedValue.pasteTiming ?? "auto" },
                                 set: { 
                                     modeBinding.wrappedValue.pasteTiming = $0
                                     saveModes()
                                 }
                             )) {
+                                Text(t("Automatic")).tag("auto")
                                 Text(t("Field focused at start")).tag("start")
                                 Text(t("Field focused at end")).tag("end")
                             }
@@ -544,6 +550,15 @@ struct ModeEditorView: View {
                             }
                             .buttonStyle(.plain)
                             .help(t("Apply to all assistants"))
+                            Button(action: {
+                                showPasteTimingInfo = true
+                            }) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .help(t("Learn more about Paste target"))
                         }
                         HStack {
                             Toggle(t("Copy to clipboard if no text field is detected"), isOn: Binding(

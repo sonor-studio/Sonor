@@ -7,6 +7,10 @@ struct UserProfileChangePasswordView: View {
     let colorScheme: ColorScheme
     @ObservedObject private var localizer = LocalizationManager.shared
     
+    @State private var isOldPasswordVisible = false
+    @State private var isNewPasswordVisible = false
+    @State private var isConfirmNewPasswordVisible = false
+    
     var body: some View {
         VStack(spacing: 14) {
             Text(t("Change Password"))
@@ -30,13 +34,26 @@ struct UserProfileChangePasswordView: View {
                 Text(t("Old password"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
-                SecureField(t("Enter old password..."), text: $viewModel.oldPassword)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
-                    .cornerRadius(8)
-                    .foregroundColor(.primary)
+                HStack {
+                    if isOldPasswordVisible {
+                        TextField(t("Enter old password..."), text: $viewModel.oldPassword)
+                            .textFieldStyle(.plain)
+                    } else {
+                        SecureField(t("Enter old password..."), text: $viewModel.oldPassword)
+                            .textFieldStyle(.plain)
+                    }
+                    Button(action: { isOldPasswordVisible.toggle() }) {
+                        Image(systemName: isOldPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
+                .cornerRadius(8)
+                .foregroundColor(.primary)
             }
             .padding(.horizontal, 24)
             
@@ -44,13 +61,26 @@ struct UserProfileChangePasswordView: View {
                 Text(t("New password"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
-                SecureField(t("Enter new password..."), text: $viewModel.newPassword)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
-                    .cornerRadius(8)
-                    .foregroundColor(.primary)
+                HStack {
+                    if isNewPasswordVisible {
+                        TextField(t("Enter new password..."), text: $viewModel.newPassword)
+                            .textFieldStyle(.plain)
+                    } else {
+                        SecureField(t("Enter new password..."), text: $viewModel.newPassword)
+                            .textFieldStyle(.plain)
+                    }
+                    Button(action: { isNewPasswordVisible.toggle() }) {
+                        Image(systemName: isNewPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
+                .cornerRadius(8)
+                .foregroundColor(.primary)
             }
             .padding(.horizontal, 24)
             
@@ -58,13 +88,26 @@ struct UserProfileChangePasswordView: View {
                 Text(t("Repeat new password"))
                     .font(.system(size: 11, weight: .medium))
                     .foregroundColor(.secondary)
-                SecureField(t("Repeat new password..."), text: $viewModel.confirmNewPassword)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
-                    .background(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
-                    .cornerRadius(8)
-                    .foregroundColor(.primary)
+                HStack {
+                    if isConfirmNewPasswordVisible {
+                        TextField(t("Repeat new password..."), text: $viewModel.confirmNewPassword)
+                            .textFieldStyle(.plain)
+                    } else {
+                        SecureField(t("Repeat new password..."), text: $viewModel.confirmNewPassword)
+                            .textFieldStyle(.plain)
+                    }
+                    Button(action: { isConfirmNewPasswordVisible.toggle() }) {
+                        Image(systemName: isConfirmNewPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.04))
+                .cornerRadius(8)
+                .foregroundColor(.primary)
             }
             .padding(.horizontal, 24)
             

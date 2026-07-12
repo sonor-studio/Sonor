@@ -10,6 +10,7 @@ struct SnippetsSettingsView: View {
     @State private var isHoveringAdd = false
     @State private var hoveredKey: String? = nil
     @State private var isShowingInfo = false
+    private let maxSnippets = 70
     private var sortedKeys: [String] {
         entries.keys.sorted()
     }
@@ -63,7 +64,7 @@ struct SnippetsSettingsView: View {
             )
     }
     private var isAddButtonActive: Bool {
-        !newShortcut.isEmpty && !newExpansion.isEmpty
+        !newShortcut.isEmpty && !newExpansion.isEmpty && entries.count < maxSnippets
     }
     private var addButtonColor: Color {
         if isAddButtonActive {
@@ -236,9 +237,11 @@ struct SnippetsSettingsView: View {
             } else {
                 addFormView
                 HStack {
-                    Text(String(format: t("SAVED SNIPPETS (%d)"), entries.count))
+                    let savedText = String(format: t("SAVED SNIPPETS (%d)"), entries.count)
+                    let textWithLimit = savedText.replacingOccurrences(of: ")", with: "/\(maxSnippets))")
+                    Text(textWithLimit)
                         .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(entries.count >= maxSnippets ? .red : .secondary)
                         .tracking(1)
                     Spacer()
                 }
@@ -283,6 +286,7 @@ struct SnippetsSettingsView: View {
         entries = UserDefaults.standard.dictionary(forKey: "snippetsEntries") as? [String: String] ?? [:]
     }
     func addEntry() {
+        if entries.count >= maxSnippets { return }
         entries[newShortcut] = newExpansion
         UserDefaults.standard.set(entries, forKey: "snippetsEntries")
         newShortcut = ""

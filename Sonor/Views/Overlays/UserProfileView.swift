@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct UserProfileView: View {
+    @Binding var isShowingProfileSheet: Bool
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
     
@@ -24,6 +25,7 @@ struct UserProfileView: View {
                         isCloseHovered = hovering
                     }
                     .onTapGesture {
+                        isShowingProfileSheet = false
                         dismiss()
                     }
             }
@@ -89,6 +91,7 @@ struct UserProfileView: View {
         }
         .onChange(of: authManager.isLoggedIn) {
             if !authManager.isLoggedIn {
+                isShowingProfileSheet = false
                 dismiss()
             }
         }

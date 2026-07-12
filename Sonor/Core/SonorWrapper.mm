@@ -42,7 +42,7 @@
     }
 }
 
-- (NSString *)transcribeAudioBuffer:(float *)samples count:(int)count language:(NSString *)language {
+- (NSString *)transcribeAudioBuffer:(float *)samples count:(int)count language:(NSString *)language initialPrompt:(NSString *)initialPrompt {
     if (!ctx) return @"";
     
     struct sonor_full_params params = sonor_full_default_params(SONOR_SAMPLING_GREEDY);
@@ -58,6 +58,10 @@
         params.language = strdup("auto");
     }
     
+    if (initialPrompt && [initialPrompt length] > 0) {
+        params.initial_prompt = strdup([initialPrompt UTF8String]);
+    }
+    
     params.n_threads        = 4;
     params.offset_ms        = 0;
     params.no_context       = true;
@@ -66,6 +70,10 @@
     
     if (params.language) {
         free((void *)params.language);
+    }
+    
+    if (params.initial_prompt) {
+        free((void *)params.initial_prompt);
     }
     
     if (ret != 0) {

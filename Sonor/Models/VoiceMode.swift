@@ -21,7 +21,7 @@ struct VoiceMode: Identifiable, Codable, Equatable {
     var isBuiltIn: Bool? 
     var pasteTiming: String? 
     var fallbackToClipboard: Bool?
-    init(id: UUID = UUID(), name: String, prompt: String, boundAppBundleIDs: [String] = [], audioBehavior: AudioBehavior? = .keep, assistantType: String? = "dictation", passAppName: Bool? = true, passCopiedText: Bool? = true, language: String? = "auto", isBuiltIn: Bool? = false, pasteTiming: String? = "start", fallbackToClipboard: Bool? = false) {
+    init(id: UUID = UUID(), name: String, prompt: String, boundAppBundleIDs: [String] = [], audioBehavior: AudioBehavior? = .keep, assistantType: String? = "dictation", passAppName: Bool? = true, passCopiedText: Bool? = true, language: String? = "auto", isBuiltIn: Bool? = false, pasteTiming: String? = "auto", fallbackToClipboard: Bool? = false) {
         self.id = id
         self.name = name
         self.prompt = prompt
@@ -83,7 +83,7 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                         passCopiedText: old.passCopiedText,
                         language: old.language,
                         isBuiltIn: old.isBuiltIn,
-                        pasteTiming: "start",
+                        pasteTiming: "auto",
                         fallbackToClipboard: false
                     )
                 }

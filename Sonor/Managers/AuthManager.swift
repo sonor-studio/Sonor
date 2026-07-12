@@ -371,7 +371,9 @@ final class AuthManager: ObservableObject {
     func loginWithGoogle() {
         guard !supabaseUrl.isEmpty else { return }
         if let url = URL(string: "\(supabaseUrl)/auth/v1/authorize?provider=google&redirect_to=sonor://auth-callback") {
-            NSWorkspace.shared.open(url)
+            DispatchQueue.main.async {
+                NSWorkspace.shared.open(url)
+            }
         }
     }
     func handleDeepLink(_ url: URL) {
@@ -511,6 +513,27 @@ final class AuthManager: ObservableObject {
         request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
         let body: [String: Any] = ["password": newPassword, "current_password": oldPassword]
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw NSError(domain: "AuthError", code: 500, userInfo: [NSLocalizedDescriptionKey: "Brak odpowiedzi od serwera."])
+        }
+        if !(200...299).contains(httpResponse.statusCode) {
+            let errorMsg = extractErrorMessage(from: data)
+            throw NSError(domain: "AuthError", code: httpResponse.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
+        }
+    }
+    func updatePasswordAfterRecovery(newPassword: String) async throws {
+        let token = try await getValidAccessToken()
+        guard let url = URL(string: "\(supabaseUrl)/auth/v1/user") else {
+            throw NSError(domain: "AuthError", code: 400, userInfo: [NSLocalizedDescriptionKey: "URL Error."])
+        }
+        var request = URLRequest(url: url)
+        request.httpMethod = "PUT"
+        request.addValue(supabaseAnonKey, forHTTPHeaderField: "apikey")
+        request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+        let body: [String: Any] = ["password": newPassword]
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let httpResponse = response as? HTTPURLResponse else {
@@ -714,7 +737,9 @@ final class AuthManager: ObservableObject {
                                     self.saveProfileCache(email: email, date: finalDate)
                                     if self.currentUserProvider == "google" {
                                         let diff = abs(Date().timeIntervalSince(finalDate))
-                                        if diff < 120 {
+                                        let defaultsKey = "hasShownThankYou_\(email)"
+                                        if diff < 120 && !UserDefaults.standard.bool(forKey: defaultsKey) {
+                                            UserDefaults.standard.set(true, forKey: defaultsKey)
                                             NotificationCenter.default.post(name: Notification.Name("ShowThankYouView"), object: nil)
                                         }
                                     }

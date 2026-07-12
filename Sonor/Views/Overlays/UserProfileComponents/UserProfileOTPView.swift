@@ -13,7 +13,7 @@ struct UserProfileOTPView: View {
                 .font(.system(size: 20, weight: .bold))
                 .padding(.top, 10)
             
-            Text(t("Please enter the 6-character confirmation code sent to your email."))
+            Text(t("Please enter the 6-character confirmation code sent to your email. (Check your spam folder)"))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

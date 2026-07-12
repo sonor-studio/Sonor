@@ -8,6 +8,8 @@ struct LoginView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    @State private var isPasswordVisible = false
+    @State private var isConfirmPasswordVisible = false
     @State private var isRegistering = false
     @State private var errorMessage: String? = nil
     @State private var isLoading = false
@@ -20,6 +22,9 @@ struct LoginView: View {
     @State private var resendCooldown: Int = UserDefaults.standard.integer(forKey: "resendCooldown")
     @State private var resendTimerTask: Task<Void, Never>? = nil
     @State private var lastSentRegisterEmail = ""
+    
+    @State private var isForgotPasswordFlow = false
+    @State private var forgotPasswordStep = 0
     private func updateCooldown() {
         let lastSent = UserDefaults.standard.double(forKey: "lastRegisterOTPSentTime")
         let elapsed = Date().timeIntervalSince1970 - lastSent
@@ -54,10 +59,330 @@ struct LoginView: View {
                 .scaledToFit()
                 .frame(width: 48, height: 48)
                 .foregroundColor(.primary)
-            if showOTPVerification {
+            if isForgotPasswordFlow {
+                if forgotPasswordStep == 0 {
+                    Text(t("Change Password"))
+                        .font(.system(size: 20, weight: .bold))
+                    Text(t("Enter your email to receive a password reset code."))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                        .padding(.bottom, 4)
+                    if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.system(size: 13, weight: .medium))
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                            .padding(.horizontal, 40)
+                    }
+                    VStack(spacing: 10) {
+                        TextField(t("Email address"), text: $email)
+                            .textFieldStyle(.plain)
+                            .padding(10)
+                            .background(Color.primary.opacity(0.05))
+                            .cornerRadius(8)
+                    }
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 4)
+                    
+                    Button(action: {
+                        Task {
+                            isLoading = true
+                            errorMessage = nil
+                            do {
+                                try await authManager.requestPasswordChangeOTP(email: email)
+                                await MainActor.run {
+                                    isLoading = false
+                                    forgotPasswordStep = 1
+                                }
+                            } catch {
+                                await MainActor.run {
+                                    isLoading = false
+                                    errorMessage = tError(error.localizedDescription)
+                                }
+                            }
+                        }
+                    }) {
+                        HStack {
+                            if isLoading {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .padding(.trailing, 5)
+                            }
+                            Text(t("Send Code"))
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(10)
+                    .disabled(email.isEmpty || isLoading)
+                    .keyboardShortcut(.defaultAction)
+                    .padding(.horizontal, 40)
+                    
+                    Button(action: {
+                        withAnimation {
+                            isForgotPasswordFlow = false
+                            errorMessage = nil
+                        }
+                    }) {
+                        Text(t("Back to Login"))
+                            .font(.system(size: 13))
+                            .foregroundColor(.blue)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                    
+                } else if forgotPasswordStep == 1 {
+                    Text(t("Confirm Email"))
+                        .font(.system(size: 20, weight: .bold))
+                    Text(t("Please enter the 6-character confirmation code sent to your email. (Check your spam folder)"))
+                        .font(.system(size: 12))
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
+                        .padding(.bottom, 4)
+                    if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.system(size: 13, weight: .medium))
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                            .padding(.horizontal, 40)
+                    }
+                    HStack(spacing: 8) {
+                        ForEach(0..<6, id: \.self) { index in
+                            TextField("", text: $otpDigits[index])
+                                .textFieldStyle(.plain)
+                                .font(.system(size: 24, weight: .bold))
+                                .multilineTextAlignment(.center)
+                                .frame(width: 40, height: 50)
+                                .background(Color.primary.opacity(0.05))
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(focusedField == index ? Color.blue : Color.clear, lineWidth: 2)
+                                )
+                                .focused($focusedField, equals: index)
+                                .onChange(of: otpDigits[index]) {
+                                    let newValue = otpDigits[index]
+                                    let oldVal = oldOtpDigits[index]
+                                    let filtered = newValue.filter { $0.isNumber }
+                                    if filtered.isEmpty {
+                                        if newValue == "" {
+                                            otpDigits[index] = "\u{200B}"
+                                            oldOtpDigits[index] = "\u{200B}"
+                                            if index > 0 {
+                                                focusedField = index - 1
+                                            }
+                                        } else if newValue == "\u{200B}" {
+                                            oldOtpDigits[index] = "\u{200B}"
+                                        } else {
+                                            otpDigits[index] = oldVal
+                                        }
+                                        return
+                                    }
+                                    if filtered.count > 1 {
+                                        let chars = Array(filtered.prefix(6))
+                                        for i in 0..<chars.count {
+                                            if index + i < 6 {
+                                                otpDigits[index + i] = String(chars[i])
+                                                oldOtpDigits[index + i] = String(chars[i])
+                                            }
+                                        }
+                                        focusedField = min(index + chars.count, 5)
+                                    } else {
+                                        otpDigits[index] = filtered
+                                        oldOtpDigits[index] = filtered
+                                        if oldVal != filtered {
+                                            if index < 5 {
+                                                focusedField = index + 1
+                                            }
+                                        }
+                                    }
+                                }
+                                .onAppear {
+                                    if index == 0 {
+                                        focusedField = 0
+                                    }
+                                }
+                        }
+                    }
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 8)
+                    
+                    Button(action: {
+                        Task {
+                            isLoading = true
+                            errorMessage = nil
+                            do {
+                                try await authManager.verifyPasswordChangeOTP(email: email, token: otpToken)
+                                await MainActor.run {
+                                    isLoading = false
+                                    forgotPasswordStep = 2
+                                    password = ""
+                                    confirmPassword = ""
+                                }
+                            } catch {
+                                await MainActor.run {
+                                    isLoading = false
+                                    errorMessage = tError(error.localizedDescription)
+                                }
+                            }
+                        }
+                    }) {
+                        HStack {
+                            if isLoading {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .padding(.trailing, 5)
+                            }
+                            Text(t("Confirm email"))
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(10)
+                    .disabled(otpToken.count != 6 || isLoading)
+                    .keyboardShortcut(.defaultAction)
+                    .padding(.horizontal, 40)
+                    
+                    Button(action: {
+                        withAnimation {
+                            forgotPasswordStep = 0
+                            errorMessage = nil
+                        }
+                    }) {
+                        Text(t("Back"))
+                            .font(.system(size: 13))
+                            .foregroundColor(.blue)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                    
+                } else if forgotPasswordStep == 2 {
+                    Text(t("New password"))
+                        .font(.system(size: 20, weight: .bold))
+                    if let error = errorMessage {
+                        Text(error)
+                            .foregroundColor(.red)
+                            .font(.system(size: 13, weight: .medium))
+                            .padding(10)
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red.opacity(0.1))
+                            .cornerRadius(8)
+                            .padding(.horizontal, 40)
+                    }
+                    VStack(spacing: 10) {
+                        HStack {
+                            if isPasswordVisible {
+                                TextField(t("New password"), text: $password)
+                                    .textFieldStyle(.plain)
+                                    .frame(height: 16)
+                            } else {
+                                SecureField(t("New password"), text: $password)
+                                    .textFieldStyle(.plain)
+                                    .frame(height: 16)
+                            }
+                            Button(action: { isPasswordVisible.toggle() }) {
+                                Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .focusable(false)
+                        }
+                        .padding(10)
+                        .background(Color.primary.opacity(0.05))
+                        .cornerRadius(8)
+                        
+                        HStack {
+                            if isConfirmPasswordVisible {
+                                TextField(t("Repeat new password"), text: $confirmPassword)
+                                    .textFieldStyle(.plain)
+                                    .frame(height: 16)
+                            } else {
+                                SecureField(t("Repeat new password"), text: $confirmPassword)
+                                    .textFieldStyle(.plain)
+                                    .frame(height: 16)
+                            }
+                            Button(action: { isConfirmPasswordVisible.toggle() }) {
+                                Image(systemName: isConfirmPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .focusable(false)
+                        }
+                        .padding(10)
+                        .background(Color.primary.opacity(0.05))
+                        .cornerRadius(8)
+                    }
+                    .padding(.horizontal, 40)
+                    .padding(.bottom, 8)
+                    
+                    Button(action: {
+                        guard password == confirmPassword else {
+                            errorMessage = t("Passwords do not match.")
+                            return
+                        }
+                        Task {
+                            isLoading = true
+                            errorMessage = nil
+                            do {
+                                try await authManager.updatePasswordAfterRecovery(newPassword: password)
+                                await MainActor.run {
+                                    isLoading = false
+                                    isForgotPasswordFlow = false
+                                    forgotPasswordStep = 0
+                                    presentationMode.wrappedValue.dismiss()
+                                }
+                            } catch {
+                                await MainActor.run {
+                                    isLoading = false
+                                    errorMessage = tError(error.localizedDescription)
+                                }
+                            }
+                        }
+                    }) {
+                        HStack {
+                            if isLoading {
+                                ProgressView()
+                                    .controlSize(.small)
+                                    .padding(.trailing, 5)
+                            }
+                            Text(t("Save Password"))
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                        .foregroundColor(colorScheme == .dark ? .black : .white)
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.plain)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(10)
+                    .disabled(password.isEmpty || confirmPassword.isEmpty || isLoading)
+                    .keyboardShortcut(.defaultAction)
+                    .padding(.horizontal, 40)
+                }
+            } else if showOTPVerification {
                 Text(t("Confirm Email"))
                     .font(.system(size: 20, weight: .bold))
-                Text(t("Please enter the 6-character confirmation code sent to your email."))
+                Text(t("Please enter the 6-character confirmation code sent to your email. (Check your spam folder)"))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -150,11 +475,12 @@ struct LoginView: View {
                             ProgressView().controlSize(.small)
                                 .padding(.trailing, 5)
                         }
-                        Text(t("Verify"))
+                        Text(t("Confirm email"))
                             .font(.system(size: 15, weight: .bold))
                     }
                     .foregroundColor(colorScheme == .dark ? .black : .white)
                     .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
                     .padding(12)
                     .background(colorScheme == .dark ? Color.white : Color.black)
                     .cornerRadius(10)
@@ -224,17 +550,48 @@ struct LoginView: View {
                     .padding(10)
                     .background(Color.primary.opacity(0.05))
                     .cornerRadius(8)
-                SecureField(t("Password"), text: $password)
-                    .textFieldStyle(.plain)
+                HStack {
+                    if isPasswordVisible {
+                        TextField(t("Password"), text: $password)
+                            .textFieldStyle(.plain)
+                            .frame(height: 16)
+                    } else {
+                        SecureField(t("Password"), text: $password)
+                            .textFieldStyle(.plain)
+                            .frame(height: 16)
+                    }
+                    Button(action: { isPasswordVisible.toggle() }) {
+                        Image(systemName: isPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .focusable(false)
+                }
+                .padding(10)
+                .background(Color.primary.opacity(0.05))
+                .cornerRadius(8)
+                
+                if isRegistering {
+                    HStack {
+                        if isConfirmPasswordVisible {
+                            TextField(t("Repeat password"), text: $confirmPassword)
+                                .textFieldStyle(.plain)
+                                .frame(height: 16)
+                        } else {
+                            SecureField(t("Repeat password"), text: $confirmPassword)
+                                .textFieldStyle(.plain)
+                                .frame(height: 16)
+                        }
+                        Button(action: { isConfirmPasswordVisible.toggle() }) {
+                            Image(systemName: isConfirmPasswordVisible ? "eye.slash.fill" : "eye.fill")
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                    }
                     .padding(10)
                     .background(Color.primary.opacity(0.05))
                     .cornerRadius(8)
-                if isRegistering {
-                    SecureField(t("Repeat password"), text: $confirmPassword)
-                        .textFieldStyle(.plain)
-                        .padding(10)
-                        .background(Color.primary.opacity(0.05))
-                        .cornerRadius(8)
                     HStack(spacing: 8) {
                         Toggle("", isOn: $acceptedPrivacyPolicy)
                             .labelsHidden()
@@ -246,6 +603,7 @@ struct LoginView: View {
                             if !prefix.isEmpty {
                                 Text(prefix)
                                     .font(.system(size: 13))
+                                    .onTapGesture { acceptedPrivacyPolicy.toggle() }
                             }
                             Button(action: {
                                 openPrivacyPolicy()
@@ -265,6 +623,7 @@ struct LoginView: View {
                             }
                             Text(t("and"))
                                 .font(.system(size: 13))
+                                .onTapGesture { acceptedPrivacyPolicy.toggle() }
                             Button(action: {
                                 openTermsOfService()
                             }) {
@@ -284,6 +643,7 @@ struct LoginView: View {
                             if localizer.appLanguage == "ja" {
                                 Text(t("to agree"))
                                     .font(.system(size: 13))
+                                    .onTapGesture { acceptedPrivacyPolicy.toggle() }
                             }
                         }
                         Spacer()
@@ -301,75 +661,107 @@ struct LoginView: View {
                             .foregroundColor(.secondary)
                             .multilineTextAlignment(.leading)
                             .fixedSize(horizontal: false, vertical: true)
+                            .onTapGesture { acceptedMarketing.toggle() }
                         Spacer()
                     }
                     .padding(.top, 4)
                 }
             }
             .padding(.horizontal, 40)
-            Button(action: {
-                if !validateInputs() { return }
-                Task {
-                    await handleAuth()
-                }
-            }) {
-                HStack {
-                    if isLoading {
-                        ProgressView().controlSize(.small)
-                            .padding(.trailing, 5)
+            
+            if !isForgotPasswordFlow && !showOTPVerification {
+                Button(action: {
+                    if !validateInputs() { return }
+                    Task {
+                        await handleAuth()
                     }
-                    Text(isRegistering ? t("Sign Up") : t("Log In"))
-                        .font(.system(size: 15, weight: .bold))
+                }) {
+                    HStack {
+                        if isLoading {
+                            ProgressView().controlSize(.small)
+                                .padding(.trailing, 5)
+                        }
+                        Text(isRegistering ? t("Sign Up") : t("Log In"))
+                            .font(.system(size: 15, weight: .bold))
+                    }
+                    .foregroundColor(colorScheme == .dark ? .black : .white)
+                    .frame(maxWidth: .infinity)
+                    .padding(12)
+                    .background(colorScheme == .dark ? Color.white : Color.black)
+                    .cornerRadius(10)
                 }
-                .foregroundColor(colorScheme == .dark ? .black : .white)
-                .frame(maxWidth: .infinity)
-                .padding(12)
-                .background(colorScheme == .dark ? Color.white : Color.black)
-                .cornerRadius(10)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 40)
-            .disabled(isLoading)
-            .keyboardShortcut(.defaultAction)
-            Button(action: {
-                authManager.loginWithGoogle()
-            }) {
-                HStack {
-                    Image("GoogleLogo")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 16, height: 16)
-                    Text(t("Continue with Google"))
-                        .font(.system(size: 15, weight: .bold))
-                }
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity)
-                .padding(12)
-                .background(Color.primary.opacity(0.05))
-                .cornerRadius(10)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 40)
-            .disabled(isLoading)
-            Button(action: {
-                withAnimation {
-                    isRegistering.toggle()
-                }
-                errorMessage = nil
-                confirmPassword = ""
-            }) {
-                Text(isRegistering ? t("Already have an account? Log In") : t("Don't have an account? Sign Up"))
-                    .font(.system(size: 13))
+                .buttonStyle(.plain)
+                .padding(.horizontal, 40)
+                .disabled(isLoading)
+                .keyboardShortcut(.defaultAction)
+                
+                Button(action: {
+                    authManager.loginWithGoogle()
+                }) {
+                    HStack {
+                        Image("GoogleLogo")
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: 16, height: 16)
+                        Text(t("Continue with Google"))
+                            .font(.system(size: 15, weight: .bold))
+                    }
                     .foregroundColor(.primary)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+                    .padding(12)
+                    .background(Color.primary.opacity(0.05))
+                    .cornerRadius(10)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 40)
+                .disabled(isLoading)
+                
+                Button(action: {
+                    withAnimation {
+                        isRegistering.toggle()
+                    }
+                    errorMessage = nil
+                    confirmPassword = ""
+                }) {
+                    let fullText = isRegistering ? t("Already have an account? Log In") : t("Don't have an account? Sign Up")
+                    let parts = splitAccountText(fullText)
+                    
+                    HStack(spacing: 4) {
+                        Text(parts.0)
+                            .foregroundColor(.primary)
+                        if !parts.1.isEmpty {
+                            Text(parts.1)
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .font(.system(size: 13))
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+                
+                if !isRegistering {
+                    Button(action: {
+                        withAnimation {
+                            isForgotPasswordFlow = true
+                            forgotPasswordStep = 0
+                            errorMessage = nil
+                        }
+                    }) {
+                        Text(t("Forgot Password?"))
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 4)
+                }
             }
-            .buttonStyle(.plain)
-            .padding(.top, 4)
             }
         }
         .padding(.vertical, 30)
         .frame(maxWidth: .infinity)
         .onChange(of: authManager.isLoggedIn) {
-            if authManager.isLoggedIn {
+            if authManager.isLoggedIn && !isForgotPasswordFlow {
                 presentationMode.wrappedValue.dismiss()
             }
         }
@@ -532,5 +924,15 @@ struct LoginView: View {
         } else if let fallback = filteredUrls.first(where: { $0.lastPathComponent.contains("(Updated).pdf") }) {
             NSWorkspace.shared.open(fallback)
         }
+    }
+    private func splitAccountText(_ text: String) -> (String, String) {
+        if let range = text.range(of: "? ") {
+            return (String(text[..<range.upperBound]).trimmingCharacters(in: .whitespaces), String(text[range.upperBound...]))
+        } else if let range = text.range(of: "？ ") {
+            return (String(text[..<range.upperBound]).trimmingCharacters(in: .whitespaces), String(text[range.upperBound...]))
+        } else if let range = text.range(of: "？") {
+            return (String(text[..<range.upperBound]).trimmingCharacters(in: .whitespaces), String(text[range.upperBound...]))
+        }
+        return (text, "")
     }
 }

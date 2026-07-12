@@ -25,6 +25,50 @@ public class LocalizationManager: ObservableObject {
         }
     }
     private let translations: [String: [String]] = [
+        "Paste Target Explanation": [
+            "Paste Target Explanation",
+            "Cel wklejania - objaśnienie",
+            "Einfügeziel-Erklärung",
+            "Explicación del objetivo de pegado",
+            "Explication de la cible de collage",
+            "Spiegazione della destinazione di incollaggio",
+            "貼り付け先の説明",
+            "Explicação do alvo de colagem",
+            "粘贴目标说明"
+        ],
+        "Checks both at the start and at the end of dictation. Priority is given to the field focused at the end, so text is always pasted where your cursor is right now. If no field is found at the end, it will safely paste into the field that was focused when you started talking. If neither had focus, it detects 'no field'.": [
+            "Checks both at the start and at the end of dictation. Priority is given to the field focused at the end, so text is always pasted where your cursor is right now. If no field is found at the end, it will safely paste into the field that was focused when you started talking. If neither had focus, it detects 'no field'.",
+            "Sprawdza aktywne pola na początku oraz na końcu dyktowania. Priorytet ma pole na końcu, dzięki czemu tekst trafia tam, gdzie aktualnie znajduje się kursor. Jeśli jednak pole nie zostanie wykryte, Sonor asekuracyjnie przywróci to, w którym kursor był na starcie.",
+            "Überprüft sowohl beim Start als auch am Ende des Diktats. Priorität hat das am Ende fokussierte Feld, sodass der Text immer dort eingefügt wird, wo sich Ihr Cursor gerade befindet. Wenn am Ende kein Feld gefunden wird, fügt es sicher in das Feld ein, das beim Start fokussiert war.",
+            "Comprueba tanto al inicio como al final del dictado. Se da prioridad al campo enfocado al final, por lo que el texto siempre se pega donde está el cursor ahora mismo. Si no se encuentra ningún campo al final, pegará de forma segura en el campo que estaba enfocado al inicio.",
+            "Vérifie à la fois au début et à la fin de la dictée. La priorité est donnée au champ ciblé à la fin, de sorte que le texte est toujours collé là où se trouve votre curseur en ce moment. Si aucun champ n'est trouvé à la fin, il collera en toute sécurité dans le champ qui était ciblé au début.",
+            "Controlla sia all'inizio che alla fine della dettatura. La priorità viene data al campo attivo alla fine, in modo che il testo venga sempre incollato dove si trova attualmente il cursore. Se non viene trovato alcun campo alla fine, incollerà in modo sicuro nel campo iniziale.",
+            "ディクテーションの開始時と終了時の両方で確認します。終了時にフォーカスされているフィールドが優先されるため、テキストは常に現在のカーソル位置に貼り付けられます。終了時にフィールドが見つからない場合は、開始時のフィールドに安全に貼り付けます。",
+            "Verifica tanto no início quanto no final do ditado. A prioridade é dada ao campo focado no final, para que o texto seja sempre colado onde seu cursor está no momento. Se nenhum campo for encontrado no final, ele colará com segurança no campo que estava focado no início.",
+            "在听写开始和结束时都会进行检查。优先考虑结束时聚焦的字段，因此文本始终粘贴在当前光标所在的位置。如果在结束时未找到字段，它将安全地粘贴到您开始说话时聚焦的字段中。"
+        ],
+        "Saves the exact text field you clicked before launching the assistant. When generating finishes, it forces the text strictly into that specific field, ignoring whatever field is active at the end.": [
+            "Saves the exact text field you clicked before launching the assistant. When generating finishes, it forces the text strictly into that specific field, ignoring whatever field is active at the end.",
+            "Zapisuje dokładne pole, w którym znajdował się kursor tuż przed uruchomieniem asystenta. Po zakończeniu transkrypcji zmusza tekst do wklejenia dokładnie w to zapisane miejsce, ignorując to, w co aktualnie klikasz.",
+            "Speichert das genaue Textfeld, auf das Sie geklickt haben, bevor Sie den Assistenten gestartet haben. Nach Abschluss der Generierung wird der Text zwingend in dieses bestimmte Feld eingefügt, unabhängig davon, welches Feld am Ende aktiv ist.",
+            "Guarda el campo de texto exacto en el que hiciste clic antes de iniciar el asistente. Al terminar la generación, fuerza el texto estrictamente en ese campo específico, ignorando cualquier campo que esté activo al final.",
+            "Enregistre le champ de texte exact sur lequel vous avez cliqué avant de lancer l'assistant. À la fin de la génération, il force le texte strictement dans ce champ spécifique, ignorant tout champ actif à la fin.",
+            "Salva l'esatto campo di testo in cui hai cliccato prima di avviare l'assistente. Al termine della generazione, forza il testo rigorosamente in quello specifico campo, ignorando qualsiasi campo sia attivo alla fine.",
+            "アシスタントを起動する前にクリックした正確なテキストフィールドを保存します。生成が終了すると、終了時にアクティブなフィールドを無視して、その特定のフィールドにテキストを強制的に入力します。",
+            "Salva o campo de texto exato no qual você clicou antes de iniciar o assistente. Ao terminar a geração, ele força o texto estritamente para aquele campo específico, ignorando qualquer campo que esteja ativo no final.",
+            "保存您在启动助手之前单击的确切文本字段。生成完成时，它将文本严格强制粘贴到该特定字段中，忽略结束时活动的任何字段。"
+        ],
+        "Ignores your initial text field entirely. It will wait for the text to be fully generated, and paste it only into the field that is active at the exact moment of pasting. If none is found at the end, it detects 'no field'.": [
+            "Ignores your initial text field entirely. It will wait for the text to be fully generated, and paste it only into the field that is active at the exact moment of pasting. If none is found at the end, it detects 'no field'.",
+            "Całkowicie ignoruje pole, w którym znajdował się kursor na początku. Odczeka na zakończenie generowania, po czym wklei tekst wyłącznie do pola, w którym kursor jest w dokładnie tej samej sekundzie co wklejanie.",
+            "Ignoriert Ihr anfängliches Textfeld vollständig. Es wartet darauf, dass der Text vollständig generiert wird, und fügt ihn nur in das Feld ein, das im genauen Moment des Einfügens aktiv ist.",
+            "Ignora por completo tu campo de texto inicial. Esperará a que el texto se genere completamente y lo pegará solo en el campo que esté activo en el momento exacto de pegar.",
+            "Ignore complètement votre champ de texte initial. Il attendra que le texte soit entièrement généré et le collera uniquement dans le champ qui est actif au moment exact du collage.",
+            "Ignora completamente il tuo campo di testo iniziale. Attenderà che il testo sia completamente generato e lo incollerà solo nel campo attivo nell'esatto momento dell'incollaggio.",
+            "初期のテキストフィールドを完全に無視します。テキストが完全に生成されるのを待ち、貼り付けの正確な瞬間にアクティブなフィールドにのみ貼り付けます。",
+            "Ignora completamente o seu campo de texto inicial. Ele esperará que o texto seja totalmente gerado e o colará apenas no campo que estiver ativo no momento exato da colagem.",
+            "完全忽略您的初始文本字段。它将等待文本完全生成，并且仅将其粘贴到粘贴确切时刻处于活动状态的字段中。"
+        ],
         "What's new in version %@": [
             "What's new in version %@",
             "Co nowego w wersji %@",
@@ -345,6 +389,50 @@ public class LocalizationManager: ObservableObject {
             "厳格な新しい権限設定ウィンドウ、ドラッグ可能なオーバーレイ、およびより滑らかなアニメーション。",
             "Nova e rigorosa janela de permissões, sobreposições arrastáveis e animações mais suaves.",
             "严格的新权限设置窗口、可拖动叠加层以及更流畅的动画。"
+        ],
+        "Version": [
+            "Version",
+            "Wersja",
+            "Version",
+            "Versión",
+            "Version",
+            "Versione",
+            "バージョン",
+            "Versão",
+            "版本"
+        ],
+        "Made by Sonor Studio": [
+            "Made by Sonor Studio",
+            "Stworzone przez Sonor Studio",
+            "Erstellt von Sonor Studio",
+            "Hecho por Sonor Studio",
+            "Créé par Sonor Studio",
+            "Creato da Sonor Studio",
+            "Sonor Studioによる作成",
+            "Criado por Sonor Studio",
+            "由 Sonor Studio 制作"
+        ],
+        "All rights reserved.": [
+            "All rights reserved.",
+            "Wszelkie prawa zastrzeżone.",
+            "Alle Rechte vorbehalten.",
+            "Todos los derechos reservados.",
+            "Tous droits réservés.",
+            "Tutti i diritti riservati.",
+            "全著作権所有。",
+            "Todos os direitos reservados.",
+            "版权所有。"
+        ],
+        "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License": [
+            "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License",
+            "Licencja Creative Commons Uznanie autorstwa-Użycie niekomercyjne-Na tych samych warunkach 4.0 Międzynarodowa",
+            "Creative Commons Namensnennung - Nicht-kommerziell - Weitergabe unter gleichen Bedingungen 4.0 International",
+            "Licencia Pública Internacional de Creative Commons Reconocimiento-NoComercial-CompartirIgual 4.0",
+            "Licence Publique Internationale Creative Commons Attribution - Pas d'Utilisation Commerciale - Partage dans les Mêmes Conditions 4.0",
+            "Licenza Pubblica Internazionale Creative Commons Attribuzione - Non commerciale - Condividi allo stesso modo 4.0",
+            "クリエイティブ・コモンズ 表示 - 非営利 - 継承 4.0 国際 パブリック・ライセンス",
+            "Licença Pública Internacional Creative Commons Atribuição-NãoComercial-CompartilhaIgual 4.0",
+            "知识共享署名-非商业性使用-相同方式共享 4.0 国际公共许可证"
         ],
 "Change Assistant": [
             "Change Assistant", 
@@ -3459,6 +3547,17 @@ public class LocalizationManager: ObservableObject {
             "Escolher microfone:", 
             "选择麦克风：", 
         ],
+        "Dashboard": [
+            "Dashboard", 
+            "Panel Główny", 
+            "Dashboard", 
+            "Panel de Control", 
+            "Tableau de bord", 
+            "Pannello di controllo", 
+            "ダッシュボード", 
+            "Painel de Controle", 
+            "仪表板", 
+        ],
         "Settings": [
             "Settings", 
             "Ustawienia", 
@@ -4361,16 +4460,16 @@ public class LocalizationManager: ObservableObject {
             "Confirmar E-mail", 
             "确认电子邮件", 
         ],
-        "Please enter the 6-character confirmation code sent to your email.": [
-            "Please enter the 6-character confirmation code sent to your email.", 
-            "Proszę wpisać 6-znakowy kod potwierdzający wysłany na Twój e-mail.", 
-            "Bitte geben Sie den 6-stelligen Bestätigungscode ein, der an Ihre E-Mail gesendet wurde.", 
-            "Por favor, introduzca el código de confirmación de 6 caracteres enviado a su correo electrónico.", 
-            "Veuillez entrer le code de confirmation à 6 caractères envoyé à votre adresse e-mail.", 
-            "Inserisci il codice di conferma a 6 caratteri inviato alla tua email.", 
-            "メールに送信された6文字の確認コードを入力してください。", 
-            "Por favor, insira o código de confirmação de 6 caracteres enviado para o seu e-mail.", 
-            "请输入发送到您电子邮件的 6 字符确认代码。", 
+        "Please enter the 6-character confirmation code sent to your email. (Check your spam folder)": [
+            "Please enter the 6-character confirmation code sent to your email. (Check your spam folder)", 
+            "Proszę wpisać 6-znakowy kod potwierdzający wysłany na Twój e-mail. (Sprawdź folder spam)", 
+            "Bitte geben Sie den 6-stelligen Bestätigungscode ein, der an Ihre E-Mail gesendet wurde. (Überprüfen Sie Ihren Spam-Ordner)", 
+            "Por favor, introduzca el código de confirmación de 6 caracteres enviado a su correo electrónico. (Revisa tu carpeta de spam)", 
+            "Veuillez entrer le code de confirmation à 6 caractères envoyé à votre adresse e-mail. (Vérifiez votre dossier spam)", 
+            "Inserisci il codice di conferma a 6 caratteri inviato alla tua email. (Controlla la tua cartella spam)", 
+            "メールに送信された6文字の確認コードを入力してください。 (迷惑メールフォルダを確認してください)", 
+            "Por favor, insira o código de confirmação de 6 caracteres enviado para o seu e-mail. (Verifique sua pasta de spam)", 
+            "请输入发送到您电子邮件的 6 字符确认代码。 (检查您的垃圾邮件文件夹)", 
         ],
         "Verify": [
             "Verify", 
@@ -4394,16 +4493,16 @@ public class LocalizationManager: ObservableObject {
             "Reenviar e-mail", 
             "重新发送电子邮件", 
         ],
-        "To continue, you need to confirm your email address. A 6-digit code will be sent to your email.": [
-            "To continue, you need to confirm your email address. A 6-digit code will be sent to your email.", 
-            "Aby kontynuować, musisz potwierdzić swój adres e-mail. Na Twój e-mail zostanie wysłany 6-cyfrowy kod.", 
-            "Um fortzufahren, müssen Sie Ihre E-Mail-Adresse bestätigen. Ein 6-stelliger Code wird an Ihre E-Mail gesendet.", 
-            "Para continuar, debe confirmar su dirección de correo electrónico. Le enviaremos un código de 6 dígitos a su correo electrónico.", 
-            "Pour continuer, vous devez confirmer votre adresse e-mail. Un code à 6 chiffres sera envoyé à votre adresse e-mail.", 
-            "Per continuare, devi confermare il tuo indirizzo email. Un codice a 6 cifre verrà inviato alla tua email.", 
-            "続行するには、メールアドレスを確認する必要があります。メールに6桁のコードが送信されます。", 
-            "Para continuar, você precisa confirmar seu endereço de e-mail. Um código de 6 dígitos será enviado para o seu e-mail.", 
-            "要继续，您需要确认您的电子邮件地址。一个 6 位数的验证码已发送至您的电子邮箱。", 
+        "To continue, you need to confirm your email address. A 6-digit code will be sent to your email. (Check your spam folder)": [
+            "To continue, you need to confirm your email address. A 6-digit code will be sent to your email. (Check your spam folder)", 
+            "Aby kontynuować, musisz potwierdzić swój adres e-mail. Na Twój e-mail zostanie wysłany 6-cyfrowy kod. (Sprawdź folder spam)", 
+            "Um fortzufahren, müssen Sie Ihre E-Mail-Adresse bestätigen. Ein 6-stelliger Code wird an Ihre E-Mail gesendet. (Überprüfen Sie Ihren Spam-Ordner)", 
+            "Para continuar, debe confirmar su dirección de correo electrónico. Le enviaremos un código de 6 dígitos a su correo electrónico. (Revisa tu carpeta de spam)", 
+            "Pour continuer, vous devez confirmer votre adresse e-mail. Un code à 6 chiffres sera envoyé à votre adresse e-mail. (Vérifiez votre dossier spam)", 
+            "Per continuare, devi confermare il tuo indirizzo email. Un codice a 6 cifre verrà inviato alla tua email. (Controlla la tua cartella spam)", 
+            "続行するには、メールアドレスを確認する必要があります。メールに6桁のコードが送信されます。 (迷惑メールフォルダを確認してください)", 
+            "Para continuar, você precisa confirmar seu endereço de e-mail. Um código de 6 dígitos será enviado para o seu e-mail. (Verifique sua pasta de spam)", 
+            "要继续，您需要确认您的电子邮件地址。一个 6 位数的验证码已发送至您的电子邮箱。 (检查您的垃圾邮件文件夹)", 
         ],
         "Confirm email": [
             "Confirm email", 
@@ -4932,6 +5031,105 @@ public class LocalizationManager: ObservableObject {
             "Sonorは常に進化しています。今後のアップデートにより、より高度なAIモデルの選択肢が増える予定です。", 
             "O Sonor está em constante desenvolvimento. Atualizações futuras trarão uma seleção mais ampla de modelos de IA avançados.", 
             "Sonor不断在发展。未来的更新将带来更广泛的高级AI模型选择。"
+        ],
+        "Forgot Password?": [
+            "Forgot Password?",
+            "Zapomniałeś hasła?",
+            "Passwort vergessen?",
+            "¿Olvidaste tu contraseña?",
+            "Mot de passe oublié ?",
+            "Hai dimenticato la password?",
+            "パスワードをお忘れですか？",
+            "Esqueceu a senha?",
+            "忘记密码？"
+        ],
+        "Reset Password": [
+            "Reset Password",
+            "Zresetuj hasło",
+            "Passwort zurücksetzen",
+            "Restablecer la contraseña",
+            "Réinitialiser le mot de passe",
+            "Reimposta password",
+            "パスワードをリセット",
+            "Redefinir senha",
+            "重置密码"
+        ],
+        "Enter your email to receive a password reset code.": [
+            "Enter your email to receive a password reset code.",
+            "Wprowadź e-mail, aby otrzymać kod resetowania hasła.",
+            "Geben Sie Ihre E-Mail-Adresse ein, um einen Code zum Zurücksetzen des Passworts zu erhalten.",
+            "Introduce tu correo para recibir un código de restablecimiento.",
+            "Entrez votre e-mail pour recevoir un code de réinitialisation.",
+            "Inserisci l'email per ricevere un codice di reimpostazione.",
+            "メールアドレスを入力して、パスワードリセットコードを受け取ります。",
+            "Insira seu e-mail para receber um código de redefinição de senha.",
+            "输入您的电子邮件以接收密码重置代码。"
+        ],
+        "Enter new password": [
+            "Enter new password",
+            "Wprowadź nowe hasło",
+            "Neues Passwort eingeben",
+            "Introducir nueva contraseña",
+            "Entrez le nouveau mot de passe",
+            "Inserisci una nuova password",
+            "新しいパスワードを入力",
+            "Insira a nova senha",
+            "输入新密码"
+        ],
+        "Confirm new password": [
+            "Confirm new password",
+            "Potwierdź nowe hasło",
+            "Neues Passwort bestätigen",
+            "Confirmar nueva contraseña",
+            "Confirmez le nouveau mot de passe",
+            "Conferma la nuova password",
+            "新しいパスワードを確認",
+            "Confirme a nova senha",
+            "确认新密码"
+        ],
+        "Update Password": [
+            "Update Password",
+            "Zaktualizuj hasło",
+            "Passwort aktualisieren",
+            "Actualizar contraseña",
+            "Mettre à jour le mot de passe",
+            "Aggiorna password",
+            "パスワードを更新",
+            "Atualizar senha",
+            "更新密码"
+        ],
+        "Password updated successfully!": [
+            "Password updated successfully!",
+            "Hasło zaktualizowane pomyślnie!",
+            "Passwort erfolgreich aktualisiert!",
+            "¡Contraseña actualizada con éxito!",
+            "Mot de passe mis à jour avec succès !",
+            "Password aggiornata con successo!",
+            "パスワードが正常に更新されました！",
+            "Senha atualizada com sucesso!",
+            "密码更新成功！"
+        ],
+        "Send Code": [
+            "Send Code",
+            "Wyślij kod",
+            "Code senden",
+            "Enviar código",
+            "Envoyer le code",
+            "Invia codice",
+            "コードを送信",
+            "Enviar código",
+            "发送验证码"
+        ],
+        "Back to Login": [
+            "Back to Login",
+            "Wróć do logowania",
+            "Zurück zum Login",
+            "Volver a iniciar sesión",
+            "Retour à la connexion",
+            "Torna al login",
+            "ログインに戻る",
+            "Voltar ao login",
+            "返回登录"
         ]
     ]
 
@@ -5013,6 +5211,19 @@ public class LocalizationManager: ObservableObject {
             case "pt": return "A exclusão de conta própria está desativada no servidor."
             case "zh": return "服务器上已禁用用户自我删除。"
             default: return "User self-deletion is disabled on the server."
+            }
+        }
+        if lower.contains("abcdefghijklmnopqrstuvwxyz") || lower.contains("password should contain at least one character of each") {
+            switch appLanguage {
+            case "pl": return "Hasło musi zawierać co najmniej jedną małą literę, jedną dużą literę i jedną cyfrę."
+            case "de": return "Das Passwort muss mindestens einen Kleinbuchstaben, einen Großbuchstaben und eine Zahl enthalten."
+            case "es": return "La contraseña debe contener al menos una letra minúscula, una letra mayúscula y un número."
+            case "fr": return "Le mot de passe doit contenir au moins une lettre minuscule, une lettre majuscule et un chiffre."
+            case "it": return "La password deve contenere almeno una lettera minuscola, una lettera maiuscola e un numero."
+            case "ja": return "パスワードには、少なくとも1つの小文字、1つの大文字、および1つの数字を含める必要があります。"
+            case "pt": return "A senha deve conter pelo menos uma letra minúscula, uma letra maiúscula e um número."
+            case "zh": return "密码必须至少包含一个小写字母、一个大写字母和一个数字。"
+            default: return "Password must contain at least one lowercase letter, one uppercase letter, and one number."
             }
         }
         return translate(msg)
