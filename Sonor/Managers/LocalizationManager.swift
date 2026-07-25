@@ -25,6 +25,50 @@ public class LocalizationManager: ObservableObject {
         }
     }
     private let translations: [String: [String]] = [
+        "Overlay Appearance": [
+            "Overlay Appearance",
+            "Wygląd nakładki",
+            "Erscheinungsbild des Overlays",
+            "Apariencia de la superposición",
+            "Apparence de la superposition",
+            "Aspetto dell'overlay",
+            "オーバーレイの外観",
+            "Aparência da Sobreposição",
+            "叠加层外观"
+        ],
+        "Transparent (Glass)": [
+            "Transparent (Glass)",
+            "Przezroczysta (Szkło)",
+            "Transparent (Glas)",
+            "Transparente (Cristal)",
+            "Transparent (Verre)",
+            "Trasparente (Vetro)",
+            "透明（ガラス）",
+            "Transparente (Vidro)",
+            "透明（玻璃）"
+        ],
+        "Solid": [
+            "Solid",
+            "Solidna",
+            "Massiv",
+            "Sólido",
+            "Solide",
+            "Solido",
+            "ソリッド",
+            "Sólido",
+            "纯色"
+        ],
+        "Choose whether the assistant overlay should be slightly transparent or have a solid background.": [
+            "Choose whether the assistant overlay should be slightly transparent or have a solid background.",
+            "Wybierz, czy nakładka asystenta ma być lekko przezroczysta, czy mieć całkowicie jednolite tło.",
+            "Wählen Sie, ob das Assistenten-Overlay leicht transparent sein oder einen durchgehenden Hintergrund haben soll.",
+            "Elija si la superposición del asistente debe ser ligeramente transparente o tener un fondo sólido.",
+            "Choisissez si la superposition de l'assistant doit être légèrement transparente ou avoir un fond uni.",
+            "Scegli se l'overlay dell'assistente deve essere leggermente trasparente o avere uno sfondo solido.",
+            "アシスタントのオーバーレイを少し透明にするか、単色の背景にするかを選択します。",
+            "Escolha se a sobreposição do assistente deve ser levemente transparente ou ter um fundo sólido.",
+            "选择助手叠加层是稍微透明还是具有纯色背景。"
+        ],
         "Paste Target Explanation": [
             "Paste Target Explanation",
             "Cel wklejania - objaśnienie",
@@ -35,17 +79,6 @@ public class LocalizationManager: ObservableObject {
             "貼り付け先の説明",
             "Explicação do alvo de colagem",
             "粘贴目标说明"
-        ],
-        "Checks both at the start and at the end of dictation. Priority is given to the field focused at the end, so text is always pasted where your cursor is right now. If no field is found at the end, it will safely paste into the field that was focused when you started talking. If neither had focus, it detects 'no field'.": [
-            "Checks both at the start and at the end of dictation. Priority is given to the field focused at the end, so text is always pasted where your cursor is right now. If no field is found at the end, it will safely paste into the field that was focused when you started talking. If neither had focus, it detects 'no field'.",
-            "Sprawdza aktywne pola na początku oraz na końcu dyktowania. Priorytet ma pole na końcu, dzięki czemu tekst trafia tam, gdzie aktualnie znajduje się kursor. Jeśli jednak pole nie zostanie wykryte, Sonor asekuracyjnie przywróci to, w którym kursor był na starcie.",
-            "Überprüft sowohl beim Start als auch am Ende des Diktats. Priorität hat das am Ende fokussierte Feld, sodass der Text immer dort eingefügt wird, wo sich Ihr Cursor gerade befindet. Wenn am Ende kein Feld gefunden wird, fügt es sicher in das Feld ein, das beim Start fokussiert war.",
-            "Comprueba tanto al inicio como al final del dictado. Se da prioridad al campo enfocado al final, por lo que el texto siempre se pega donde está el cursor ahora mismo. Si no se encuentra ningún campo al final, pegará de forma segura en el campo que estaba enfocado al inicio.",
-            "Vérifie à la fois au début et à la fin de la dictée. La priorité est donnée au champ ciblé à la fin, de sorte que le texte est toujours collé là où se trouve votre curseur en ce moment. Si aucun champ n'est trouvé à la fin, il collera en toute sécurité dans le champ qui était ciblé au début.",
-            "Controlla sia all'inizio che alla fine della dettatura. La priorità viene data al campo attivo alla fine, in modo che il testo venga sempre incollato dove si trova attualmente il cursore. Se non viene trovato alcun campo alla fine, incollerà in modo sicuro nel campo iniziale.",
-            "ディクテーションの開始時と終了時の両方で確認します。終了時にフォーカスされているフィールドが優先されるため、テキストは常に現在のカーソル位置に貼り付けられます。終了時にフィールドが見つからない場合は、開始時のフィールドに安全に貼り付けます。",
-            "Verifica tanto no início quanto no final do ditado. A prioridade é dada ao campo focado no final, para que o texto seja sempre colado onde seu cursor está no momento. Se nenhum campo for encontrado no final, ele colará com segurança no campo que estava focado no início.",
-            "在听写开始和结束时都会进行检查。优先考虑结束时聚焦的字段，因此文本始终粘贴在当前光标所在的位置。如果在结束时未找到字段，它将安全地粘贴到您开始说话时聚焦的字段中。"
         ],
         "Saves the exact text field you clicked before launching the assistant. When generating finishes, it forces the text strictly into that specific field, ignoring whatever field is active at the end.": [
             "Saves the exact text field you clicked before launching the assistant. When generating finishes, it forces the text strictly into that specific field, ignoring whatever field is active at the end.",
@@ -79,72 +112,6 @@ public class LocalizationManager: ObservableObject {
             "バージョン %@ の新機能",
             "O que há de novo na versão %@",
             "版本 %@ 的新增功能"
-        ],
-        "New Notification Window": [
-            "New Notification Window",
-            "Nowe okno powiadomień",
-            "Neues Benachrichtigungsfenster",
-            "Nueva ventana de notificaciones",
-            "Nouvelle fenêtre de notifications",
-            "Nuova finestra di notifiche",
-            "新しい通知ウィンドウ",
-            "Nova janela de notificações",
-            "新的通知窗口"
-        ],
-        "From now on, all updates will be presented in a new, readable, and aesthetic format.": [
-            "From now on, all updates will be presented in a new, readable, and aesthetic format.",
-            "Od teraz wszystkie nowości w aplikacji będą prezentowane w nowym, czytelnym i estetycznym formacie.",
-            "Ab sofort werden alle Updates in einem neuen, gut lesbaren und ästhetischen Format präsentiert.",
-            "A partir de ahora, todas las actualizaciones se presentarán en un formato nuevo, legible y estético.",
-            "Désormais, toutes les mises à jour seront présentées dans un nouveau format lisible et esthétique.",
-            "Da ora in poi, tutti gli aggiornamenti saranno presentati in un formato nuovo, leggibile ed estetico.",
-            "今後、すべてのアップデートは新しく読みやすく美しい形式で提示されます。",
-            "A partir de agora, todas as atualizações serão apresentadas num formato novo, legível e estético.",
-            "从现在开始，所有更新都将以一种新的、可读的且美观的格式呈现。"
-        ],
-        "Mandatory Updates": [
-            "Mandatory Updates",
-            "Obowiązkowe aktualizacje",
-            "Obligatorische Updates",
-            "Actualizaciones obligatorias",
-            "Mises à jour obligatoires",
-            "Aggiornamenti obbligatori",
-            "必須のアップデート",
-            "Atualizações obrigatórias",
-            "强制更新"
-        ],
-        "Older, unsupported app versions will display a clear message about the need to update.": [
-            "Older, unsupported app versions will display a clear message about the need to update.",
-            "Starsze, niewspierane już wersje aplikacji będą wyświetlać jasny komunikat o konieczności aktualizacji.",
-            "Ältere, nicht mehr unterstützte App-Versionen zeigen eine klare Meldung über die Notwendigkeit eines Updates.",
-            "Las versiones más antiguas y no compatibles de la aplicación mostrarán un mensaje claro sobre la necesidad de actualizar.",
-            "Les anciennes versions de l'application qui ne sont plus prises en charge afficheront un message clair sur la nécessité de mettre à jour.",
-            "Le versioni precedenti non supportate dell'app mostreranno un chiaro messaggio sulla necessità di eseguire l'aggiornamento.",
-            "サポートされなくなった古いアプリのバージョンには、アップデートの必要性に関する明確なメッセージが表示されます。",
-            "As versões mais antigas e não suportadas da aplicação exibirão uma mensagem clara sobre a necessidade de atualização.",
-            "不再受支持的旧应用版本将显示关于需要更新的清晰消息。"
-        ],
-        "Performance Improvements": [
-            "Performance Improvements",
-            "Poprawa wydajności",
-            "Leistungsverbesserungen",
-            "Mejoras de rendimiento",
-            "Amélioration des performances",
-            "Miglioramenti delle prestazioni",
-            "パフォーマンスの向上",
-            "Melhorias de desempenho",
-            "性能改进"
-        ],
-        "The app now runs even faster thanks to background process optimizations.": [
-            "The app now runs even faster thanks to background process optimizations.",
-            "Aplikacja działa teraz jeszcze szybciej dzięki optymalizacji procesów działających w tle.",
-            "Die App läuft jetzt dank Optimierungen von Hintergrundprozessen noch schneller.",
-            "La aplicación ahora funciona aún más rápido gracias a las optimizaciones de los procesos en segundo plano.",
-            "L'application s'exécute désormais encore plus rapidement grâce aux optimisations des processus en arrière-plan.",
-            "L'app ora funziona ancora più velocemente grazie alle ottimizzazioni dei processi in background.",
-            "バックグラウンドプロセスの最適化により、アプリの動作がさらに高速になりました。",
-            "A aplicação agora funciona ainda mais rápido graças às otimizações dos processos em segundo plano.",
-            "得益于后台进程的优化，应用程序现在的运行速度甚至更快。"
         ],
         "Permissions Required": [
             "Permissions Required",
@@ -189,17 +156,6 @@ public class LocalizationManager: ObservableObject {
             "文字起こしされたテキストを他のアプリケーションに自動的に貼り付け、ホットキーをサポートするために必要です。",
             "Necessário para colar automaticamente seu texto transcrito em outros aplicativos e dar suporte a teclas de atalho.",
             "需要自动将您的转录文本粘贴到其他应用程序并支持热键。"
-        ],
-        "Quit Application": [
-            "Quit Application",
-            "Zakończ aplikację",
-            "Anwendung beenden",
-            "Salir de la aplicación",
-            "Quitter l'application",
-            "Esci dall'applicazione",
-            "アプリケーションを終了する",
-            "Sair do aplicativo",
-            "退出申请"
         ],
         "Microphone": [
             "Microphone",
@@ -609,6 +565,117 @@ public class LocalizationManager: ObservableObject {
             "録音中はシステムをミュートする",
             "Silenciar o sistema durante a gravação",
             "录音时静音系统"
+        ],
+        "Select Language": [
+            "Select Language",
+            "Wybierz język",
+            "Sprache auswählen",
+            "Seleccionar idioma",
+            "Choisir la langue",
+            "Seleziona lingua",
+            "言語を選択",
+            "Selecione o idioma",
+            "选择语言"
+        ],
+        "Sonor speaks your language. Choose your preferred language for the application interface to get started.": [
+            "Sonor speaks your language. Choose your preferred language for the application interface to get started.",
+            "Sonor mówi w Twoim języku. Wybierz preferowany język interfejsu aplikacji, aby rozpocząć.",
+            "Sonor spricht Ihre Sprache. Wählen Sie Ihre bevorzugte Sprache für die Benutzeroberfläche, um zu beginnen.",
+            "Sonor habla tu idioma. Elija su idioma preferido para la interfaz de la aplicación para comenzar.",
+            "Sonor parle votre langue. Choisissez votre langue préférée pour l'interface de l'application pour commencer.",
+            "Sonor parla la tua lingua. Scegli la lingua preferita per l'interfaccia dell'applicazione per iniziare.",
+            "Sonorはあなたの言語を話します。アプリケーションインターフェースの希望する言語を選択して開始してください。",
+            "Sonor fala o seu idioma. Escolha o seu idioma preferido para a interface da aplicação para começar.",
+            "Sonor说你的语言。选择您喜欢的应用程序界面语言即可开始。"
+        ],
+        "Global Support": [
+            "Global Support",
+            "Globalne wsparcie",
+            "Weltweite Unterstützung",
+            "Soporte global",
+            "Support mondial",
+            "Supporto globale",
+            "グローバルサポート",
+            "Suporte Global",
+            "全球支持"
+        ],
+        "The interface is fully localized into 9 languages for maximum comfort.": [
+            "The interface is fully localized into 9 languages for maximum comfort.",
+            "Interfejs jest w pełni zlokalizowany w 9 językach dla maksymalnego komfortu.",
+            "Die Benutzeroberfläche ist für maximalen Komfort vollständig in 9 Sprachen lokalisiert.",
+            "La interfaz está completamente localizada en 9 idiomas para máxima comodidad.",
+            "L'interface est entièrement localisée en 9 langues pour un confort maximal.",
+            "L'interfaccia è completamente localizzata in 9 lingue per il massimo comfort.",
+            "インターフェースは最大の快適さのために9つの言語に完全にローカライズされています。",
+            "A interface é totalmente localizada em 9 idiomas para máximo conforto.",
+            "界面完全本地化为 9 种语言，以实现最大的舒适度。"
+        ],
+        "Multi-lingual Dictation": [
+            "Multi-lingual Dictation",
+            "Wielojęzyczne dyktowanie",
+            "Mehrsprachiges Diktat",
+            "Dictado multilingüe",
+            "Dictée multilingue",
+            "Dettatura multilingue",
+            "多言語ディクテーション",
+            "Ditado multilíngue",
+            "多语言听写"
+        ],
+        "You can dictate in over 50 languages regardless of the chosen interface language.": [
+            "You can dictate in over 50 languages regardless of the chosen interface language.",
+            "Możesz dyktować w ponad 50 językach, niezależnie od wybranego języka interfejsu.",
+            "Sie können unabhängig von der gewählten Schnittstellensprache in über 50 Sprachen diktieren.",
+            "Puede dictar en más de 50 idiomas independientemente del idioma de interfaz elegido.",
+            "Vous pouvez dicter dans plus de 50 langues, quelle que soit la langue d'interface choisie.",
+            "Puoi dettare in oltre 50 lingue indipendentemente dalla lingua dell'interfaccia scelta.",
+            "選択したインターフェース言語に関係なく、50以上の言語でディクテーションできます。",
+            "Você pode ditar em mais de 50 idiomas, independentemente do idioma da interface escolhido.",
+            "无论选择哪种界面语言，您都可以用 50 多种语言进行听写。"
+        ],
+
+        "No token. Please log in again.": [
+            "No token. Please log in again.",
+            "Brak tokenu. Zaloguj się ponownie.",
+            "Kein Token. Bitte melden Sie sich erneut an.",
+            "No hay token. Por favor inicie sesión nuevamente.",
+            "Aucun jeton. Veuillez vous reconnecter.",
+            "Nessun token. Si prega di accedere di nuovo.",
+            "トークンがありません。もう一度ログインしてください。",
+            "Sem token. Por favor, faça login novamente.",
+            "没有令牌。请重新登录。"
+        ],
+        "No refresh token. Please log in again.": [
+            "No refresh token. Please log in again.",
+            "Brak tokenu odświeżania. Zaloguj się ponownie.",
+            "Kein Aktualisierungs-Token. Bitte melden Sie sich erneut an.",
+            "No hay token de actualización. Por favor inicie sesión nuevamente.",
+            "Aucun jeton d'actualisation. Veuillez vous reconnecter.",
+            "Nessun token di aggiornamento. Si prega di accedere di nuovo.",
+            "更新トークンがありません。もう一度ログインしてください。",
+            "Sem token de atualização. Por favor, faça login novamente.",
+            "没有刷新令牌。请重新登录。"
+        ],
+        "No 'delete_own_user' function in the database. Create it in the SQL Editor in Supabase.": [
+            "No 'delete_own_user' function in the database. Create it in the SQL Editor in Supabase.",
+            "Brak funkcji 'delete_own_user' w bazie. Stwórz ją w SQL Editorze w Supabase.",
+            "Keine 'delete_own_user'-Funktion in der Datenbank. Erstellen Sie sie im SQL-Editor in Supabase.",
+            "No hay función 'delete_own_user' en la base de datos. Créela en el Editor de SQL en Supabase.",
+            "Aucune fonction 'delete_own_user' dans la base de données. Créez-la dans l'éditeur SQL de Supabase.",
+            "Nessuna funzione 'delete_own_user' nel database. Creala nell'Editor SQL in Supabase.",
+            "データベースに'delete_own_user'関数がありません。SupabaseのSQLエディタで作成してください。",
+            "Nenhuma função 'delete_own_user' no banco de dados. Crie-a no Editor SQL no Supabase.",
+            "数据库中没有'delete_own_user'功能。请在Supabase的SQL编辑器中创建它。"
+        ],
+        "This application is already used in the assistant '%@'. Do you want to move it to this assistant?": [
+            "This application is already used in the assistant '%@'. Do you want to move it to this assistant?",
+            "Ta aplikacja jest już używana w asystencie '%@'. Czy chcesz ją przenieść do tego asystenta?",
+            "Diese Anwendung wird bereits im Assistenten '%@' verwendet. Möchten Sie sie in diesen Assistenten verschieben?",
+            "Esta aplicación ya se usa en el asistente '%@'. ¿Desea moverla a este asistente?",
+            "Cette application est déjà utilisée dans l'assistant '%@'. Voulez-vous la déplacer vers cet assistant?",
+            "Questa applicazione è già utilizzata nell'assistente '%@'. Vuoi spostarla in questo assistente?",
+            "このアプリケーションはすでにアシスタント'%@'で使用されています。このアシスタントに移動しますか？",
+            "Esta aplicação já é usada no assistente '%@'. Deseja movê-la para este assistente?",
+            "此应用程序已在助手'%@'中使用。您要将其移至该助手吗？"
         ],
         "Smart Pause (Experimental)": [
             "Smart Pause (Experimental)", 
@@ -2029,17 +2096,7 @@ public class LocalizationManager: ObservableObject {
             "Atualização automática do dicionário", 
             "自动更新词典", 
         ],
-        "Automatic": [
-            "Automatic", 
-            "Automatycznie", 
-            "Automatisch", 
-            "Automático", 
-            "Automatique", 
-            "Automatico", 
-            "自動", 
-            "Automático", 
-            "自动", 
-        ],
+
         "Built-in Assistant Description": [
             "Built-in Assistant Description", 
             "Opis asystenta wbudowanego", 
@@ -4823,72 +4880,6 @@ public class LocalizationManager: ObservableObject {
             "Beta", 
             "测试版", 
         ],
-        "Microphone Access Required": [
-            "Microphone Access Required",
-            "Wymagany dostęp do mikrofonu",
-            "Mikrofonzugriff erforderlich",
-            "Acceso al micrófono requerido",
-            "Accès au microphone requis",
-            "Accesso al microfono richiesto",
-            "マイクへのアクセスが必要です",
-            "Acesso ao microfone necessário",
-            "需要麦克风权限"
-        ],
-        "Sonor needs access to your microphone to capture your voice. Without it, the application cannot function.": [
-            "Sonor needs access to your microphone to capture your voice. Without it, the application cannot function.",
-            "Sonor wymaga dostępu do mikrofonu, aby rejestrować Twój głos. Bez tego aplikacja nie może działać.",
-            "Sonor benötigt Zugriff auf Ihr Mikrofon, um Ihre Stimme zu erfassen. Ohne ihn kann die Anwendung nicht funktionieren.",
-            "Sonor necesita acceso a tu micrófono para capturar tu voz. Sin él, la aplicación no puede funcionar.",
-            "Sonor a besoin d'accéder à votre microphone pour capturer votre voix. Sans cela, l'application ne peut pas fonctionner.",
-            "Sonor ha bisogno dell'accesso al tuo microfono per catturare la tua voce. Senza di esso, l'applicazione non può funzionare.",
-            "Sonorはあなたの声をキャプチャするためにマイクへのアクセスが必要です。これがないと、アプリケーションは機能しません。",
-            "O Sonor precisa de acesso ao seu microfone para capturar sua voz. Sem isso, o aplicativo não pode funcionar.",
-            "Sonor 需要访问您的麦克风以捕获您的声音。否则，应用程序将无法运行。"
-        ],
-        "1. Open System Settings": [
-            "1. Open System Settings",
-            "1. Otwórz Ustawienia systemowe",
-            "1. Systemeinstellungen öffnen",
-            "1. Abrir Ajustes del sistema",
-            "1. Ouvrir les Réglages Système",
-            "1. Apri Impostazioni di Sistema",
-            "1. システム設定を開く",
-            "1. Abrir Ajustes do Sistema",
-            "1. 打开系统设置"
-        ],
-        "2. Go to Privacy & Security": [
-            "2. Go to Privacy & Security",
-            "2. Przejdź do: Prywatność i ochrona",
-            "2. Gehen Sie zu: Datenschutz & Sicherheit",
-            "2. Ve a: Privacidad y seguridad",
-            "2. Allez dans : Confidentialité et sécurité",
-            "2. Vai a: Privacy e sicurezza",
-            "2. 「プライバシーとセキュリティ」に移動",
-            "2. Vá para: Privacidade e Segurança",
-            "2. 转到：隐私与安全性"
-        ],
-        "3. Select Microphone": [
-            "3. Select Microphone",
-            "3. Wybierz: Mikrofon",
-            "3. Wählen Sie: Mikrofon",
-            "3. Selecciona: Micrófono",
-            "3. Sélectionnez : Micro",
-            "3. Seleziona: Microfono",
-            "3. 「マイク」を選択",
-            "3. Selecione: Microfone",
-            "3. 选择：麦克风"
-        ],
-        "4. Turn on the switch next to Sonor": [
-            "4. Turn on the switch next to Sonor",
-            "4. Włącz przełącznik obok aplikacji Sonor",
-            "4. Aktivieren Sie den Schalter neben Sonor",
-            "4. Activa el interruptor junto a Sonor",
-            "4. Activez le commutateur à côté de Sonor",
-            "4. Attiva l'interruttore accanto a Sonor",
-            "4. Sonorの横にあるスイッチをオンにする",
-            "4. Ative o interruptor ao lado do Sonor",
-            "4. 打开 Sonor 旁边的开关"
-        ],
         "Open Settings": [
             "Open Settings",
             "Otwórz ustawienia",
@@ -4899,39 +4890,6 @@ public class LocalizationManager: ObservableObject {
             "設定を開く",
             "Abrir configurações",
             "打开设置"
-        ],
-        "Accessibility Access Required": [
-            "Accessibility Access Required",
-            "Wymagany dostęp do ułatwień dostępu",
-            "Bedienungshilfen-Zugriff erforderlich",
-            "Acceso a Accesibilidad requerido",
-            "Accès à l'Accessibilité requis",
-            "Accesso Accessibilità richiesto",
-            "アクセシビリティへのアクセスが必要です",
-            "Acesso à Acessibilidade necessário",
-            "需要辅助功能权限"
-        ],
-        "Sonor needs Accessibility access to automatically paste your transcribed text. Without it, the application cannot function properly.": [
-            "Sonor needs Accessibility access to automatically paste your transcribed text. Without it, the application cannot function properly.",
-            "Sonor wymaga dostępu do ułatwień dostępu, aby automatycznie wklejać przetranskrybowany tekst. Bez tego aplikacja nie może działać poprawnie.",
-            "Sonor benötigt Zugriff auf die Bedienungshilfen, um Ihren transkribierten Text automatisch einzufügen. Ohne dies kann die Anwendung nicht richtig funktionieren.",
-            "Sonor necesita acceso a Accesibilidad para pegar automáticamente tu texto transcrito. Sin él, la aplicación no puede funcionar correctamente.",
-            "Sonor a besoin de l'accès à l'Accessibilité pour coller automatiquement votre texte transcrit. Sans cela, l'application ne peut pas fonctionner correctement.",
-            "Sonor ha bisogno dell'accesso Accessibilità per incollare automaticamente il tuo testo trascritto. Senza di esso, l'applicazione non può funzionare correttamente.",
-            "Sonorは書き起こされたテキストを自動的に貼り付けるためにアクセシビリティへのアクセスが必要です。これがないと、アプリケーションは正しく機能しません。",
-            "O Sonor precisa de acesso à Acessibilidade para colar automaticamente seu texto transcrito. Sem isso, o aplicativo não pode funcionar corretamente.",
-            "Sonor 需要辅助功能权限来自动粘贴您转录的文本。否则，应用程序将无法正常工作。"
-        ],
-        "3. Select Accessibility": [
-            "3. Select Accessibility",
-            "3. Wybierz: Ułatwienia dostępu",
-            "3. Wählen Sie: Bedienungshilfen",
-            "3. Selecciona: Accesibilidad",
-            "3. Sélectionnez : Accessibilité",
-            "3. Seleziona: Accessibilità",
-            "3. 「アクセシビリティ」を選択",
-            "3. Selecione: Acessibilidade",
-            "3. 选择：辅助功能"
         ],
         "Assistant Types": [
             "Assistant Types",
@@ -5043,17 +5001,6 @@ public class LocalizationManager: ObservableObject {
             "Esqueceu a senha?",
             "忘记密码？"
         ],
-        "Reset Password": [
-            "Reset Password",
-            "Zresetuj hasło",
-            "Passwort zurücksetzen",
-            "Restablecer la contraseña",
-            "Réinitialiser le mot de passe",
-            "Reimposta password",
-            "パスワードをリセット",
-            "Redefinir senha",
-            "重置密码"
-        ],
         "Enter your email to receive a password reset code.": [
             "Enter your email to receive a password reset code.",
             "Wprowadź e-mail, aby otrzymać kod resetowania hasła.",
@@ -5075,39 +5022,6 @@ public class LocalizationManager: ObservableObject {
             "新しいパスワードを入力",
             "Insira a nova senha",
             "输入新密码"
-        ],
-        "Confirm new password": [
-            "Confirm new password",
-            "Potwierdź nowe hasło",
-            "Neues Passwort bestätigen",
-            "Confirmar nueva contraseña",
-            "Confirmez le nouveau mot de passe",
-            "Conferma la nuova password",
-            "新しいパスワードを確認",
-            "Confirme a nova senha",
-            "确认新密码"
-        ],
-        "Update Password": [
-            "Update Password",
-            "Zaktualizuj hasło",
-            "Passwort aktualisieren",
-            "Actualizar contraseña",
-            "Mettre à jour le mot de passe",
-            "Aggiorna password",
-            "パスワードを更新",
-            "Atualizar senha",
-            "更新密码"
-        ],
-        "Password updated successfully!": [
-            "Password updated successfully!",
-            "Hasło zaktualizowane pomyślnie!",
-            "Passwort erfolgreich aktualisiert!",
-            "¡Contraseña actualizada con éxito!",
-            "Mot de passe mis à jour avec succès !",
-            "Password aggiornata con successo!",
-            "パスワードが正常に更新されました！",
-            "Senha atualizada com sucesso!",
-            "密码更新成功！"
         ],
         "Send Code": [
             "Send Code",
@@ -5224,6 +5138,19 @@ public class LocalizationManager: ObservableObject {
             case "pt": return "A senha deve conter pelo menos uma letra minúscula, uma letra maiúscula e um número."
             case "zh": return "密码必须至少包含一个小写字母、一个大写字母和一个数字。"
             default: return "Password must contain at least one lowercase letter, one uppercase letter, and one number."
+            }
+        }
+        if lower.contains("offline") || lower.contains("network connection was lost") || lower.contains("could not connect to the server") || lower.contains("no route to host") || lower.contains("timed out") || lower.contains("network is down") {
+            switch appLanguage {
+            case "pl": return "Brak połączenia z internetem. Sprawdź swoje połączenie sieciowe."
+            case "de": return "Keine Internetverbindung. Bitte überprüfen Sie Ihre Netzwerkverbindung."
+            case "es": return "No hay conexión a Internet. Por favor, compruebe su conexión de red."
+            case "fr": return "Pas de connexion internet. Veuillez vérifier votre connexion réseau."
+            case "it": return "Nessuna connessione internet. Controlla la tua connessione di rete."
+            case "ja": return "インターネット接続がありません。ネットワーク接続を確認してください。"
+            case "pt": return "Sem conexão com a internet. Verifique sua conexão de rede."
+            case "zh": return "没有互联网连接。请检查您的网络连接。"
+            default: return "No internet connection. Please check your network connection."
             }
         }
         return translate(msg)

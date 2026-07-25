@@ -6,37 +6,6 @@ class PasteManager {
     static let shared = PasteManager()
     private init() {}
 
-    func pasteTextToActiveApp(text: String, targetPID: pid_t) {
-        guard targetPID > 0 else {
-            return
-        }
-
-        guard let targetApp = NSRunningApplication(processIdentifier: targetPID) else {
-            return
-        }
-
-        targetApp.activate(options: .activateAllWindows)
-
-        var attempts = 0
-        while !targetApp.isActive && attempts < 30 {
-            Thread.sleep(forTimeInterval: 0.05)
-            attempts += 1
-        }
-        Thread.sleep(forTimeInterval: 0.1)
-
-        if tryAXInsert(text: text, pid: targetPID) {
-            return
-        }
-
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
-        tryCGEventPaste()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-            let pb = NSPasteboard.general
-            pb.clearContents()
-        }
-    }
 
 
 
@@ -186,22 +155,6 @@ class PasteManager {
     }
 
 
-    private func tryCGEventPaste() {
-        guard AXIsProcessTrusted() else {
-            return
-        }
-        let src = CGEventSource(stateID: .hidSystemState)
-
-        let vDown = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: true)
-        let vUp   = CGEvent(keyboardEventSource: src, virtualKey: 0x09, keyDown: false)
-        vDown?.flags = .maskCommand
-        vUp?.flags   = .maskCommand
-
-        vDown?.post(tap: .cghidEventTap)
-        Thread.sleep(forTimeInterval: 0.05)
-        vUp?.post(tap: .cghidEventTap)
-
-    }
 
 
     func typeTextDirectly(text: String, targetPID: pid_t, forceFocusElement: AXUIElement? = nil) {
@@ -246,11 +199,11 @@ class PasteManager {
         }
         let source = CGEventSource(stateID: .combinedSessionState)
         
-        // Split token by newlines and handle them with Shift+Enter to prevent submitting forms in chat apps
+        // Handle newlines with Shift+Enter to avoid accidental form submissions
         let components = token.components(separatedBy: .newlines)
         for (index, component) in components.enumerated() {
             if index > 0 {
-                // Type Shift+Enter for the newline boundary
+                // Type Shift+Enter
                 let enterDown = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: true)
                 let enterUp = CGEvent(keyboardEventSource: source, virtualKey: 0x24, keyDown: false)
                 enterDown?.flags = .maskShift

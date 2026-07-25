@@ -47,6 +47,11 @@ struct DictionarySettingsView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
             )
+            .onChange(of: newWrong) { _, newValue in
+                if newValue.count > 100 {
+                    newWrong = String(newValue.prefix(100))
+                }
+            }
     }
     private var correctInputView: some View {
         TextField(t("e.g. Supabase"), text: $newCorrect)
@@ -61,9 +66,14 @@ struct DictionarySettingsView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
             )
+            .onChange(of: newCorrect) { _, newValue in
+                if newValue.count > 255 {
+                    newCorrect = String(newValue.prefix(255))
+                }
+            }
     }
     private var isAddButtonActive: Bool {
-        !newWrong.isEmpty && !newCorrect.isEmpty
+        !newWrong.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !newCorrect.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
     private var addButtonColor: Color {
         if isAddButtonActive {
@@ -244,7 +254,10 @@ struct DictionarySettingsView: View {
         entries = UserDefaults.standard.dictionary(forKey: "dictionaryEntries") as? [String: String] ?? [:]
     }
     func addEntry() {
-        entries[newWrong] = newCorrect
+        let trimmedWrong = newWrong.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedCorrect = newCorrect.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedWrong.isEmpty || trimmedCorrect.isEmpty { return }
+        entries[trimmedWrong] = trimmedCorrect
         UserDefaults.standard.set(entries, forKey: "dictionaryEntries")
         newWrong = ""
         newCorrect = ""

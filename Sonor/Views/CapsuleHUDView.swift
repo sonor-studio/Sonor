@@ -316,7 +316,7 @@ struct CapsuleHUDView: View {
             .frame(width: 284, height: 40)
             .contentShape(RoundedRectangle(cornerRadius: 20))
             .clipShape(RoundedRectangle(cornerRadius: 20))
-            .safeGlassEffect(cornerRadius: 20)
+            .safeGlassEffect(cornerRadius: 20, isInteractive: true)
             .onAppear {
                 isCopied = false
                 copyProgress = 1.0
@@ -550,7 +550,7 @@ struct GlassModifier: ViewModifier {
     
     func body(content: Content) -> some View {
         content
-            .safeGlassEffect(cornerRadius: cornerRadius)
+            .safeGlassEffect(cornerRadius: cornerRadius, isInteractive: true)
     }
 }
 

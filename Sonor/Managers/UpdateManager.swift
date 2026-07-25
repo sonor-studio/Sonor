@@ -72,9 +72,9 @@ class UpdateManager: ObservableObject {
             if let updateURL = URL(string: url) {
                 NSWorkspace.shared.open(updateURL)
             }
-            NSApplication.shared.terminate(nil)
+            Darwin._exit(0)
         } else {
-            NSApplication.shared.terminate(nil)
+            Darwin._exit(0)
         }
     }
     private func showOptionalAlert(url: String, currentVersion: String, latestVersion: String) {

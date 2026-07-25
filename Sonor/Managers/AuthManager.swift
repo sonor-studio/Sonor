@@ -52,11 +52,6 @@ final class AuthManager: ObservableObject {
         }
         return decoded[email.lowercased()]
     }
-    private func initProfileCacheFromLocalSession() {
-        if let email = currentUserEmail {
-            currentUserCreatedAt = loadProfileCache(email: email)
-        }
-    }
     private init() {
         checkLocalSession()
     }
@@ -100,7 +95,7 @@ final class AuthManager: ObservableObject {
     }
     func getValidAccessToken() async throws -> String {
         guard let token = getFromKeychain(key: tokenKey), !token.isEmpty else {
-            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "Brak tokenu. Zaloguj się ponownie."])
+            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "No token. Please log in again."])
         }
         if isTokenExpired(token) {
             return try await refreshSession()
@@ -114,7 +109,7 @@ final class AuthManager: ObservableObject {
         }
         guard let refreshToken = getFromKeychain(key: refreshTokenKey), !refreshToken.isEmpty else {
             await MainActor.run { logout() }
-            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "Brak tokenu odświeżania. Zaloguj się ponownie."])
+            throw NSError(domain: "AuthError", code: 401, userInfo: [NSLocalizedDescriptionKey: "No refresh token. Please log in again."])
         }
         guard let url = URL(string: "\(supabaseUrl)/auth/v1/token?grant_type=refresh_token") else {
             throw NSError(domain: "AuthError", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid Supabase URL"])
@@ -496,7 +491,7 @@ final class AuthManager: ObservableObject {
                 self.logout()
             }
         } else if rHttp.statusCode == 404 {
-            throw NSError(domain: "AuthError", code: 404, userInfo: [NSLocalizedDescriptionKey: "Brak funkcji 'delete_own_user' w bazie. Stwórz ją w SQL Editorze w Supabase."])
+            throw NSError(domain: "AuthError", code: 404, userInfo: [NSLocalizedDescriptionKey: "No 'delete_own_user' function in the database. Create it in the SQL Editor in Supabase."])
         } else {
             let errorMsg = extractErrorMessage(from: rData)
             throw NSError(domain: "AuthError", code: rHttp.statusCode, userInfo: [NSLocalizedDescriptionKey: errorMsg])
@@ -754,7 +749,7 @@ final class AuthManager: ObservableObject {
         }
     }
     private func extractErrorMessage(from data: Data) -> String {
-        var errorMessage = "An unexpected server error occurred."
+        var errorMessage = t("An unexpected server error occurred.")
         if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
             if let msg = json["error_description"] as? String { errorMessage = msg }
             else if let msg = json["msg"] as? String { errorMessage = msg }

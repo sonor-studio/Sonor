@@ -111,7 +111,7 @@ struct MainAppView: View {
                     }
                 }
                 
-                if selectedTab == .modes && (authManager.isLoggedIn || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Pure Text" || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Czysty tekst"), modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) != nil {
+                if selectedTab == .modes && (authManager.isLoggedIn || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Pure Text"), modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) != nil {
                     ModeEditorView(modes: $modes, selectedModeID: $selectedModeID)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
@@ -201,6 +201,13 @@ struct MainAppView: View {
             IncognitoAnimationOverlay()
                 .allowsHitTesting(false)
         )
+        .onChange(of: authManager.isLoggedIn) {
+            if authManager.isLoggedIn {
+                showLoginSheet = false
+            } else {
+                isShowingProfileSheet = false
+            }
+        }
     }
     
     private func updateWindowAppearance() {

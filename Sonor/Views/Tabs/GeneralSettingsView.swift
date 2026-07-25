@@ -12,6 +12,7 @@ struct GeneralSettingsView: View {
     @AppStorage("hotkeyString_assistant") private var hotkeyStringAssistant = "Ctrl + Opt + C"
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
     @AppStorage("appTheme") private var appTheme = "system"
+    @AppStorage("hudAppearance") private var hudAppearance = "glass"
     @AppStorage("playAnySound") private var playAnySound = true
     @AppStorage("playSound_Start") private var playSound_Start = true
     @AppStorage("playSound_Error") private var playSound_Error = true
@@ -35,6 +36,7 @@ struct GeneralSettingsView: View {
                     .font(.system(size: 28, weight: .bold))
             }
             appThemeSection
+            hudAppearanceSection
             appLanguageSection
             historyStorageSection
             keyboardShortcutSection
@@ -442,6 +444,72 @@ struct GeneralSettingsView: View {
                 .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
+    @ViewBuilder
+    private var hudAppearanceSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("Overlay Appearance"))
+                .font(.system(size: 16, weight: .semibold))
+            HStack(spacing: 15) {
+                Button(action: {
+                    withAnimation { hudAppearance = "glass" }
+                }) {
+                    VStack(spacing: 10) {
+                        Image(systemName: "macwindow")
+                            .font(.system(size: 20))
+                        Text(t("Transparent (Glass)"))
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(hudAppearance == "glass" ? Color.primary.opacity(0.1) : Color.clear)
+                    .cornerRadius(10)
+                    .contentShape(Rectangle())
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(hudAppearance == "glass" ? Color.primary : Color.primary.opacity(0.2), lineWidth: hudAppearance == "glass" ? 2 : 1)
+                    )
+                }
+                .buttonStyle(.plain)
+                
+                Button(action: {
+                    withAnimation { hudAppearance = "solid" }
+                }) {
+                    VStack(spacing: 10) {
+                        Image(systemName: "square.fill")
+                            .font(.system(size: 20))
+                        Text(t("Solid"))
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(hudAppearance == "solid" ? Color.primary.opacity(0.1) : Color.clear)
+                    .cornerRadius(10)
+                    .contentShape(Rectangle())
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(hudAppearance == "solid" ? Color.primary : Color.primary.opacity(0.2), lineWidth: hudAppearance == "solid" ? 2 : 1)
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Text(t("Choose whether the assistant overlay should be slightly transparent or have a solid background."))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+
     @ViewBuilder
     private var appThemeSection: some View {
         VStack(alignment: .leading, spacing: 15) {

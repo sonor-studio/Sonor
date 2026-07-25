@@ -11,12 +11,13 @@ struct OnboardingView: View {
     @State private var isRecordingHotkey = false
     @State private var eventMonitor: Any? = nil
     @State private var lastModifierPressed: UInt16? = nil
+    @ObservedObject var localizer = LocalizationManager.shared
     var body: some View {
         VStack(spacing: 0) {
             Button(action: {
                 if !isRecordingHotkey {
                     withAnimation {
-                        if currentPage < 4 {
+                        if currentPage < 5 {
                             currentPage += 1
                         } else {
                             if let login = onLoginRequest {
@@ -37,6 +38,9 @@ struct OnboardingView: View {
                 .frame(height: 20)
             ZStack {
                 if currentPage == 0 {
+                    languageSlide()
+                        .transition(.opacity)
+                } else if currentPage == 1 {
                     onboardingSlideCustomIcon(
                         title: t("Welcome to Sonor"),
                         iconView: AnyView(
@@ -51,7 +55,7 @@ struct OnboardingView: View {
                             (icon: "command.square.fill", title: t("Total Freedom"), description: t("You can use dictation and the assistant absolutely anywhere, regardless of what application you are using on your Mac."))
                         ]
                     ).transition(.opacity)
-                } else if currentPage == 1 {
+                } else if currentPage == 2 {
                     onboardingSlide(
                         title: t("Absolute Privacy"),
                         icon: "lock.shield.fill",
@@ -61,7 +65,7 @@ struct OnboardingView: View {
                             (icon: "memorychip", title: t("Volatile Memory"), description: t("Your voice is processed in volatile memory and destroyed immediately after the operation completes."))
                         ]
                     ).transition(.opacity)
-                } else if currentPage == 2 {
+                } else if currentPage == 3 {
                     onboardingSlide(
                         title: t("Full Transparency"),
                         icon: "chevron.left.forwardslash.chevron.right",
@@ -71,10 +75,10 @@ struct OnboardingView: View {
                             (icon: "building.columns.fill", title: t("Community Driven"), description: t("Developed with the highest engineering standards and the support of independent experts."))
                         ]
                     ).transition(.opacity)
-                } else if currentPage == 3 {
+                } else if currentPage == 4 {
                     configurationSlide()
                         .transition(.opacity)
-                } else if currentPage == 4 {
+                } else if currentPage == 5 {
                     loginSlide()
                         .transition(.opacity)
                 }
@@ -103,7 +107,7 @@ struct OnboardingView: View {
                 }
                 Spacer()
                 HStack(spacing: 10) {
-                    ForEach(0..<5, id: \.self) { index in
+                    ForEach(0..<6, id: \.self) { index in
                         Circle()
                             .fill(currentPage == index ? (colorScheme == .dark ? Color.white : Color.black) : Color.secondary.opacity(0.3))
                             .frame(width: 8, height: 8)
@@ -118,19 +122,19 @@ struct OnboardingView: View {
                 Spacer()
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        if currentPage < 4 {
+                        if currentPage < 5 {
                             currentPage += 1
                         } else {
                             onComplete()
                         }
                     }
                 }) {
-                    Text(currentPage < 4 ? t("Next") : t("Continue without account"))
+                    Text(currentPage < 5 ? t("Next") : t("Continue without account"))
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(currentPage < 4 ? (colorScheme == .dark ? .black : .white) : (colorScheme == .dark ? .white : .black))
-                        .frame(width: currentPage < 4 ? 110 : 200)
+                        .foregroundColor(currentPage < 5 ? (colorScheme == .dark ? .black : .white) : (colorScheme == .dark ? .white : .black))
+                        .frame(width: currentPage < 5 ? 110 : 200)
                         .padding(.vertical, 12)
-                        .background(currentPage < 4 ? (colorScheme == .dark ? Color.white : Color.black) : (colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05)))
+                        .background(currentPage < 5 ? (colorScheme == .dark ? Color.white : Color.black) : (colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05)))
                         .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
@@ -147,6 +151,78 @@ struct OnboardingView: View {
             removeEventMonitor()
         }
     }
+    @ViewBuilder
+    private func languageSlide() -> some View {
+        VStack(spacing: 0) {
+            VStack(spacing: 14) {
+                Image(systemName: "globe")
+                    .font(.system(size: 40))
+                    .foregroundColor(colorScheme == .dark ? .white : .black)
+                Text(t("Select Language"))
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(.primary)
+            }
+            .padding(.bottom, 16)
+            Text(t("Sonor speaks your language. Choose your preferred language for the application interface to get started."))
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .padding(.horizontal, 32)
+                .padding(.bottom, 32)
+                .fixedSize(horizontal: false, vertical: true)
+            VStack(alignment: .center, spacing: 24) {
+                Picker("", selection: $localizer.appLanguage) {
+                    Text("Deutsch").tag("de")
+                    Text("English").tag("en")
+                    Text("Español").tag("es")
+                    Text("Français").tag("fr")
+                    Text("Italiano").tag("it")
+                    Text("日本語").tag("ja")
+                    Text("Polski").tag("pl")
+                    Text("Português").tag("pt")
+                    Text("中文").tag("zh")
+                }
+                .pickerStyle(.menu)
+                .controlSize(.large)
+                .frame(width: 260)
+                .focusable(false)
+                .accentColor(colorScheme == .dark ? .white : .black)
+                .tint(colorScheme == .dark ? .white : .black)
+            }
+            .padding(.horizontal, 40)
+            .padding(.bottom, 40)
+            
+            VStack(alignment: .leading, spacing: 20) {
+                let features = [
+                    (icon: "globe.europe.africa.fill", title: t("Global Support"), description: t("The interface is fully localized into 9 languages for maximum comfort.")),
+                    (icon: "mic.fill", title: t("Multi-lingual Dictation"), description: t("You can dictate in over 50 languages regardless of the chosen interface language."))
+                ]
+                ForEach(features, id: \.title) { feature in
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: feature.icon)
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(colorScheme == .dark ? .white : .black)
+                            .frame(width: 24)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(feature.title)
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundColor(.primary)
+                            Text(feature.description)
+                                .font(.system(size: 12))
+                                .foregroundColor(.secondary)
+                                .lineSpacing(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 40)
+            Spacer()
+        }
+        .padding(.top, 10)
+    }
+
     @ViewBuilder
     private func onboardingSlide(title: String, icon: String, description: String, features: [(icon: String, title: String, description: String)]) -> some View {
         onboardingSlideCustomIcon(
@@ -342,9 +418,9 @@ struct OnboardingView: View {
                 .fixedSize(horizontal: false, vertical: true)
             VStack(alignment: .leading, spacing: 16) {
                 let features = [
-                    (icon: "brain.head.profile", title: t("Zaawansowane modele LLM"), description: t("Intelligent formatting, analysis, and processing of your notes and commands.")),
-                    (icon: "text.badge.plus", title: t("Szablony i Snippety"), description: t("Save your most frequently used message templates and insert them in a blink of an eye.")),
-                    (icon: "text.book.closed.fill", title: t("Osobisty Słownik"), description: t("The application learns your specific vocabulary and proper names every day."))
+                    (icon: "brain.head.profile", title: t("Advanced LLM models"), description: t("Intelligent formatting, analysis, and processing of your notes and commands.")),
+                    (icon: "text.badge.plus", title: t("Templates and Snippets"), description: t("Save your most frequently used message templates and insert them in a blink of an eye.")),
+                    (icon: "text.book.closed.fill", title: t("Personal Dictionary"), description: t("The application learns your specific vocabulary and proper names every day."))
                 ]
                 ForEach(features, id: \.title) { feature in
                     HStack(alignment: .top, spacing: 14) {

@@ -2,7 +2,7 @@ import SwiftUI
 
 struct LoginView: View {
     @Environment(\.colorScheme) var colorScheme
-    @Environment(\.presentationMode) var presentationMode
+    @Environment(\.dismiss) var dismiss
     @ObservedObject var authManager = AuthManager.shared
     @ObservedObject var localizer = LocalizationManager.shared
     @State private var email = ""
@@ -85,6 +85,11 @@ struct LoginView: View {
                             .padding(10)
                             .background(Color.primary.opacity(0.05))
                             .cornerRadius(8)
+                            .onChange(of: email) { _, newValue in
+                                if newValue.count > 255 {
+                                    email = String(newValue.prefix(255))
+                                }
+                            }
                     }
                     .padding(.horizontal, 40)
                     .padding(.bottom, 4)
@@ -309,6 +314,11 @@ struct LoginView: View {
                         .padding(10)
                         .background(Color.primary.opacity(0.05))
                         .cornerRadius(8)
+                        .onChange(of: password) { _, newValue in
+                            if newValue.count > 128 {
+                                password = String(newValue.prefix(128))
+                            }
+                        }
                         
                         HStack {
                             if isConfirmPasswordVisible {
@@ -330,6 +340,11 @@ struct LoginView: View {
                         .padding(10)
                         .background(Color.primary.opacity(0.05))
                         .cornerRadius(8)
+                        .onChange(of: confirmPassword) { _, newValue in
+                            if newValue.count > 128 {
+                                confirmPassword = String(newValue.prefix(128))
+                            }
+                        }
                     }
                     .padding(.horizontal, 40)
                     .padding(.bottom, 8)
@@ -348,7 +363,7 @@ struct LoginView: View {
                                     isLoading = false
                                     isForgotPasswordFlow = false
                                     forgotPasswordStep = 0
-                                    presentationMode.wrappedValue.dismiss()
+                                    dismiss()
                                 }
                             } catch {
                                 await MainActor.run {
@@ -550,6 +565,11 @@ struct LoginView: View {
                     .padding(10)
                     .background(Color.primary.opacity(0.05))
                     .cornerRadius(8)
+                    .onChange(of: email) { _, newValue in
+                        if newValue.count > 255 {
+                            email = String(newValue.prefix(255))
+                        }
+                    }
                 HStack {
                     if isPasswordVisible {
                         TextField(t("Password"), text: $password)
@@ -570,6 +590,11 @@ struct LoginView: View {
                 .padding(10)
                 .background(Color.primary.opacity(0.05))
                 .cornerRadius(8)
+                .onChange(of: password) { _, newValue in
+                    if newValue.count > 128 {
+                        password = String(newValue.prefix(128))
+                    }
+                }
                 
                 if isRegistering {
                     HStack {
@@ -592,6 +617,11 @@ struct LoginView: View {
                     .padding(10)
                     .background(Color.primary.opacity(0.05))
                     .cornerRadius(8)
+                    .onChange(of: confirmPassword) { _, newValue in
+                        if newValue.count > 128 {
+                            confirmPassword = String(newValue.prefix(128))
+                        }
+                    }
                     HStack(spacing: 8) {
                         Toggle("", isOn: $acceptedPrivacyPolicy)
                             .labelsHidden()
@@ -762,7 +792,7 @@ struct LoginView: View {
         .frame(maxWidth: .infinity)
         .onChange(of: authManager.isLoggedIn) {
             if authManager.isLoggedIn && !isForgotPasswordFlow {
-                presentationMode.wrappedValue.dismiss()
+                dismiss()
             }
         }
     }
@@ -797,7 +827,7 @@ struct LoginView: View {
                 }
             } else {
                 try await authManager.login(email: email, password: password)
-                presentationMode.wrappedValue.dismiss()
+                dismiss()
             }
         } catch {
             let errorMsg = error.localizedDescription
@@ -818,7 +848,7 @@ struct LoginView: View {
         errorMessage = nil
         do {
             try await authManager.verifyOTP(email: email, token: otpToken)
-            presentationMode.wrappedValue.dismiss()
+            dismiss()
             if isRegistering {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                     NotificationCenter.default.post(name: Notification.Name("ShowThankYouView"), object: nil)

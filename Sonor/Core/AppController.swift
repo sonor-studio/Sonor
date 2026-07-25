@@ -4,8 +4,6 @@ import Combine
 import AVFoundation
 import CoreAudio
 
-// Sonor: A privacy-first, local-only AI assistant. We believe in keeping your data on your device.
-
 @MainActor
 class AppController: NSObject, ObservableObject {
     // MARK: - Published State
@@ -454,7 +452,7 @@ class AppController: NSObject, ObservableObject {
             
             let selectedMode = await MainActor.run { return self.currentMode ?? VoiceMode.defaults.first! }
             _ = selectedMode.language ?? "auto"
-            // PRIVACY FIRST: The entire transcription process happens locally on the user's device using the downloaded Whisper model. No audio data is ever sent to the cloud.
+            // Transcribe audio using the local Whisper model.
             let snippets = UserDefaults.standard.dictionary(forKey: "snippetsEntries") as? [String: String] ?? [:]
             let snippetKeys = Array(snippets.keys)
             let initialPrompt = snippetKeys.isEmpty ? nil : snippetKeys.joined(separator: ", ")
@@ -501,7 +499,10 @@ class AppController: NSObject, ObservableObject {
     func quitApp() {
         self.cancelRecording()
         _ = self.audioManager.stopRecording()
-        NSApplication.shared.terminate(nil)
+        NotificationCenter.default.post(name: NSNotification.Name("AppWillTerminate"), object: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            Darwin._exit(0)
+        }
     }
     func startAutoLearnTracking(targetPID: pid_t, originalText: String) {
         AutoLearnService.shared.startAutoLearnTracking(targetPID: targetPID, originalText: originalText, currentNotification: activeDictionaryNotification) { [weak self] newNotification in

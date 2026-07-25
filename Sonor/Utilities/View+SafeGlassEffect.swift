@@ -1,6 +1,7 @@
 import SwiftUI
 import AppKit
 
+
 struct ActiveVisualEffectView: NSViewRepresentable {
     var material: NSVisualEffectView.Material
     var blendingMode: NSVisualEffectView.BlendingMode
@@ -31,10 +32,29 @@ struct ActiveVisualEffectView: NSViewRepresentable {
 
 struct SafeGlassModifier: ViewModifier {
     var cornerRadius: CGFloat
+    var isInteractive: Bool = false
     @Environment(\.colorScheme) var colorScheme
+    @AppStorage("hudAppearance") var hudAppearance = "glass"
+    
     func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+        let isSolid = hudAppearance == "solid"
+        if isSolid {
+            content
+                .background(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .fill(Color(NSColor.windowBackgroundColor))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: cornerRadius)
+                        .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1), lineWidth: 1)
+                )
+        } else {
+            if #available(macOS 26.0, *) {
+            if isInteractive {
+                content.glassEffect(.regular.interactive(), in: .rect(cornerRadius: cornerRadius))
+            } else {
+                content.glassEffect(.regular, in: .rect(cornerRadius: cornerRadius))
+            }
         } else {
             let isDark = colorScheme == .dark
             content
@@ -51,13 +71,14 @@ struct SafeGlassModifier: ViewModifier {
                             .fill(isDark ? Color.black.opacity(0.1) : Color.white.opacity(0.2))
                     )
                 )
+            }
         }
     }
 }
 
 extension View {
-    func safeGlassEffect(cornerRadius: CGFloat) -> some View {
-        self.modifier(SafeGlassModifier(cornerRadius: cornerRadius))
+    func safeGlassEffect(cornerRadius: CGFloat, isInteractive: Bool = false) -> some View {
+        self.modifier(SafeGlassModifier(cornerRadius: cornerRadius, isInteractive: isInteractive))
     }
 }
 

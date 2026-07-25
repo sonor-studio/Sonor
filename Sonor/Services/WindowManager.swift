@@ -58,15 +58,8 @@ class WindowManager {
         hudWindow?.orderOut(nil)
     }
     
-    func closeAllWindows() {
-        hudWindow?.close()
-        settingsWindow?.close()
-        supportWindow?.close()
-        permissionsWindow?.close()
-        changelogWindow?.close()
-    }
-    
-    private var hasShownSupportWindowThisSession = false
+
+    var hasShownSupportWindowThisSession = false
 
     func openSettings(showSupportWindow: Bool = true) {
         let trusted = AXIsProcessTrusted()

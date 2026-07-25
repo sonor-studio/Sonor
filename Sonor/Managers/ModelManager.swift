@@ -13,7 +13,7 @@ enum DownloadState: Equatable {
     case downloaded
 }
 
-// PRIVACY FIRST: ModelManager handles downloading AI models (like Whisper and Gemma) directly to the user's machine. Once downloaded, all models run 100% locally to ensure user privacy and maximum security.
+// Handles downloading and caching AI models locally.
 @MainActor
 final class ModelManager: ObservableObject {
     static let shared = ModelManager()

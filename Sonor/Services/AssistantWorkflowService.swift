@@ -30,7 +30,13 @@ class AssistantWorkflowService {
         let pid = initialPID
         
         // Detect whether a text field is actually focused initially
-        let isTextFieldDetected = PasteManager.shared.isTextFieldFocused(pid: pid)
+        let isTextFieldDetected: Bool
+        if selectedMode.pasteTiming == "end" {
+            // For 'end', we bypass the strict start requirement since the user might change windows during speech
+            isTextFieldDetected = true
+        } else {
+            isTextFieldDetected = PasteManager.shared.isTextFieldFocused(pid: pid)
+        }
         
         // willPaste: only paste if a text field was actually found — same behavior regardless of fallbackToClipboard
         var willPaste = isTextFieldDetected
@@ -42,8 +48,7 @@ class AssistantWorkflowService {
         let shouldRunLLM = !selectedMode.prompt.isEmpty && isPremium
         
         if !shouldRunLLM {
-            // DIRECT PASTE PATH: We skip LLM generation (e.g. for "Pure Text" mode)
-            // and immediately inject the transcribed text into the target app.
+            // Skip LLM generation and paste directly.
             MessageMemoryManager.shared.saveMessage(correctedText)
             
             if willPaste {
@@ -70,8 +75,7 @@ class AssistantWorkflowService {
                 onStatusChange("Done!")
             }
         } else {
-            // LLM GENERATION PATH: The text goes through a local LLM model to apply
-            // stylistic changes, corrections, or fulfill specific user commands.
+            // Process text using the LLM.
             if Task.isCancelled { return }
             
             let recognizer = NLLanguageRecognizer()
@@ -178,14 +182,27 @@ class AssistantWorkflowService {
             var finalPID = initialPID
             var finalFocused = false
             
-            var frontmostPID = initialPID
-            if let frontApp = NSWorkspace.shared.frontmostApplication,
-               frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
-                frontmostPID = frontApp.processIdentifier
+            if selectedMode.pasteTiming == "end" {
+                // strict end-only resolution
+                var currentFrontPID = pid
+                if let frontApp = NSWorkspace.shared.frontmostApplication,
+                   frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
+                    currentFrontPID = frontApp.processIdentifier
+                }
+                
+                finalPID = currentFrontPID
+                finalFocused = PasteManager.shared.isTextFieldFocused(pid: finalPID)
+                
+            } else {
+                // start mode: "what is currently active"
+                var frontmostPID = initialPID
+                if let frontApp = NSWorkspace.shared.frontmostApplication,
+                   frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
+                    frontmostPID = frontApp.processIdentifier
+                }
+                finalPID = frontmostPID
+                finalFocused = PasteManager.shared.isTextFieldFocused(pid: finalPID)
             }
-            
-            finalPID = frontmostPID
-            finalFocused = PasteManager.shared.isTextFieldFocused(pid: finalPID)
             
             let willDoFinalPaste = finalFocused && (!initialWillPaste || !willPaste)
             

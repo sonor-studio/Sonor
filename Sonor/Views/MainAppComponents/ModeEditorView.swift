@@ -16,6 +16,7 @@ struct ModeEditorView: View {
     @State private var showAssistantTypeInfo = false
     @State private var showRenameSheet = false
     @State private var newAssistantName = ""
+    @State private var showPasteTimingInfo = false
     
     var body: some View {
         if let index = modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) {
@@ -52,7 +53,7 @@ struct ModeEditorView: View {
                     .alert(isPresented: $showConflictAlert) {
                         Alert(
                             title: Text(t("App Already Assigned")),
-                            message: Text("Ta aplikacja jest już używana w asystencie '\(assistantWithConflictingApp?.name ?? "")'. Czy chcesz ją przenieść do tego asystenta?"),
+                            message: Text(String(format: t("This application is already used in the assistant '%@'. Do you want to move it to this assistant?"), assistantWithConflictingApp?.name ?? "")),
                             primaryButton: .destructive(Text(t("Move"))) {
                                 resolveConflict()
                             },
@@ -82,6 +83,10 @@ struct ModeEditorView: View {
                     AssistantTypeExplanationView()
                         .preferredColorScheme(colorScheme)
                 }
+                .sheet(isPresented: $showPasteTimingInfo) {
+                    PasteTimingExplanationView()
+                        .preferredColorScheme(colorScheme)
+                }
 
         }
     }
@@ -99,6 +104,11 @@ struct ModeEditorView: View {
             
             TextField(t("Enter new name for the assistant:"), text: $newAssistantName)
                 .textFieldStyle(.roundedBorder)
+                .onChange(of: newAssistantName) { _, newValue in
+                    if newValue.count > 50 {
+                        newAssistantName = String(newValue.prefix(50))
+                    }
+                }
                 .onSubmit {
                     let finalName = newAssistantName.trimmingCharacters(in: .whitespacesAndNewlines)
                     if !finalName.isEmpty && !nameExists {
@@ -239,18 +249,7 @@ struct ModeEditorView: View {
             NotificationCenter.default.post(name: Notification.Name("VoiceModesUpdated"), object: nil)
         }
     }
-    private func requestScreenCaptureAccess() {
-        if !CGPreflightScreenCaptureAccess() {
-            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture") {
-                NSWorkspace.shared.open(url)
-            }
-            if #available(macOS 14.4, *) {
-                CGRequestScreenCaptureAccess()
-            } else {
-                SCShareableContent.getExcludingDesktopWindows(false, onScreenWindowsOnly: true) { _, _ in }
-            }
-        }
-    }
+
     @ViewBuilder
     private func editorScrollView(modeBinding: Binding<VoiceMode>) -> some View {
                 ScrollView {
@@ -327,7 +326,7 @@ struct ModeEditorView: View {
                             }
                         }
 
-                        if modeBinding.wrappedValue.name != "Pure Text" && modeBinding.wrappedValue.name != "Czysty tekst" {
+                        if modeBinding.wrappedValue.name != "Pure Text" {
                             HStack {
                                 Text(t("Language"))
                                     .font(.system(size: 12))
@@ -380,15 +379,15 @@ struct ModeEditorView: View {
                                     .padding(.horizontal, 4)
                                 let description: String = {
                                     switch modeBinding.wrappedValue.name {
-                                    case "Pure Text", "Czysty tekst":
+                                    case "Pure Text":
                                         return t("Performs pure 1:1 transcription of your speech, without any corrections or AI editing.")
-                                    case "Text Smoothing", "Wygładzanie tekstu":
+                                    case "Text Smoothing":
                                         return t("Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.")
-                                    case "Formal Style", "Styl formalny":
+                                    case "Formal Style":
                                         return t("Automatically transforms loose thoughts into professional, elegant, and official style. Ideal for formal communication.")
-                                    case "Casual Style", "Luźny styl":
+                                    case "Casual Style":
                                         return t("Transforms text into a casual, relaxed, and conversational style with natural colloquialisms. Ideal for friendly communication.")
-                                    case "Edit & Create", "Edycja i tworzenie":
+                                    case "Edit & Create":
                                         return t("Acts as an expert editor. It perfectly executes your spoken instructions to edit, rewrite, or generate brand new texts. Ideal for creating custom content on the fly.")
                                     default:
                                         return t("Built-in system assistant.")
@@ -421,6 +420,11 @@ struct ModeEditorView: View {
                                             RoundedRectangle(cornerRadius: 8)
                                                 .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.clear)
                                         )
+                                        .onChange(of: modeBinding.wrappedValue.prompt) { _, newValue in
+                                            if newValue.count > 10000 {
+                                                modeBinding.wrappedValue.prompt = String(newValue.prefix(10000))
+                                            }
+                                        }
                                     if modeBinding.wrappedValue.prompt.isEmpty {
                                         Text(t("Enter your prompt here..."))
                                             .font(.system(size: 13))
@@ -517,6 +521,44 @@ struct ModeEditorView: View {
                             .help(t("Apply to all assistants"))
                         }
 
+                        HStack {
+                            Picker(t("Paste target"), selection: Binding(
+                                get: { modeBinding.wrappedValue.pasteTiming ?? "end" },
+                                set: { 
+                                    modeBinding.wrappedValue.pasteTiming = $0
+                                    saveModes()
+                                }
+                            )) {
+                                Text(t("Field focused at end")).tag("end")
+                                Text(t("Field focused at start")).tag("start")
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                            .font(.system(size: 12))
+                            Button(action: {
+                                let newVal = modeBinding.wrappedValue.pasteTiming ?? "end"
+                                for i in modes.indices {
+                                    modes[i].pasteTiming = newVal
+                                }
+                                saveModes()
+                            }) {
+                                Image(systemName: "rectangle.stack")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .padding(4)
+                                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.1)))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .help(t("Apply to all assistants"))
+                            Button(action: {
+                                showPasteTimingInfo = true
+                            }) {
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .help(t("Learn more about Paste target"))
+                        }
                         HStack {
                             Toggle(t("Copy to clipboard if no text field is detected"), isOn: Binding(
                                 get: { modeBinding.wrappedValue.fallbackToClipboard ?? false },

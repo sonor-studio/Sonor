@@ -174,7 +174,7 @@ class AudioManager: ObservableObject {
             let ratio = targetFormat.sampleRate / buffer.format.sampleRate
             let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 1024
             guard let pcmBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity) else { return }
-            pcmBuffer.frameLength = pcmBuffer.frameCapacity // FIX for AVAudioConverter returning 0 frames
+            pcmBuffer.frameLength = pcmBuffer.frameCapacity // Prevents AVAudioConverter from returning 0 frames
             
             var error: NSError? = nil
             var hasData = false

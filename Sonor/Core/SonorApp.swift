@@ -51,6 +51,15 @@ struct SonorApp: App {
                 }
             }
         }
+        
+        let hasLaunchedBefore = UserDefaults.standard.bool(forKey: "hasLaunchedBefore")
+        if !hasLaunchedBefore {
+            UserDefaults.standard.set(true, forKey: "hasLaunchedBefore")
+            WindowManager.shared.hasShownSupportWindowThisSession = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                WindowManager.shared.openSettings(showSupportWindow: false)
+            }
+        }
 
     }
     var body: some Scene {

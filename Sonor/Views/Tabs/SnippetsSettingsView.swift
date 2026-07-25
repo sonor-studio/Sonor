@@ -9,6 +9,7 @@ struct SnippetsSettingsView: View {
     @ObservedObject private var localizer = LocalizationManager.shared
     @State private var isHoveringAdd = false
     @State private var hoveredKey: String? = nil
+    @State private var expandedKeys: Set<String> = []
     @State private var isShowingInfo = false
     private let maxSnippets = 70
     private var sortedKeys: [String] {
@@ -48,6 +49,11 @@ struct SnippetsSettingsView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
             )
+            .onChange(of: newShortcut) { _, newValue in
+                if newValue.count > 50 {
+                    newShortcut = String(newValue.prefix(50))
+                }
+            }
     }
     private var expansionInputView: some View {
         TextField(t("e.g. https://youtube.com/c/SonorApp"), text: $newExpansion)
@@ -62,9 +68,14 @@ struct SnippetsSettingsView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.15), lineWidth: 1)
             )
+            .onChange(of: newExpansion) { _, newValue in
+                if newValue.count > 5000 {
+                    newExpansion = String(newValue.prefix(5000))
+                }
+            }
     }
     private var isAddButtonActive: Bool {
-        !newShortcut.isEmpty && !newExpansion.isEmpty && entries.count < maxSnippets
+        newShortcut.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 && !newExpansion.isEmpty && entries.count < maxSnippets
     }
     private var addButtonColor: Color {
         if isAddButtonActive {
@@ -193,8 +204,18 @@ struct SnippetsSettingsView: View {
                 Text(value)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.primary)
-                    .lineLimit(1)
+                    .lineLimit(expandedKeys.contains(key) ? nil : 1)
                     .truncationMode(.tail)
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            if expandedKeys.contains(key) {
+                                expandedKeys.remove(key)
+                            } else {
+                                expandedKeys.insert(key)
+                            }
+                        }
+                    }
+                    .help(expandedKeys.contains(key) ? t("Click to collapse") : t("Click to expand"))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             Button(action: { removeEntry(key: key) }) {
@@ -287,7 +308,10 @@ struct SnippetsSettingsView: View {
     }
     func addEntry() {
         if entries.count >= maxSnippets { return }
-        entries[newShortcut] = newExpansion
+        let trimmedShortcut = newShortcut.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedExpansion = newExpansion.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedShortcut.count < 2 || trimmedExpansion.isEmpty { return }
+        entries[trimmedShortcut] = trimmedExpansion
         UserDefaults.standard.set(entries, forKey: "snippetsEntries")
         newShortcut = ""
         newExpansion = ""

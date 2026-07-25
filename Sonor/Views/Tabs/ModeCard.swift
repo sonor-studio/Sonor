@@ -27,15 +27,15 @@ struct ModeCard: View {
     private var descriptionText: String {
         if mode.isBuiltInMode {
             switch mode.name {
-            case "Pure Text", "Czysty tekst":
+            case "Pure Text":
                 return t("Performs pure 1:1 transcription of your speech, without any corrections or AI editing.")
-            case "Text Smoothing", "Wygładzanie tekstu":
+            case "Text Smoothing":
                 return t("Removes stutters, repetitions, and grammatical errors and inserts appropriate punctuation. Preserves the original style, tone, and vocabulary of your statement.")
-            case "Formal Style", "Styl formalny":
+            case "Formal Style":
                 return t("Automatically transforms loose thoughts into professional, elegant, and official style. Ideal for formal communication.")
-            case "Casual Style", "Luźny styl":
+            case "Casual Style":
                 return t("Transforms text into a casual, relaxed, and conversational style with natural colloquialisms. Ideal for friendly communication.")
-            case "Edit & Create", "Edycja i tworzenie":
+            case "Edit & Create":
                 return t("Acts as an expert editor. It perfectly executes your spoken instructions to edit, rewrite, or generate brand new texts. Ideal for creating custom content on the fly.")
             default:
                 return t("Built-in system assistant.")
