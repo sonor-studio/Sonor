@@ -9,6 +9,36 @@ Apple Silicon Metal acceleration and local LLMs (Gemma), your audio and data nev
 
 ---
 
+## 🚀 Getting Started
+
+### Requirements
+* **System:** macOS 14.6 or later.
+* **Hardware:** Apple Silicon (M1/M2/M3/M4 chips and newer) **is strictly required** for local hardware acceleration. Intel processors are not supported.
+
+### For Regular Users (Pre-built App)
+If you just want to use the app without dealing with code, ready-to-use releases are available! Because this is an independent open-source release without a paid Apple Developer certificate, macOS Gatekeeper will block the application on the first launch. Please follow these steps to run Sonor:
+
+1. Go to the **[Releases](https://github.com/sonor-studio/Sonor/releases)** tab on GitHub and download the latest `Sonor.dmg` file.
+2. Open the `.dmg` and drag `Sonor.app` into your system **Applications** folder.
+3. Double-click `Sonor.app` to trigger the initial system check. macOS will show a dialog stating it cannot be opened — click **Cancel**.
+4. Open your macOS **System Settings** and navigate to **Privacy & Security**.
+5. Scroll down to the *Security* section and click the **"Open Anyway"** button next to the Sonor block notice.
+6. Confirm with your Mac password or Touch ID.
+
+*Note: This configuration is a one-time process. Once approved, Sonor will launch instantly every time.*
+
+<img width="1108" height="720" alt="1" src="https://github.com/user-attachments/assets/9d9e289b-eb32-45fb-af9a-d721cdef5a2d" />
+
+### For Developers (Building from Source)
+If you want to play with the code, compile the app yourself, or contribute to the project, you can clone the repository. No extra submodules are required:
+
+```bash
+git clone https://github.com/sonor-studio/Sonor.git
+```
+Then, open `Sonor.xcodeproj` in Xcode and hit Run!
+
+---
+
 ## ✨ Key Features
 
 * **Local-First & Privacy-First:** No cloud API endpoints, no data tracking, no external servers. Complete peace of mind.
@@ -25,28 +55,6 @@ Apple Silicon Metal acceleration and local LLMs (Gemma), your audio and data nev
 * **Frontend:** Swift, SwiftUI (optimized for macOS)
 * **Core Engine:** C++ (`whisper.cpp`, Gemma runtime)
 * **Backend Framework:** Supabase (Secure user accounts & lifecycle management)
-
----
-
-## 🚀 Getting Started
-
-### Requirements
-* **System:** macOS 14.6 or later.
-* **Hardware:** Apple Silicon (M1/M2/M3/M4 chips and newer) **is strictly required** for local hardware acceleration. Intel processors are not supported.
-
-### Installation & Gatekeeper Bypass
-Because this is an independent open-source release without a paid Apple Developer certificate, macOS Gatekeeper will block the application on the first launch. Please follow these steps to run Sonor:
-
-1. Go to the **Releases** tab on GitHub and download the latest `Sonor.dmg` file.
-2. Open the `.dmg` and drag `Sonor.app` into your system **Applications** folder.
-3. Double-click `Sonor.app` to trigger the initial system check. macOS will show a dialog stating it cannot be opened — click **Cancel**.
-4. Open your macOS **System Settings** and navigate to **Privacy & Security**.
-5. Scroll down to the *Security* section and click the **"Open Anyway"** button next to the Sonor block notice.
-6. Confirm with your Mac password or Touch ID.
-
-*Note: This configuration is a one-time process. Once approved, Sonor will launch instantly every time.*
-
-<img width="1108" height="720" alt="1" src="https://github.com/user-attachments/assets/9d9e289b-eb32-45fb-af9a-d721cdef5a2d" />
 
 ---
 
