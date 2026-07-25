@@ -269,7 +269,7 @@ struct CapsuleHUDView: View {
                 Button(action: {}) { Color.white.opacity(0.001) }
                     .buttonStyle(NoAnimButtonStyle())
                 HStack(spacing: 8) {
-                    Text(t("Nie wykryto pola"))
+                    Text(t("Field not detected"))
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.primary)
                         .lineLimit(1)
@@ -290,7 +290,7 @@ struct CapsuleHUDView: View {
                                     .font(.system(size: 11, weight: .bold))
                                     .transition(.scale.combined(with: .opacity))
                             } else {
-                                Text(t("Skopiuj"))
+                                Text(t("Copy"))
                                     .font(.system(size: 11, weight: .bold))
                                     .fixedSize()
                                     .transition(.scale.combined(with: .opacity))

@@ -91,7 +91,6 @@ struct ModeEditorView: View {
         }
     }
     
-    // MARK: - Rename Sheet
     
     private var renameSheetContent: some View {
         let otherModes = modes.filter { $0.id.uuidString != selectedModeID }
@@ -162,7 +161,6 @@ struct ModeEditorView: View {
         .preferredColorScheme(colorScheme)
     }
     
-    // MARK: - Logic
     
     private func saveModes() {
         if let data = try? JSONEncoder().encode(modes) {

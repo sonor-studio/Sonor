@@ -6,7 +6,6 @@ import CoreAudio
 
 @MainActor
 class AppController: NSObject, ObservableObject {
-    // MARK: - Published State
     
     @Published var isRecording = false
     @Published var activeDictionaryNotification: DictionaryNotification? = nil
@@ -38,7 +37,6 @@ class AppController: NSObject, ObservableObject {
             }
         }
     }
-    // MARK: - Hardware & System State
     
     private let audioManager = AudioManager()
     private var sonorContext: SonorContext? // C++ interop for the local Whisper model
@@ -156,7 +154,6 @@ class AppController: NSObject, ObservableObject {
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
         self.currentMode = modes.first(where: { $0.id.uuidString == activeModeID }) ?? modes.first
     }
-    // MARK: - Core Recording Flow
 
     /// Toggles the recording state. 
     /// Handles accessibility permissions, microphone permissions, and model checking before proceeding.
