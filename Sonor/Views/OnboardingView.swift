@@ -5,7 +5,6 @@ struct OnboardingView: View {
     @Environment(\.colorScheme) var colorScheme
     @State private var currentPage = 0
     let onComplete: () -> Void
-    var onLoginRequest: (() -> Void)? = nil
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
     @AppStorage("hotkeyString") private var hotkeyString = "Ctrl + Opt + Space"
     @State private var isRecordingHotkey = false
@@ -17,14 +16,10 @@ struct OnboardingView: View {
             Button(action: {
                 if !isRecordingHotkey {
                     withAnimation {
-                        if currentPage < 5 {
+                        if currentPage < 4 {
                             currentPage += 1
                         } else {
-                            if let login = onLoginRequest {
-                                login()
-                            } else {
-                                onComplete()
-                            }
+                            onComplete()
                         }
                     }
                 }
@@ -78,9 +73,6 @@ struct OnboardingView: View {
                 } else if currentPage == 4 {
                     configurationSlide()
                         .transition(.opacity)
-                } else if currentPage == 5 {
-                    loginSlide()
-                        .transition(.opacity)
                 }
             }
             .animation(.easeInOut, value: currentPage)
@@ -107,7 +99,7 @@ struct OnboardingView: View {
                 }
                 Spacer()
                 HStack(spacing: 10) {
-                    ForEach(0..<6, id: \.self) { index in
+                    ForEach(0..<5, id: \.self) { index in
                         Circle()
                             .fill(currentPage == index ? (colorScheme == .dark ? Color.white : Color.black) : Color.secondary.opacity(0.3))
                             .frame(width: 8, height: 8)
@@ -122,19 +114,19 @@ struct OnboardingView: View {
                 Spacer()
                 Button(action: {
                     withAnimation(.easeInOut(duration: 0.3)) {
-                        if currentPage < 5 {
+                        if currentPage < 4 {
                             currentPage += 1
                         } else {
                             onComplete()
                         }
                     }
                 }) {
-                    Text(currentPage < 5 ? t("Next") : t("Continue without account"))
+                    Text(currentPage < 4 ? t("Next") : t("Finish"))
                         .font(.system(size: 13, weight: .bold))
-                        .foregroundColor(currentPage < 5 ? (colorScheme == .dark ? .black : .white) : (colorScheme == .dark ? .white : .black))
-                        .frame(width: currentPage < 5 ? 110 : 200)
+                        .foregroundColor(currentPage < 4 ? (colorScheme == .dark ? .black : .white) : (colorScheme == .dark ? .white : .black))
+                        .frame(width: currentPage < 4 ? 110 : 200)
                         .padding(.vertical, 12)
-                        .background(currentPage < 5 ? (colorScheme == .dark ? Color.white : Color.black) : (colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05)))
+                        .background(currentPage < 4 ? (colorScheme == .dark ? Color.white : Color.black) : (colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05)))
                         .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
@@ -391,79 +383,6 @@ struct OnboardingView: View {
                 }
             }
             .padding(.horizontal, 40)
-            Spacer()
-        }
-        .padding(.top, 10)
-    }
-    @ViewBuilder
-    private func loginSlide() -> some View {
-        VStack(spacing: 0) {
-            VStack(spacing: 10) {
-                Image(systemName: "person.crop.circle.fill.badge.plus")
-                    .font(.system(size: 40))
-                    .foregroundColor(colorScheme == .dark ? .white : .black)
-                Text(t("Unlock full potential"))
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.center)
-            }
-            .padding(.bottom, 12)
-            Text(t("Creating a free account unlocks access to advanced assistant features. You can always do this later in settings."))
-                .font(.system(size: 13))
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-                .lineSpacing(2)
-                .padding(.horizontal, 32)
-                .padding(.bottom, 20)
-                .fixedSize(horizontal: false, vertical: true)
-            VStack(alignment: .leading, spacing: 16) {
-                let features = [
-                    (icon: "brain.head.profile", title: t("Advanced LLM models"), description: t("Intelligent formatting, analysis, and processing of your notes and commands.")),
-                    (icon: "text.badge.plus", title: t("Templates and Snippets"), description: t("Save your most frequently used message templates and insert them in a blink of an eye.")),
-                    (icon: "text.book.closed.fill", title: t("Personal Dictionary"), description: t("The application learns your specific vocabulary and proper names every day."))
-                ]
-                ForEach(features, id: \.title) { feature in
-                    HStack(alignment: .top, spacing: 14) {
-                        Image(systemName: feature.icon)
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundColor(colorScheme == .dark ? .white : .black)
-                            .frame(width: 24)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(feature.title)
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.primary)
-                            Text(feature.description)
-                                .font(.system(size: 12))
-                                .foregroundColor(.secondary)
-                                .lineSpacing(2)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                }
-            }
-            .padding(.horizontal, 40)
-            .padding(.bottom, 24)
-            Button(action: {
-                if let login = onLoginRequest {
-                    login()
-                } else {
-                    onComplete()
-                }
-            }) {
-                HStack(spacing: 12) {
-                    Image(systemName: "lock.open.fill")
-                    Text(t("Log in for free"))
-                        .font(.system(size: 16, weight: .bold))
-                }
-                .foregroundColor(colorScheme == .dark ? .black : .white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(colorScheme == .dark ? Color.white : Color.black)
-                .cornerRadius(12)
-            }
-            .buttonStyle(.plain)
-            .focusable(false)
-            .padding(.horizontal, 60)
             Spacer()
         }
         .padding(.top, 10)

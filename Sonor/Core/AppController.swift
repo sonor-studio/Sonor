@@ -206,14 +206,9 @@ class AppController: NSObject, ObservableObject {
                 wasTextFieldFocusedAtStart = PasteManager.shared.isElementTextField(targetAXElement)
             }
             let selectedMode: VoiceMode
-            if !AuthManager.shared.isLoggedIn {
-                selectedMode = availableModes.first(where: { $0.name == "Pure Text" }) ?? VoiceMode.defaults.first!
-                self.currentMode = selectedMode
-            } else {
-                selectedMode = currentMode ?? availableModes.first ?? VoiceMode.defaults.first!
-                if self.currentMode?.id != selectedMode.id {
-                    self.selectMode(selectedMode)
-                }
+            selectedMode = currentMode ?? availableModes.first ?? VoiceMode.defaults.first!
+            if self.currentMode?.id != selectedMode.id {
+                self.selectMode(selectedMode)
             }
             self.activeCopyNotification = nil
             self.activeDictionaryNotification = nil
@@ -470,7 +465,7 @@ class AppController: NSObject, ObservableObject {
             }
             let duration = Double(samples.count) / 16000.0
             UsageTrackingService.shared.recordUsage(duration: duration, text: rawText)
-            let correctedText = TextProcessingService.shared.applyCorrections(to: rawText, isLoggedIn: AuthManager.shared.isLoggedIn)
+            let correctedText = TextProcessingService.shared.applyCorrections(to: rawText)
             await AssistantWorkflowService.shared.execute(
                 correctedText: correctedText,
                 selectedMode: selectedMode,

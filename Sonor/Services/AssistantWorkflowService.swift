@@ -44,8 +44,7 @@ class AssistantWorkflowService {
         // willFallbackToClipboard: copy text to clipboard when no field found, only if user enabled this option
         let willFallbackToClipboard = !isTextFieldDetected && (selectedMode.fallbackToClipboard == true)
         
-        let isPremium = AuthManager.shared.isLoggedIn && AuthManager.shared.accountTier == "premium"
-        let shouldRunLLM = !selectedMode.prompt.isEmpty && isPremium
+        let shouldRunLLM = !selectedMode.prompt.isEmpty
         
         if !shouldRunLLM {
             // Skip LLM generation and paste directly.

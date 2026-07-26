@@ -54,7 +54,6 @@ Then, open `Sonor.xcodeproj` in Xcode and hit Run!
 
 * **Frontend:** Swift, SwiftUI (optimized for macOS)
 * **Core Engine:** C++ (`whisper.cpp`, Gemma runtime)
-* **Backend Framework:** Supabase (Secure user accounts & lifecycle management)
 
 ---
 
@@ -62,7 +61,7 @@ Then, open `Sonor.xcodeproj` in Xcode and hit Run!
 
 Sonor is engineered from the ground up to respect user privacy.
 * Audio processing is computed directly via the Mac's GPU/Unified Memory.
-* Account synchronization and core analytics are securely handled via encrypted Supabase connections. No audio data or transcripts are ever transmitted.
+* No audio data or transcripts are ever transmitted.
 
 ---
 

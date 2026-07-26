@@ -38,8 +38,7 @@ class TextProcessingService {
         return result
     }
     
-    func applyCorrections(to text: String, isLoggedIn: Bool) -> String {
-        guard isLoggedIn else { return text }
+    func applyCorrections(to text: String) -> String {
         var processedText = text
         let dictionary = UserDefaults.standard.dictionary(forKey: "dictionaryEntries") as? [String: String] ?? [:]
         for (wrong, correct) in dictionary {

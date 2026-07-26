@@ -3,10 +3,8 @@ import SwiftUI
 struct ModelsSettingsView: View {
     @ObservedObject var manager = ModelManager.shared
     @Environment(\.colorScheme) var colorScheme
-    @ObservedObject private var authManager = AuthManager.shared
     @State private var showUninstallConfirmation = false
     @State private var modelToUninstall: ModelType? = nil
-    @State private var showLoginSheet = false
     enum ModelType {
         case whisper
         case gemma
@@ -40,8 +38,6 @@ struct ModelsSettingsView: View {
                     title: "Gemma (Text Correction)",
                     description: t("Required for advanced text rewriting and smart corrections. Approx. 3 GB."),
                     state: manager.gemmaState,
-                    requiresLogin: !authManager.isLoggedIn,
-                    onLogin: { self.showLoginSheet = true },
                     onDownload: { manager.downloadGemma() },
                     onPause: { manager.pauseGemmaDownload() },
                     onCancel: { manager.cancelGemmaDownload() },
@@ -89,28 +85,6 @@ struct ModelsSettingsView: View {
             .padding(.vertical, 24)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
-        .sheet(isPresented: $showLoginSheet) {
-            LoginView()
-                .preferredColorScheme(colorScheme)
-                .frame(width: 520)
-                .fixedSize(horizontal: false, vertical: true)
-                .overlay(
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button(action: { showLoginSheet = false }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                            .focusable(false)
-                            .padding(15)
-                        }
-                        Spacer()
-                    }
-                )
-        }
         .background(
             Color.clear
                 .alert(isPresented: $showUninstallConfirmation) {
@@ -140,8 +114,6 @@ struct ModelCard: View {
     let state: DownloadState
     var isActive: Bool? = nil
     var onSetActive: (() -> Void)? = nil
-    var requiresLogin: Bool = false
-    var onLogin: (() -> Void)? = nil
     let onDownload: () -> Void
     var onPause: (() -> Void)? = nil
     let onCancel: () -> Void
@@ -161,20 +133,6 @@ struct ModelCard: View {
                 Spacer()
                 switch state {
                 case .notDownloaded:
-                    if requiresLogin {
-                        if NetworkMonitor.shared.isConnected {
-                            Button(action: { onLogin?() }) {
-                                Text(t("Log In"))
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundColor(colorScheme == .dark ? .black : .white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(colorScheme == .dark ? Color.white : Color.black)
-                                    .cornerRadius(8)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    } else {
                         Button(action: onDownload) {
                             Text(t("Download"))
                                 .font(.system(size: 13, weight: .semibold))
@@ -185,7 +143,6 @@ struct ModelCard: View {
                                 .cornerRadius(8)
                         }
                         .buttonStyle(.plain)
-                    }
                 case .downloading(let progress):
                     HStack(spacing: 12) {
                         ProgressView(value: progress)
@@ -220,39 +177,18 @@ struct ModelCard: View {
                         Text("\(Int(progress * 100))%")
                             .font(.system(size: 12, weight: .medium).monospacedDigit())
                             .foregroundColor(.secondary)
-                        if requiresLogin {
-                            Button(action: onCancel) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                            if NetworkMonitor.shared.isConnected {
-                                Button(action: { onLogin?() }) {
-                                    Text(t("Log In"))
-                                        .font(.system(size: 13, weight: .semibold))
-                                        .foregroundColor(colorScheme == .dark ? .black : .white)
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(colorScheme == .dark ? Color.white : Color.black)
-                                        .cornerRadius(8)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        } else {
-                            Button(action: onDownload) {
-                                Image(systemName: "play.circle.fill")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(colorScheme == .dark ? .white : .black)
-                            }
-                            .buttonStyle(.plain)
-                            Button(action: onCancel) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
+                        Button(action: onDownload) {
+                            Image(systemName: "play.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(colorScheme == .dark ? .white : .black)
                         }
+                        .buttonStyle(.plain)
+                        Button(action: onCancel) {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
                 case .downloaded:
                     HStack(spacing: 12) {

@@ -41,16 +41,10 @@ struct MainAppView: View {
     @State private var isShowingSidePanel = false
     @State private var isHoveringTrafficLights = false
     @FocusState private var isDummyFocused: Bool
-    @ObservedObject private var authManager = AuthManager.shared
-    @State private var showLoginSheet = false
-    @State private var isShowingProfileSheet = false
-    @State private var isProfileCardHovered = false
     @State private var isShowingOnboardingSheet = false
-    @State private var isShowingThankYouSheet = false
     @State private var isShowingMilestoneSheet = false
     @State private var milestoneHoursForSheet = 10
     @ObservedObject private var modelManager = ModelManager.shared
-    @ObservedObject private var networkMonitor = NetworkMonitor.shared
     var body: some View {
         mainContent
     }
@@ -60,9 +54,6 @@ struct MainAppView: View {
             VStack(alignment: .leading, spacing: 0) {
                 SidebarView(
                     selectedTab: $selectedTab,
-                    isProfileCardHovered: $isProfileCardHovered,
-                    showLoginSheet: $showLoginSheet,
-                    isShowingProfileSheet: $isShowingProfileSheet,
                     effectiveColorScheme: effectiveColorScheme
                 )
             }
@@ -81,11 +72,11 @@ struct MainAppView: View {
                             case .home:
                                 StatisticsView()
                             case .modes:
-                                ModesSettingsView(modes: $modes, selectedModeID: $selectedModeID, isShowingSidePanel: $isShowingSidePanel, isPremium: authManager.isLoggedIn && authManager.accountTier == "premium", showLoginSheet: $showLoginSheet)
+                                ModesSettingsView(modes: $modes, selectedModeID: $selectedModeID, isShowingSidePanel: $isShowingSidePanel)
                             case .dictionary:
-                                DictionarySettingsView(showLoginSheet: $showLoginSheet)
+                                DictionarySettingsView()
                             case .snippets:
-                                SnippetsSettingsView(showLoginSheet: $showLoginSheet)
+                                SnippetsSettingsView()
                             case .models:
                                 ModelsSettingsView()
                             case .settings:
@@ -111,7 +102,7 @@ struct MainAppView: View {
                     }
                 }
                 
-                if selectedTab == .modes && (authManager.isLoggedIn || modes.first(where: { $0.id.uuidString == selectedModeID })?.name == "Pure Text"), modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) != nil {
+                if selectedTab == .modes && modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) != nil {
                     ModeEditorView(modes: $modes, selectedModeID: $selectedModeID)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
@@ -127,53 +118,12 @@ struct MainAppView: View {
             }
             checkTimeSavedMilestones()
         }
-        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("ShowThankYouView"))) { _ in
-            isShowingThankYouSheet = true
-        }
-        .sheet(isPresented: $isShowingThankYouSheet) {
-            ThankYouView(onComplete: {
-                isShowingThankYouSheet = false
-            })
-            .preferredColorScheme(effectiveColorScheme)
-        }
         .sheet(isPresented: $isShowingOnboardingSheet) {
             OnboardingView(onComplete: {
                 isShowingOnboardingSheet = false
                 UserDefaults.standard.set(true, forKey: "hasSeenOnboardingLocally")
-            }, onLoginRequest: {
-                isShowingOnboardingSheet = false
-                UserDefaults.standard.set(true, forKey: "hasSeenOnboardingLocally")
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    showLoginSheet = true
-                }
             })
             .preferredColorScheme(effectiveColorScheme)
-        }
-        .sheet(isPresented: $showLoginSheet) {
-            LoginView()
-                .preferredColorScheme(effectiveColorScheme)
-                .frame(width: 520)
-                .fixedSize(horizontal: false, vertical: true)
-                .overlay(
-                    VStack {
-                        HStack {
-                            Spacer()
-                            Button(action: { showLoginSheet = false }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                            .focusable(false)
-                            .padding(15)
-                        }
-                        Spacer()
-                    }
-                )
-        }
-        .sheet(isPresented: $isShowingProfileSheet) {
-            UserProfileView(isShowingProfileSheet: $isShowingProfileSheet)
-                .preferredColorScheme(effectiveColorScheme)
         }
         .sheet(isPresented: $isShowingMilestoneSheet) {
             TimeSavedMilestoneView(hoursSaved: milestoneHoursForSheet)
@@ -201,13 +151,6 @@ struct MainAppView: View {
             IncognitoAnimationOverlay()
                 .allowsHitTesting(false)
         )
-        .onChange(of: authManager.isLoggedIn) {
-            if authManager.isLoggedIn {
-                showLoginSheet = false
-            } else {
-                isShowingProfileSheet = false
-            }
-        }
     }
     
     private func updateWindowAppearance() {

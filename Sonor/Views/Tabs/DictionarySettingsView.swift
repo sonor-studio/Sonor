@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct DictionarySettingsView: View {
-    @Binding var showLoginSheet: Bool
     @ObservedObject var localizer = LocalizationManager.shared
     @State private var entries: [String: String] = [:]
     @State private var newWrong: String = ""
@@ -199,44 +198,40 @@ struct DictionarySettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             headerView
-            if !AuthManager.shared.isLoggedIn {
-                PremiumLockView(showLoginSheet: $showLoginSheet)
-            } else {
-                addFormView
-                HStack {
-                    Text(String(format: t("SAVED CORRECTIONS (%d)"), entries.count))
-                        .font(.system(size: 10, weight: .bold))
+            addFormView
+            HStack {
+                Text(String(format: t("SAVED CORRECTIONS (%d)"), entries.count))
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.secondary)
+                    .tracking(1)
+                Spacer()
+            }
+            .padding(.top, 8)
+            if entries.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "book.closed")
+                        .font(.system(size: 40))
+                        .foregroundColor(.secondary.opacity(0.5))
+                    Text(t("No dictionary entries"))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundColor(.secondary)
-                        .tracking(1)
-                    Spacer()
+                    Text(t("Add the first correction above to automatically fix the most common Sonor errors."))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
                 }
-                .padding(.top, 8)
-                if entries.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "book.closed")
-                            .font(.system(size: 40))
-                            .foregroundColor(.secondary.opacity(0.5))
-                        Text(t("No dictionary entries"))
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.secondary)
-                        Text(t("Add the first correction above to automatically fix the most common Sonor errors."))
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, miterLimit: 10, dash: [5, 5], dashPhase: 0))
-                    )
-                } else {
-                    VStack(spacing: 12) {
-                        ForEach(sortedKeys, id: \.self) { key in
-                            if let value = entries[key] {
-                                rowView(key: key, value: value)
-                            }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, miterLimit: 10, dash: [5, 5], dashPhase: 0))
+                )
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(sortedKeys, id: \.self) { key in
+                        if let value = entries[key] {
+                            rowView(key: key, value: value)
                         }
                     }
                 }

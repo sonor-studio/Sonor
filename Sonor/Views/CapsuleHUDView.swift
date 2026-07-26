@@ -342,7 +342,7 @@ struct CapsuleHUDView: View {
                         .zIndex(2)
                 } else {
                     VStack(spacing: 8) {
-                        if AuthManager.shared.isLoggedIn && modelManager.gemmaState == .downloaded {
+                        if modelManager.gemmaState == .downloaded {
                             if !isInitializing && !isFinalState && controller.isRecording {
                                 assistantSelector
                                     .transition(.asymmetric(insertion: .offset(y: 40).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(y: 40).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))

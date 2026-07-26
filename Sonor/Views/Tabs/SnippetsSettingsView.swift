@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct SnippetsSettingsView: View {
-    @Binding var showLoginSheet: Bool
     @State private var entries: [String: String] = [:]
     @State private var newShortcut: String = ""
     @State private var newExpansion: String = ""
@@ -253,46 +252,42 @@ struct SnippetsSettingsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 24) {
             headerView
-            if !AuthManager.shared.isLoggedIn {
-                PremiumLockView(showLoginSheet: $showLoginSheet)
-            } else {
-                addFormView
-                HStack {
-                    let savedText = String(format: t("SAVED SNIPPETS (%d)"), entries.count)
-                    let textWithLimit = savedText.replacingOccurrences(of: ")", with: "/\(maxSnippets))")
-                    Text(textWithLimit)
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(entries.count >= maxSnippets ? .red : .secondary)
-                        .tracking(1)
-                    Spacer()
+            addFormView
+            HStack {
+                let savedText = String(format: t("SAVED SNIPPETS (%d)"), entries.count)
+                let textWithLimit = savedText.replacingOccurrences(of: ")", with: "/\(maxSnippets))")
+                Text(textWithLimit)
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(entries.count >= maxSnippets ? .red : .secondary)
+                    .tracking(1)
+                Spacer()
+            }
+            .padding(.top, 8)
+            if entries.isEmpty {
+                VStack(spacing: 16) {
+                    Image(systemName: "scissors")
+                        .font(.system(size: 40))
+                        .foregroundColor(.secondary.opacity(0.5))
+                    Text(t("No snippets"))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.secondary)
+                    Text(t("Add the first shortcut above to be able to use templates and automatically expand short forms."))
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary.opacity(0.7))
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 40)
                 }
-                .padding(.top, 8)
-                if entries.isEmpty {
-                    VStack(spacing: 16) {
-                        Image(systemName: "scissors")
-                            .font(.system(size: 40))
-                            .foregroundColor(.secondary.opacity(0.5))
-                        Text(t("No snippets"))
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundColor(.secondary)
-                        Text(t("Add the first shortcut above to be able to use templates and automatically expand short forms."))
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary.opacity(0.7))
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal, 40)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 40)
-                    .background(
-                        RoundedRectangle(cornerRadius: 16)
-                            .stroke(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, miterLimit: 10, dash: [5, 5], dashPhase: 0))
-                    )
-                } else {
-                    VStack(spacing: 12) {
-                        ForEach(sortedKeys, id: \.self) { key in
-                            if let value = entries[key] {
-                                rowView(key: key, value: value)
-                            }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 40)
+                .background(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(colorScheme == .dark ? Color.white.opacity(0.06) : Color.black.opacity(0.05), style: StrokeStyle(lineWidth: 1, lineCap: .round, lineJoin: .round, miterLimit: 10, dash: [5, 5], dashPhase: 0))
+                )
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(sortedKeys, id: \.self) { key in
+                        if let value = entries[key] {
+                            rowView(key: key, value: value)
                         }
                     }
                 }

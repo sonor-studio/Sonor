@@ -633,39 +633,6 @@ public class LocalizationManager: ObservableObject {
             "无论选择哪种界面语言，您都可以用 50 多种语言进行听写。"
         ],
 
-        "No token. Please log in again.": [
-            "No token. Please log in again.",
-            "Brak tokenu. Zaloguj się ponownie.",
-            "Kein Token. Bitte melden Sie sich erneut an.",
-            "No hay token. Por favor inicie sesión nuevamente.",
-            "Aucun jeton. Veuillez vous reconnecter.",
-            "Nessun token. Si prega di accedere di nuovo.",
-            "トークンがありません。もう一度ログインしてください。",
-            "Sem token. Por favor, faça login novamente.",
-            "没有令牌。请重新登录。"
-        ],
-        "No refresh token. Please log in again.": [
-            "No refresh token. Please log in again.",
-            "Brak tokenu odświeżania. Zaloguj się ponownie.",
-            "Kein Aktualisierungs-Token. Bitte melden Sie sich erneut an.",
-            "No hay token de actualización. Por favor inicie sesión nuevamente.",
-            "Aucun jeton d'actualisation. Veuillez vous reconnecter.",
-            "Nessun token di aggiornamento. Si prega di accedere di nuovo.",
-            "更新トークンがありません。もう一度ログインしてください。",
-            "Sem token de atualização. Por favor, faça login novamente.",
-            "没有刷新令牌。请重新登录。"
-        ],
-        "No 'delete_own_user' function in the database. Create it in the SQL Editor in Supabase.": [
-            "No 'delete_own_user' function in the database. Create it in the SQL Editor in Supabase.",
-            "Brak funkcji 'delete_own_user' w bazie. Stwórz ją w SQL Editorze w Supabase.",
-            "Keine 'delete_own_user'-Funktion in der Datenbank. Erstellen Sie sie im SQL-Editor in Supabase.",
-            "No hay función 'delete_own_user' en la base de datos. Créela en el Editor de SQL en Supabase.",
-            "Aucune fonction 'delete_own_user' dans la base de données. Créez-la dans l'éditeur SQL de Supabase.",
-            "Nessuna funzione 'delete_own_user' nel database. Creala nell'Editor SQL in Supabase.",
-            "データベースに'delete_own_user'関数がありません。SupabaseのSQLエディタで作成してください。",
-            "Nenhuma função 'delete_own_user' no banco de dados. Crie-a no Editor SQL no Supabase.",
-            "数据库中没有'delete_own_user'功能。请在Supabase的SQL编辑器中创建它。"
-        ],
         "This application is already used in the assistant '%@'. Do you want to move it to this assistant?": [
             "This application is already used in the assistant '%@'. Do you want to move it to this assistant?",
             "Ta aplikacja jest już używana w asystencie '%@'. Czy chcesz ją przenieść do tego asystenta?",
@@ -764,17 +731,6 @@ public class LocalizationManager: ObservableObject {
             "おめでとうございます、全ての機能が解放されました！", 
             "Parabéns, você desbloqueou todo o potencial!", 
             "恭喜，您已解锁全部潜力！", 
-        ],
-        "Thank you for creating an account in Sonor. You now have access to powerful premium features. You can test them right away!": [
-            "Thank you for creating an account in Sonor. You now have access to powerful premium features. You can test them right away!", 
-            "Dziękujemy za założenie konta w Sonor. Od teraz posiadasz dostęp do potężnych funkcji premium. Możesz je przetestować od razu!", 
-            "Vielen Dank für die Erstellung eines Kontos bei Sonor. Sie haben jetzt Zugang zu leistungsstarken Premium-Funktionen. Sie können sie sofort testen!", 
-            "Gracias por crear una cuenta en Sonor. Ahora tienes acceso a potentes funciones premium. ¡Puedes probarlas de inmediato!", 
-            "Merci d'avoir créé un compte dans Sonor. Vous avez désormais accès à de puissantes fonctionnalités premium. Vous pouvez les tester dès maintenant !", 
-            "Grazie per aver creato un account in Sonor. Ora hai accesso a potenti funzioni premium. Puoi provarle subito!", 
-            "Sonorのアカウントを作成いただきありがとうございます。強力なプレミアム機能をご利用いただけるようになりました。すぐにお試しいただけます！", 
-            "Obrigado por criar uma conta no Sonor. Agora você tem acesso a poderosos recursos premium. Pode testá-los imediatamente!", 
-            "感谢您在 Sonor 创建帐户。您现在可以使用强大的高级功能。您可以马上测试它们！", 
         ],
         "Advanced LLM models": [
             "Advanced LLM models", 
@@ -1139,17 +1095,6 @@ public class LocalizationManager: ObservableObject {
             "Desbloqueie todo o potencial", 
             "解锁全部潜力", 
         ],
-        "Creating a free account unlocks access to advanced assistant features. You can always do this later in settings.": [
-            "Creating a free account unlocks access to advanced assistant features. You can always do this later in settings.", 
-            "Utworzenie bezpłatnego konta odblokowuje dostęp do zaawansowanych funkcji asystenta. Zawsze możesz zrobić to później w ustawieniach.", 
-            "Die Erstellung eines kostenlosen Kontos schaltet den Zugang zu erweiterten Assistentenfunktionen frei.", 
-            "Crear una cuenta gratuita desbloquea el acceso a funciones avanzadas del asistente.", 
-            "La création d'un compte gratuit débloque l'accès aux fonctionnalités avancées de l'assistant.", 
-            "La creazione di un account gratuito sblocca l'accesso alle funzionalità avanzate.", 
-            "無料アカウントを作成すると、高度なアシスタント機能にアクセスできます。", 
-            "A criação de uma conta gratuita desbloqueia o acesso a recursos avançados.", 
-            "创建免费帐户可解锁对高级助手功能的访问权限。", 
-        ],
         "Intelligent formatting, analysis, and processing of your notes and commands.": [
             "Intelligent formatting, analysis, and processing of your notes and commands.", 
             "Inteligentne formatowanie, analiza i przetwarzanie Twoich notatek oraz poleceń.", 
@@ -1205,28 +1150,6 @@ public class LocalizationManager: ObservableObject {
             "Próximo", 
             "下一步", 
         ],
-        "Continue without account": [
-            "Continue without account", 
-            "Kontynuuj niezalogowany", 
-            "Ohne Konto fortfahren", 
-            "Continuar sin cuenta", 
-            "Continuer sans compte", 
-            "Continua senza account", 
-            "アカウントなしで続行", 
-            "Continuar sem conta", 
-            "无帐户继续", 
-        ],
-        "Log in for free": [
-            "Log in for free", 
-            "Zaloguj się za darmo", 
-            "Kostenlos einloggen", 
-            "Iniciar sesión gratis", 
-            "Connectez-vous gratuitement", 
-            "Accedi gratuitamente", 
-            "無料でログイン", 
-            "Entrar de graça", 
-            "免费登录", 
-        ],
         "Incognito Mode Active": [
             "Incognito Mode Active", 
             "Tryb Incognito Włączony", 
@@ -1248,39 +1171,6 @@ public class LocalizationManager: ObservableObject {
             "Googleで続行", 
             "Continuar com o Google", 
             "继续使用 Google", 
-        ],
-        "You will be redirected to Google to authorize the deletion of your account. This action cannot be undone.": [
-            "You will be redirected to Google to authorize the deletion of your account. This action cannot be undone.", 
-            "Zostaniesz przekierowany do Google, aby autoryzować usunięcie konta. Tej operacji nie można cofnąć.", 
-            "Sie werden zu Google weitergeleitet, um die Löschung Ihres Kontos zu autorisieren. Diese Aktion kann nicht rückgängig gemacht werden.", 
-            "Será redirigido a Google para autorizar la eliminación de su cuenta. Esta acción no se puede deshacer.", 
-            "Vous serez redirigé vers Google pour autoriser la suppression de votre compte. Cette action est irréversible.", 
-            "Verrai reindirizzato a Google per autorizzare l'eliminazione del tuo account. Questa azione non può essere annullata.", 
-            "アカウント의削除を承認するため、Googleにリダイレクトされます。この操作は元に戻せません。", 
-            "Você será redirecionado para o Google para autorizar a exclusão da sua conta. Esta ação não pode ser desfeita.", 
-            "您将被重定向至Google以授权删除帐户。此操作无法撤销。", 
-        ],
-        "The selected Google account does not match. Please choose the correct account to delete it.": [
-            "The selected Google account does not match. Please choose the correct account to delete it.", 
-            "Wybrane konto Google nie zgadza się z zalogowanym kontem. Wybierz poprawne konto, aby je usunąć.", 
-            "Das ausgewählte Google-Konto stimmt nicht überein. Bitte wählen Sie das richtige Konto aus, um es zu löschen.", 
-            "La cuenta de Google seleccionada no coincide. Por favor, elija la cuenta correcta para eliminarla.", 
-            "Le compte Google sélectionné ne correspond pas. Veuillez choisir le bon compte pour le supprimer.", 
-            "L'account Google selezionato non corrisponde. Scegli l'account corretto per eliminarlo.", 
-            "選択されたGoogleアカウントが一致しません。削除するには正しいアカウントを選択してください。", 
-            "A conta do Google selecionada não corresponde. Escolha a conta correta para excluí-la.", 
-            "选择的 Google 账号不匹配。请选择正确的账号进行删除。", 
-        ],
-        "Failed to verify the Google token. Please try again.": [
-            "Failed to verify the Google token. Please try again.", 
-            "Nie udało się zweryfikować tokenu Google. Spróbuj ponownie.", 
-            "Google-Token konnte nicht verifiziert werden. Bitte versuchen Sie es erneut.", 
-            "No se pudo verificar el token de Google. Por favor, inténtelo de nuevo.", 
-            "Échec de la vérification du jeton Google. Veuillez réessayer.", 
-            "Impossibile verificare il token Google. Riprova.", 
-            "Googleトークンの検証に失敗しました。もう一度お試しください。", 
-            "Falha ao verificar o token do Google. Tente novamente.", 
-            "验证 Google 令牌失败。请重试。", 
         ],
         "Incognito Mode Inactive": [
             "Incognito Mode Inactive", 
@@ -1425,28 +1315,7 @@ public class LocalizationManager: ObservableObject {
             "Pagar um café ☕️", 
             "请喝杯咖啡 ☕️", 
         ],
-        "Join Discord": [
-            "Join Discord", 
-            "Dołącz do Discorda", 
-            "Discord beitreten", 
-            "Unirse a Discord", 
-            "Rejoindre Discord", 
-            "Unisciti a Discord", 
-            "Discordに参加する", 
-            "Entrar no Discord", 
-            "加入 Discord", 
-        ],
-        "Community and Support": [
-            "Community and Support", 
-            "Społeczność i Wsparcie", 
-            "Community und Support", 
-            "Comunidad y Soporte", 
-            "Communauté et Support", 
-            "Community e Supporto", 
-            "コミュニティ&サポート", 
-            "Comunidade e Suporte", 
-            "社区与支持", 
-        ],
+
         "I accept the": [
             "I accept the", 
             "Akceptuję", 
@@ -1501,17 +1370,6 @@ public class LocalizationManager: ObservableObject {
             "に同意します", 
             "", 
             "", 
-        ],
-        "Please accept the Privacy Policy and Terms of Service to create an account.": [
-            "Please accept the Privacy Policy and Terms of Service to create an account.", 
-            "Proszę zaakceptować Politykę Prywatności i Regulamin Świadczenia Usług, aby utworzyć konto.", 
-            "Bitte akzeptieren Sie die Datenschutzerklärung und die Nutzungsbedingungen, um ein Konto zu erstellen.", 
-            "Por favor, acepte la Política de Privacidad y los Términos de Servicio para crear una cuenta.", 
-            "Veuillez accepter la Politique de Confidentialité et les Conditions de Service pour créer un compte.", 
-            "Si prega di accettare l'Informativa sulla Privacy e i Termini di Servizio per creare un account.", 
-            "アカウントを作成するには、プライバシーポリシーと利用規約に同意してください。", 
-            "Por favor, aceite a Política de Privacidade e os Termos de Serviço para criar uma conta.", 
-            "请接受隐私政策和服务条款以创建账户。", 
         ],
         "Smart Presets": [
             "Smart Presets", 
@@ -1908,17 +1766,6 @@ public class LocalizationManager: ObservableObject {
             "アプリケーションを閉じると、保存されたすべてのテキストは即座に消去されます。復元できないため、データは完全にプライベートに保たれます。", 
             "Todos os textos salvos desaparecem imediatamente ao fechar o aplicativo. Eles não são recuperáveis, garantindo que seus dados permaneçam privados.", 
             "关闭应用程序时，所有保存的文本都会立即消失。它们无法恢复，从而确保您的数据保持私密。", 
-        ],
-        "Already have an account? Log In": [
-            "Already have an account? Log In", 
-            "Masz już konto? Zaloguj się", 
-            "Haben Sie bereits ein Konto? Einloggen", 
-            "¿Ya tienes cuenta? Iniciar sesión", 
-            "Déjà un compte ? Se connecter", 
-            "Hai già un account? Accedi", 
-            "アカウントをお持ちですか？ ログイン", 
-            "Já tem uma conta? Entrar", 
-            "已有账号？登录", 
         ],
         "An unexpected server error occurred.": [
             "An unexpected server error occurred.", 
@@ -2361,17 +2208,6 @@ public class LocalizationManager: ObservableObject {
             "Não exibir este aviso novamente", 
             "不再显示此通知", 
         ],
-        "Don't have an account? Sign Up": [
-            "Don't have an account? Sign Up", 
-            "Nie masz konta? Zarejestruj się", 
-            "Kein Konto? Registrieren", 
-            "¿No tienes cuenta? Registrarse", 
-            "Pas de compte ? S'inscrire", 
-            "Non hai un account? Registrati", 
-            "アカウントをお持ちでないですか？ 新規登録", 
-            "Não tem uma conta? Inscrever-se", 
-            "没有账号？注册", 
-        ],
         "See for yourself.": [
             "See for yourself.", 
             "Przekonaj się o tym samodzielnie.", 
@@ -2504,17 +2340,6 @@ public class LocalizationManager: ObservableObject {
             "Erro / Não reconhecido / Nenhum campo de texto", 
             "错误 / 未识别 / 无文本字段", 
         ],
-        "Error parsing token response": [
-            "Error parsing token response", 
-            "Błąd parsowania odpowiedzi tokenu", 
-            "Fehler beim Parsen der Token-Antwort", 
-            "Error al analizar la respuesta del token", 
-            "Erreur lors de l'analyse de la réponse du jeton", 
-            "Errore durante l'analisi della risposta del token", 
-            "トークン応答の解析エラー", 
-            "Erro ao processar resposta do token", 
-            "解析 Token 响应时出错", 
-        ],
         "Error: Missing model": [
             "Error: Missing model", 
             "Błąd: Brak modelu", 
@@ -2591,17 +2416,6 @@ public class LocalizationManager: ObservableObject {
             "カジュアルなスタイル",
             "Estilo casual",
             "休闲风格",
-        ],
-        "Free account": [
-            "Free account", 
-            "Darmowe konto", 
-            "Kostenloses Konto", 
-            "Cuenta gratuita", 
-            "Compte gratuit", 
-            "Account gratuito", 
-            "無料アカウント", 
-            "Conta gratuita", 
-            "免费账户", 
         ],
         "Get access to advanced AI assistants (speech smoothing, professional emails, notes). Everything is 100% free, runs fully offline on your computer, and collects no data.": [
             "Get access to advanced AI assistants (speech smoothing, professional emails, notes). Everything is 100% free, runs fully offline on your computer, and collects no data.", 
@@ -2735,17 +2549,6 @@ public class LocalizationManager: ObservableObject {
             "Inicializando", 
             "初始化中", 
         ],
-        "Invalid Supabase URL": [
-            "Invalid Supabase URL", 
-            "Nieprawidłowy adres URL Supabase", 
-            "Ungültige Supabase-URL", 
-            "URL de Supabase no válida", 
-            "URL Supabase invalide", 
-            "URL Supabase non valido", 
-            "無効なSupabase URL", 
-            "URL do Supabase inválida", 
-            "无效的 Supabase URL", 
-        ],
         "Join Sonor": [
             "Join Sonor", 
             "Dołącz do Sonor", 
@@ -2856,28 +2659,6 @@ public class LocalizationManager: ObservableObject {
             "Processamento local", 
             "本地处理", 
         ],
-        "Log In": [
-            "Log In", 
-            "Zaloguj się", 
-            "Einloggen", 
-            "Iniciar sesión", 
-            "Se connecter", 
-            "Accedi", 
-            "ログイン", 
-            "Entrar", 
-            "登录", 
-        ],
-        "Log Out": [
-            "Log Out", 
-            "Wyloguj się", 
-            "Abmelden", 
-            "Cerrar sesión", 
-            "Se déconnecter", 
-            "Disconnetti", 
-            "ログアウト", 
-            "Sair", 
-            "登出", 
-        ],
         "Main Assistant": [
             "Main Assistant", 
             "Główny asystent", 
@@ -2910,17 +2691,6 @@ public class LocalizationManager: ObservableObject {
             "マイクエラー", 
             "Erro de microfone", 
             "麦克风错误", 
-        ],
-        "Missing Supabase keys in .env file": [
-            "Missing Supabase keys in .env file", 
-            "Brak kluczy Supabase w pliku .env", 
-            "Fehlende Supabase-Schlüssel in der .env-Datei", 
-            "Faltan las claves de Supabase en el archivo .env", 
-            "Clés Supabase manquantes dans le fichier .env", 
-            "Chiavi Supabase mancanti nel file .env", 
-            ".envファイルにSupabaseキーがありません", 
-            "Chaves Supabase ausentes no arquivo .env", 
-            ".env 文件中缺少 Supabase 密钥", 
         ],
         "Models Required": [
             "Models Required", 
@@ -3164,39 +2934,6 @@ public class LocalizationManager: ObservableObject {
             "Passar texto copiado", 
             "传递复制的文本", 
         ],
-        "Password must be at least 6 characters long.": [
-            "Password must be at least 6 characters long.", 
-            "Hasło musi mieć co najmniej 6 znaków.", 
-            "Das Passwort muss mindestens 6 Zeichen lang sein.", 
-            "La contraseña debe tener al menos 6 caracteres.", 
-            "Le mot de passe doit comporter au moins 6 caractères.", 
-            "La password deve contenere almeno 6 caratteri.", 
-            "パスワードは6文字以上である必要があります。", 
-            "A senha deve ter pelo menos 6 caracteres.", 
-            "密码长度必须至少为 6 个字符。", 
-        ],
-        "Password": [
-            "Password", 
-            "Hasło", 
-            "Passwort", 
-            "Contraseña", 
-            "Mot de passe", 
-            "Password", 
-            "パスワード", 
-            "Senha", 
-            "密码", 
-        ],
-        "Passwords do not match.": [
-            "Passwords do not match.", 
-            "Hasła nie są identyczne.", 
-            "Passwörter stimmen nicht überein.", 
-            "Las contraseñas no coinciden.", 
-            "Les mots de passe ne correspondent pas.", 
-            "Le password non corrispondono.", 
-            "パスワードが一致しません。", 
-            "As senhas não coincidem.", 
-            "密码不匹配。", 
-        ],
         "Performs pure 1:1 transcription of your speech, without any corrections or AI editing.": [
             "Performs pure 1:1 transcription of your speech, without any corrections or AI editing.", 
             "Wykonuje czystą transkrypcję Twojej mowy 1:1, bez wprowadzania jakichkolwiek poprawek ani edycji AI.", 
@@ -3251,28 +2988,6 @@ public class LocalizationManager: ObservableObject {
             "メールアドレスを入力してください。", 
             "Por favor, insira seu endereço de e-mail.", 
             "请输入您的电子邮件地址。", 
-        ],
-        "Please enter your password.": [
-            "Please enter your password.", 
-            "Proszę wpisać swoje hasło.", 
-            "Bitte geben Sie Ihr Passwort ein.", 
-            "Por favor, introduzca su contraseña.", 
-            "Veuillez saisir votre mot de passe.", 
-            "Inserisci la tua password.", 
-            "パスワードを入力してください。", 
-            "Por favor, insira sua senha.", 
-            "请输入您的密码。", 
-        ],
-        "Please repeat your password.": [
-            "Please repeat your password.", 
-            "Proszę powtórzyć hasło.", 
-            "Bitte wiederholen Sie Ihr Passwort.", 
-            "Por favor, repita su contraseña.", 
-            "Veuillez répéter votre mot de passe.", 
-            "Per favore, ripeti la password.", 
-            "パスワードをもう一度入力してください。", 
-            "Por favor, repita sua senha.", 
-            "请再次输入密码。", 
         ],
         "Press keys...": [
             "Press keys...", 
@@ -3394,17 +3109,6 @@ public class LocalizationManager: ObservableObject {
             "プレーンテキスト", 
             "Texto puro", 
             "纯文本", 
-        ],
-        "Repeat password": [
-            "Repeat password", 
-            "Powtórz hasło", 
-            "Passwort wiederholen", 
-            "Repetir contraseña", 
-            "Répéter le mot de passe", 
-            "Ripeti la password", 
-            "パスワードの再入力", 
-            "Repetir senha", 
-            "重复密码", 
         ],
         "Read the same text aloud:": [
             "Read the same text aloud:", 
@@ -3636,17 +3340,6 @@ public class LocalizationManager: ObservableObject {
             "設定", 
             "Configurações", 
             "设置", 
-        ],
-        "Sign Up": [
-            "Sign Up", 
-            "Zarejestruj się", 
-            "Registrieren", 
-            "Registrarse", 
-            "S'inscrire", 
-            "Registrati", 
-            "新規登録", 
-            "Inscrever-se", 
-            "注册", 
         ],
         "Snippets": [
             "Snippets", 
@@ -3978,17 +3671,6 @@ public class LocalizationManager: ObservableObject {
             "Desbloqueie assistentes de IA avançados, dicionários inteligentes e trechos personalizados para transformar cada gravação em texto polido e pronto para uso. Tudo é 100% gratuito e roda totalmente offline no seu computador — os seus dados estão seguros e o aplicativo não coleta nenhuma informação.", 
             "解锁先进 AI 助手、智能词典和自定义片段，将每次录音转化为完美、即用的文本。一切 100% 免费，在计算机上完全离线运行。", 
         ],
-        "Unlock new assistants after logging in": [
-            "Unlock new assistants after logging in", 
-            "Odblokuj nowych asystentów po zalogowaniu", 
-            "Neue Assistenten nach dem Einloggen freischalten", 
-            "Desbloquear asistentes tras iniciar sesión", 
-            "Débloquer les assistants après connexion", 
-            "Sblocca assistenti dopo il login", 
-            "ログインして新しいアシスタントを解放", 
-            "Desbloquear assistentes após login", 
-            "登录后解锁新助手", 
-        ],
         "User": [
             "User", 
             "Użytkownik", 
@@ -4264,39 +3946,6 @@ public class LocalizationManager: ObservableObject {
             "da meta", 
             "目标比例", 
         ],
-        "PREMIUM": [
-            "PREMIUM", 
-            "PREMIUM", 
-            "PREMIUM", 
-            "PREMIUM", 
-            "PREMIUM", 
-            "PREMIUM", 
-            "プレミアム", 
-            "PREMIUM", 
-            "高级会员", 
-        ],
-        "Premium": [
-            "Premium",
-            "Premium",
-            "Premium",
-            "Premium",
-            "Premium",
-            "Premium",
-            "プレミアム",
-            "Premium",
-            "高级会员"
-        ],
-        "Member since:": [
-            "Member since:", 
-            "Konto od:", 
-            "Mitglied seit:", 
-            "Miembro desde:", 
-            "Membre depuis :", 
-            "Iscritto dal:", 
-            "登録日:", 
-            "Membro desde:", 
-            "注册时间:", 
-        ],
         "Loading...": [
             "Loading...", 
             "Ładowanie...", 
@@ -4308,204 +3957,6 @@ public class LocalizationManager: ObservableObject {
             "Carregando...", 
             "加载中...", 
         ],
-        "Delete Account": [
-            "Delete Account", 
-            "Usuń konto", 
-            "Konto löschen", 
-            "Eliminar cuenta", 
-            "Supprimer le compte", 
-            "Elimina account", 
-            "アカウント削除", 
-            "Excluir conta", 
-            "注销账号", 
-        ],
-        "Please enter your password to confirm. This action cannot be undone.": [
-            "Please enter your password to confirm. This action cannot be undone.", 
-            "Wprowadź hasło, aby potwierdzić. Tej operacji nie można cofnąć.", 
-            "Bitte geben Sie Ihr Passwort ein, um zu bestätigen. Diese Aktion kann nicht rückgängig gemacht werden.", 
-            "Por favor, introduzca su contraseña para confirmar. Esta acción no se puede deshacer.", 
-            "Veuillez saisir votre mot de passe pour confirmer. Cette action est irréversible.", 
-            "Inserisci la tua password per confermare. Questa azione non può essere annullata.", 
-            "確認のためパスワードを入力してください。この操作は取り消せません。", 
-            "Por favor, insira sua senha para confirmar. Esta ação não pode ser desfeita.", 
-            "请输入密码以确认。此操作无法撤销。", 
-        ],
-        "Password cannot be empty.": [
-            "Password cannot be empty.", 
-            "Hasło nie może być puste.", 
-            "Das Passwort darf nicht leer sein.", 
-            "La contraseña no puede estar vacía.", 
-            "Le mot de passe ne peut pas être vide.", 
-            "La password non può essere vuota.", 
-            "パスワードを入力してください。", 
-            "A senha não pode estar vazia.", 
-            "密码不能为空。", 
-        ],
-        "Change Password": [
-            "Change Password", 
-            "Zmień hasło", 
-            "Passwort ändern", 
-            "Cambiar contraseña", 
-            "Changer le mot de passe", 
-            "Cambia password", 
-            "パスワード変更", 
-            "Alterar senha", 
-            "修改密码", 
-        ],
-        "Old password": [
-            "Old password", 
-            "Stare hasło", 
-            "Altes Passwort", 
-            "Contraseña anterior", 
-            "Ancien mot de passe", 
-            "Vecchia password", 
-            "現在のパスワード", 
-            "Senha antiga", 
-            "旧密码", 
-        ],
-        "Enter old password...": [
-            "Enter old password...", 
-            "Wpisz stare hasło...", 
-            "Altes Passwort eingeben...", 
-            "Introduzca la contraseña anterior...", 
-            "Saisir l'ancien mot de passe...", 
-            "Inserisci la vecchia password...", 
-            "現在のパスワードを入力...", 
-            "Digite a senha antiga...", 
-            "输入旧密码...", 
-        ],
-        "New password": [
-            "New password", 
-            "Nowe hasło", 
-            "Neues Passwort", 
-            "Contraseña nueva", 
-            "Nouveau mot de passe", 
-            "Nuova password", 
-            "新しいパスワード", 
-            "Nova senha", 
-            "新密码", 
-        ],
-        "Enter new password...": [
-            "Enter new password...", 
-            "Wpisz nowe hasło...", 
-            "Neues Passwort eingeben...", 
-            "Introduzca la contraseña nueva...", 
-            "Saisir le nouveau mot de passe...", 
-            "Inserisci la nuova password...", 
-            "新しいパスワードを入力...", 
-            "Digite a nova senha...", 
-            "输入新密码...", 
-        ],
-        "Repeat new password": [
-            "Repeat new password", 
-            "Powtórz nowe hasło", 
-            "Neues Passwort wiederholen", 
-            "Repetir contraseña nueva", 
-            "Répéter le nouveau mot de passe", 
-            "Ripeti la nuova password", 
-            "新しいパスワードの再入力", 
-            "Repetir a nova senha", 
-            "重复新密码", 
-        ],
-        "Repeat new password...": [
-            "Repeat new password...", 
-            "Powtórz nowe hasło...", 
-            "Neues Passwort wiederholen...", 
-            "Repetir contraseña nueva...", 
-            "Répéter le nouveau mot de passe...", 
-            "Ripeti la nuova password...", 
-            "新しいパスワードをもう一度入力...", 
-            "Repetir a nova senha...", 
-            "再次输入新密码...", 
-        ],
-        "Password Updated Successfully!": [
-            "Password Updated Successfully!", 
-            "Hasło zostało pomyślnie zmienione!", 
-            "Passwort erfolgreich aktualisiert!", 
-            "¡Contraseña actualizada con éxito!", 
-            "Mot de passe mis à jour avec succès !", 
-            "Password aggiornata con successo!", 
-            "パスワードが正常に更新されました！", 
-            "Senha atualizada com sucesso!", 
-            "密码修改成功！", 
-        ],
-        "Your account is now secure with the new password.": [
-            "Your account is now secure with the new password.", 
-            "Twoje konto jest teraz zabezpieczone nowym hasłem.", 
-            "Ihr Konto ist jetzt mit dem neuen Passwort gesichert.", 
-            "Su cuenta está ahora protegida con la nueva contraseña.", 
-            "Votre compte est désormais sécurisé avec le nouveau mot de passe.", 
-            "Il tuo account è ora protetto con la nuova password.", 
-            "アカウントは新しいパスワードで保護されています。", 
-            "Sua conta agora está protegida com a nova senha.", 
-            "您的账号现在已使用新密码保护。", 
-        ],
-        "Save Password": [
-            "Save Password", 
-            "Zapisz hasło", 
-            "Passwort speichern", 
-            "Guardar contraseña", 
-            "Enregistrer le mot de passe", 
-            "Salva password", 
-            "パスワードを保存", 
-            "Salvar senha", 
-            "保存密码", 
-        ],
-        "Please enter your old password.": [
-            "Please enter your old password.", 
-            "Proszę wpisać swoje stare hasło.", 
-            "Bitte geben Sie Ihr altes Passwort ein.", 
-            "Por favor, introduzca su contraseña anterior.", 
-            "Veuillez saisir votre ancien mot de passe.", 
-            "Inserisci la tua vecchia password.", 
-            "現在のパスワードを入力してください。", 
-            "Por favor, insira sua senha antiga.", 
-            "请输入旧密码。", 
-        ],
-        "Password must contain at least one uppercase letter.": [
-            "Password must contain at least one uppercase letter.", 
-            "Hasło musi zawierać co najmniej jedną wielką literę.", 
-            "Das Passwort muss mindestens einen Großbuchstaben enthalten.", 
-            "La contraseña debe contener al menos una letra mayúscula.", 
-            "Le mot de passe doit contenir au moins une lettre majuscule.", 
-            "La password deve contenere almeno una lettera maiuscola.", 
-            "パスワードには少なくとも1つの大文字を含める必要があります。", 
-            "A senha deve conter pelo menos uma letra maiúscula.", 
-            "密码必须至少包含一个大写字母。", 
-        ],
-        "Password must contain at least one lowercase letter.": [
-            "Password must contain at least one lowercase letter.", 
-            "Hasło musi zawierać co najmniej jedną małą literę.", 
-            "Das Passwort muss mindestens einen Kleinbuchstaben enthalten.", 
-            "La contraseña debe contener al menos una letra minúscula.", 
-            "Le mot de passe doit contenir au moins une lettre minuscule.", 
-            "La password deve contenere almeno una lettera minuscola.", 
-            "パスワードには少なくとも1つの小文字を含める必要があります。", 
-            "A senha deve conter pelo menos uma letra minúscula.", 
-            "密码必须至少包含一个小写字母。", 
-        ],
-        "Password must contain at least one number.": [
-            "Password must contain at least one number.", 
-            "Hasło musi zawierać co najmniej jedną cyfrę.", 
-            "Das Passwort muss mindestens eine Zahl enthalten.", 
-            "La contraseña debe contener al menos un número.", 
-            "Le mot de passe doit contenir au moins un chiffre.", 
-            "La password deve contenere almeno un numero.", 
-            "パスワードには少なくとも1つの数字を含める必要があります。", 
-            "A senha deve conter pelo menos um número.", 
-            "密码必须至少包含一个数字。", 
-        ],
-        "Token has expired or is invalid.": [
-            "Token has expired or is invalid.", 
-            "Nieprawidłowy lub wygasły kod.", 
-            "Token ist abgelaufen oder ungültig.", 
-            "El token ha expirado o es inválido.", 
-            "Le jeton a expiré ou est invalide.", 
-            "Il token è scaduto o non valido.", 
-            "トークンの有効期限が切れているか、無効です。", 
-            "O token expirou ou é inválido.", 
-            "令牌已过期或无效。", 
-        ],
         "Please connect to the internet to perform this action.": [
             "Please connect to the internet to perform this action.", 
             "Połącz się z internetem, aby wykonać tę akcję.", 
@@ -4516,72 +3967,6 @@ public class LocalizationManager: ObservableObject {
             "このアクションを実行するにはインターネットに接続してください。", 
             "Conecte-se à internet para realizar esta ação.", 
             "请连接互联网以执行此操作。", 
-        ],
-        "Confirm Email": [
-            "Confirm Email", 
-            "Potwierdź e-mail", 
-            "E-Mail bestätigen", 
-            "Confirmar correo electrónico", 
-            "Confirmer l'e-mail", 
-            "Conferma l'email", 
-            "メールを確認する", 
-            "Confirmar E-mail", 
-            "确认电子邮件", 
-        ],
-        "Please enter the 6-character confirmation code sent to your email. (Check your spam folder)": [
-            "Please enter the 6-character confirmation code sent to your email. (Check your spam folder)", 
-            "Proszę wpisać 6-znakowy kod potwierdzający wysłany na Twój e-mail. (Sprawdź folder spam)", 
-            "Bitte geben Sie den 6-stelligen Bestätigungscode ein, der an Ihre E-Mail gesendet wurde. (Überprüfen Sie Ihren Spam-Ordner)", 
-            "Por favor, introduzca el código de confirmación de 6 caracteres enviado a su correo electrónico. (Revisa tu carpeta de spam)", 
-            "Veuillez entrer le code de confirmation à 6 caractères envoyé à votre adresse e-mail. (Vérifiez votre dossier spam)", 
-            "Inserisci il codice di conferma a 6 caratteri inviato alla tua email. (Controlla la tua cartella spam)", 
-            "メールに送信された6文字の確認コードを入力してください。 (迷惑メールフォルダを確認してください)", 
-            "Por favor, insira o código de confirmação de 6 caracteres enviado para o seu e-mail. (Verifique sua pasta de spam)", 
-            "请输入发送到您电子邮件的 6 字符确认代码。 (检查您的垃圾邮件文件夹)", 
-        ],
-        "Verify": [
-            "Verify", 
-            "Potwierdź", 
-            "Bestätigen", 
-            "Verificar", 
-            "Vérifier", 
-            "Verifica", 
-            "確認", 
-            "Verificar", 
-            "验证", 
-        ],
-        "Resend Email": [
-            "Resend Email", 
-            "Wyślij ponownie e-mail", 
-            "E-Mail erneut senden", 
-            "Reenviar correo electrónico", 
-            "Renvoyer l'e-mail", 
-            "Reinvia l'email", 
-            "メールを再送信する", 
-            "Reenviar e-mail", 
-            "重新发送电子邮件", 
-        ],
-        "To continue, you need to confirm your email address. A 6-digit code will be sent to your email. (Check your spam folder)": [
-            "To continue, you need to confirm your email address. A 6-digit code will be sent to your email. (Check your spam folder)", 
-            "Aby kontynuować, musisz potwierdzić swój adres e-mail. Na Twój e-mail zostanie wysłany 6-cyfrowy kod. (Sprawdź folder spam)", 
-            "Um fortzufahren, müssen Sie Ihre E-Mail-Adresse bestätigen. Ein 6-stelliger Code wird an Ihre E-Mail gesendet. (Überprüfen Sie Ihren Spam-Ordner)", 
-            "Para continuar, debe confirmar su dirección de correo electrónico. Le enviaremos un código de 6 dígitos a su correo electrónico. (Revisa tu carpeta de spam)", 
-            "Pour continuer, vous devez confirmer votre adresse e-mail. Un code à 6 chiffres sera envoyé à votre adresse e-mail. (Vérifiez votre dossier spam)", 
-            "Per continuare, devi confermare il tuo indirizzo email. Un codice a 6 cifre verrà inviato alla tua email. (Controlla la tua cartella spam)", 
-            "続行するには、メールアドレスを確認する必要があります。メールに6桁のコードが送信されます。 (迷惑メールフォルダを確認してください)", 
-            "Para continuar, você precisa confirmar seu endereço de e-mail. Um código de 6 dígitos será enviado para o seu e-mail. (Verifique sua pasta de spam)", 
-            "要继续，您需要确认您的电子邮件地址。一个 6 位数的验证码已发送至您的电子邮箱。 (检查您的垃圾邮件文件夹)", 
-        ],
-        "Confirm email": [
-            "Confirm email", 
-            "Potwierdź e-mail", 
-            "E-Mail bestätigen", 
-            "Confirmar correo electrónico", 
-            "Confirmer l'e-mail", 
-            "Conferma l'email", 
-            "メールを確認する", 
-            "Confirmar e-mail", 
-            "确认电子邮件", 
         ],
         "Text History": [
             "Text History", 
@@ -4858,28 +4243,6 @@ public class LocalizationManager: ObservableObject {
             "Dia da semana", 
             "星期", 
         ],
-        "Incorrect old password.": [
-            "Incorrect old password.", 
-            "Stare hasło jest nieprawidłowe.", 
-            "Falsches altes Passwort.", 
-            "Contraseña anterior incorrecta.", 
-            "Ancien mot de passe incorrect.", 
-            "Vecchia password errata.", 
-            "古いパスワードが間違っています。", 
-            "Senha antiga incorreta.", 
-            "旧密码错误。", 
-        ],
-        "New password cannot be the same as the old password.": [
-            "New password cannot be the same as the old password.", 
-            "Nowe hasło nie może być takie samo jak stare.", 
-            "Das neue Passwort darf nicht mit dem alten Passwort übereinstimmen.", 
-            "La nueva contraseña no puede ser igual a la anterior.", 
-            "Le nouveau mot de passe ne peut pas être identique à l'ancien.", 
-            "La nuova password non può essere uguale a quella vecchia.", 
-            "新しいパスワードを古いパスワードと同じにすることはできません。", 
-            "A nova senha não pode ser igual à antiga.", 
-            "新密码不能与旧密码相同。", 
-        ],
         "Beta": [
             "Beta", 
             "Beta", 
@@ -5001,61 +4364,6 @@ public class LocalizationManager: ObservableObject {
             "O Sonor está em constante desenvolvimento. Atualizações futuras trarão uma seleção mais ampla de modelos de IA avançados.", 
             "Sonor不断在发展。未来的更新将带来更广泛的高级AI模型选择。"
         ],
-        "Forgot Password?": [
-            "Forgot Password?",
-            "Zapomniałeś hasła?",
-            "Passwort vergessen?",
-            "¿Olvidaste tu contraseña?",
-            "Mot de passe oublié ?",
-            "Hai dimenticato la password?",
-            "パスワードをお忘れですか？",
-            "Esqueceu a senha?",
-            "忘记密码？"
-        ],
-        "Enter your email to receive a password reset code.": [
-            "Enter your email to receive a password reset code.",
-            "Wprowadź e-mail, aby otrzymać kod resetowania hasła.",
-            "Geben Sie Ihre E-Mail-Adresse ein, um einen Code zum Zurücksetzen des Passworts zu erhalten.",
-            "Introduce tu correo para recibir un código de restablecimiento.",
-            "Entrez votre e-mail pour recevoir un code de réinitialisation.",
-            "Inserisci l'email per ricevere un codice di reimpostazione.",
-            "メールアドレスを入力して、パスワードリセットコードを受け取ります。",
-            "Insira seu e-mail para receber um código de redefinição de senha.",
-            "输入您的电子邮件以接收密码重置代码。"
-        ],
-        "Enter new password": [
-            "Enter new password",
-            "Wprowadź nowe hasło",
-            "Neues Passwort eingeben",
-            "Introducir nueva contraseña",
-            "Entrez le nouveau mot de passe",
-            "Inserisci una nuova password",
-            "新しいパスワードを入力",
-            "Insira a nova senha",
-            "输入新密码"
-        ],
-        "Send Code": [
-            "Send Code",
-            "Wyślij kod",
-            "Code senden",
-            "Enviar código",
-            "Envoyer le code",
-            "Invia codice",
-            "コードを送信",
-            "Enviar código",
-            "发送验证码"
-        ],
-        "Back to Login": [
-            "Back to Login",
-            "Wróć do logowania",
-            "Zurück zum Login",
-            "Volver a iniciar sesión",
-            "Retour à la connexion",
-            "Torna al login",
-            "ログインに戻る",
-            "Voltar ao login",
-            "返回登录"
-        ],
         "Copy": [
             "Copy",
             "Skopiuj",
@@ -5115,6 +4423,72 @@ public class LocalizationManager: ObservableObject {
             "Không phát hiện trường",
             "ตรวจไม่พบฟิลด์",
             "फ़ील्ड का पता नहीं चला"
+        ],
+        "100% Offline & Private": [
+            "100% Offline & Private",
+            "100% Offline i Prywatność",
+            "100% Offline & Privat",
+            "100% Offline y Privado",
+            "100 % hors ligne et privé",
+            "100% Offline e Privato",
+            "100% オフライン＆プライベート",
+            "100% Offline e Privado",
+            "100% 离线和私密"
+        ],
+        "Complete removal of user accounts and cloud syncing. Sonor now works entirely on your device.": [
+            "Complete removal of user accounts and cloud syncing. Sonor now works entirely on your device.",
+            "Całkowite usunięcie kont użytkowników i synchronizacji w chmurze. Sonor działa teraz całkowicie na Twoim urządzeniu.",
+            "Vollständige Entfernung von Benutzerkonten und Cloud-Synchronisierung. Sonor läuft nun komplett auf Ihrem Gerät.",
+            "Eliminación completa de las cuentas de usuario y sincronización en la nube. Sonor ahora funciona completamente en tu dispositivo.",
+            "Suppression complète des comptes d'utilisateurs et de la synchronisation dans le cloud. Sonor fonctionne désormais entièrement sur votre appareil.",
+            "Rimozione completa degli account utente e della sincronizzazione cloud. Sonor ora funziona interamente sul tuo dispositivo.",
+            "ユーザーアカウントとクラウド同期を完全に削除しました。Sonorはデバイス上で完全に機能するようになりました。",
+            "Remoção completa de contas de usuário e sincronização na nuvem. O Sonor agora funciona inteiramente no seu dispositivo.",
+            "完全删除用户帐户和云同步。Sonor 现在完全在您的设备上运行。"
+        ],
+        "Lighter & Faster": [
+            "Lighter & Faster",
+            "Lżejsza i szybsza",
+            "Leichter & Schneller",
+            "Más ligera y rápida",
+            "Plus léger et plus rapide",
+            "Più leggera e veloce",
+            "より軽く、より速く",
+            "Mais leve e mais rápido",
+            "更轻，更快"
+        ],
+        "Streamlined the interface and removed unnecessary integrations to make the app significantly faster.": [
+            "Streamlined the interface and removed unnecessary integrations to make the app significantly faster.",
+            "Uproszczono interfejs i usunięto niepotrzebne integracje, aby znacznie przyspieszyć działanie aplikacji.",
+            "Die Benutzeroberfläche wurde optimiert und unnötige Integrationen entfernt, um die App deutlich schneller zu machen.",
+            "Se ha optimizado la interfaz y eliminado integraciones innecesarias para que la aplicación sea significativamente más rápida.",
+            "Interface simplifiée et suppressions d'intégrations inutiles pour rendre l'application beaucoup plus rapide.",
+            "Interfaccia semplificata e rimozione di integrazioni non necessarie per rendere l'app significativamente più veloce.",
+            "インターフェイスを合理化し、不要な統合を削除して、アプリを大幅に高速化しました。",
+            "Interface simplificada e remoção de integrações desnecessárias para tornar o aplicativo significativamente mais rápido.",
+            "简化了界面并删除了不必要的集成，使应用程序显著加快。"
+        ],
+        "Simplified Experience": [
+            "Simplified Experience",
+            "Uproszczone doświadczenie",
+            "Vereinfachte Erfahrung",
+            "Experiencia simplificada",
+            "Expérience simplifiée",
+            "Esperienza semplificata",
+            "シンプルな体験",
+            "Experiência simplificada",
+            "简化的体验"
+        ],
+        "Removed unused screens and onboarding steps for quicker access to core features.": [
+            "Removed unused screens and onboarding steps for quicker access to core features.",
+            "Usunięto nieużywane ekrany i etapy wdrażania, aby przyspieszyć dostęp do głównych funkcji.",
+            "Unbenutzte Bildschirme und Onboarding-Schritte wurden entfernt, um schneller auf die Kernfunktionen zugreifen zu können.",
+            "Se eliminaron pantallas y pasos de incorporación no utilizados para un acceso más rápido a las funciones principales.",
+            "Suppression des écrans et des étapes d'intégration inutilisés pour un accès plus rapide aux fonctionnalités principales.",
+            "Rimozione di schermate e passaggi di onboarding inutilizzati per un accesso più rapido alle funzionalità principali.",
+            "未使用の画面とオンボーディング手順を削除し、コア機能へのアクセスを迅速化しました。",
+            "Remoção de telas e etapas de integração não utilizadas para acesso mais rápido aos recursos principais.",
+            "删除了未使用的屏幕和引导步骤，以便更快地访问核心功能。"
         ]
     ]
 
@@ -5133,84 +4507,7 @@ public class LocalizationManager: ObservableObject {
     }
     public func translateError(_ msg: String) -> String {
         let lower = msg.lowercased()
-        if lower.contains("already registered") || lower.contains("already exists") || lower.contains("email already taken") || lower.contains("email address already registered") || lower.contains("user_already_exists") {
-            switch appLanguage {
-            case "pl": return "To konto już istnieje."
-            case "de": return "Dieses Konto existiert bereits."
-            case "es": return "Esta cuenta ya existe."
-            case "fr": return "Ce compte existe déjà."
-            case "it": return "Questo account esiste già."
-            case "ja": return "このアカウントは既に存在します。"
-            case "pt": return "Esta conta já existe."
-            case "zh": return "该账户已存在。"
-            default: return "This account already exists."
-            }
-        }
-        if lower.contains("invalid login credentials") || lower.contains("invalid credentials") {
-            switch appLanguage {
-            case "pl": return "Nieprawidłowy e-mail lub hasło."
-            case "de": return "Ungültige E-Mail-Adresse oder Passwort."
-            case "es": return "Correo electrónico o contraseña incorrectos."
-            case "fr": return "E-mail ou mot de passe incorrect."
-            case "it": return "E-mail o password non valide."
-            case "ja": return "メールアドレスまたはパスワードが正しくありません。"
-            case "pt": return "E-mail ou senha incorretos."
-            case "zh": return "电子邮件或密码错误。"
-            default: return "Invalid email or password."
-            }
-        }
-        if lower.contains("token has expired") || (lower.contains("invalid") && (lower.contains("token") || lower.contains("otp"))) {
-            switch appLanguage {
-            case "pl": return "Nieprawidłowy lub wygasły kod."
-            case "de": return "Token ist abgelaufen oder ungültig."
-            case "es": return "El token ha expirado o es inválido."
-            case "fr": return "Le jeton a expiré ou est invalide."
-            case "it": return "Il token è scaduto o non valido."
-            case "ja": return "トークンの有効期限が切れているか、無効です。"
-            case "pt": return "O token expirou ou é inválido."
-            case "zh": return "令牌已过期或无效。"
-            default: return "Token has expired or is invalid."
-            }
-        }
-        if lower.contains("email not confirmed") {
-            switch appLanguage {
-            case "pl": return "Email nie został potwierdzony."
-            case "de": return "E-Mail nicht bestätigt."
-            case "es": return "Correo electrónico no confirmado."
-            case "fr": return "E-mail non confirmé."
-            case "it": return "Email non confermata."
-            case "ja": return "メールアドレスが確認されていません。"
-            case "pt": return "E-mail não confirmado."
-            case "zh": return "电子邮件未确认。"
-            default: return "Email not confirmed."
-            }
-        }
-        if lower.contains("self-deletion is disabled") || lower.contains("self-deletion not enabled") {
-            switch appLanguage {
-            case "pl": return "Usuwanie konta przez użytkowników jest wyłączone na serwerze."
-            case "de": return "Selbstlöschung von Benutzern ist auf dem Server deaktiviert."
-            case "es": return "La autoeliminación de usuarios está desactivada en el servidor."
-            case "fr": return "La suppression automatique des utilisateurs est désactivée sur le serveur."
-            case "it": return "L'autoeliminazione degli utenti è disabilitata sul server."
-            case "ja": return "サーバーでユーザーの自己削除gはオフになっています。"
-            case "pt": return "A exclusão de conta própria está desativada no servidor."
-            case "zh": return "服务器上已禁用用户自我删除。"
-            default: return "User self-deletion is disabled on the server."
-            }
-        }
-        if lower.contains("abcdefghijklmnopqrstuvwxyz") || lower.contains("password should contain at least one character of each") {
-            switch appLanguage {
-            case "pl": return "Hasło musi zawierać co najmniej jedną małą literę, jedną dużą literę i jedną cyfrę."
-            case "de": return "Das Passwort muss mindestens einen Kleinbuchstaben, einen Großbuchstaben und eine Zahl enthalten."
-            case "es": return "La contraseña debe contener al menos una letra minúscula, una letra mayúscula y un número."
-            case "fr": return "Le mot de passe doit contenir au moins une lettre minuscule, une lettre majuscule et un chiffre."
-            case "it": return "La password deve contenere almeno una lettera minuscola, una lettera maiuscola e un numero."
-            case "ja": return "パスワードには、少なくとも1つの小文字、1つの大文字、および1つの数字を含める必要があります。"
-            case "pt": return "A senha deve conter pelo menos uma letra minúscula, uma letra maiúscula e um número."
-            case "zh": return "密码必须至少包含一个小写字母、一个大写字母和一个数字。"
-            default: return "Password must contain at least one lowercase letter, one uppercase letter, and one number."
-            }
-        }
+
         if lower.contains("offline") || lower.contains("network connection was lost") || lower.contains("could not connect to the server") || lower.contains("no route to host") || lower.contains("timed out") || lower.contains("network is down") {
             switch appLanguage {
             case "pl": return "Brak połączenia z internetem. Sprawdź swoje połączenie sieciowe."
