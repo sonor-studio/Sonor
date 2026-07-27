@@ -25,6 +25,17 @@ public class LocalizationManager: ObservableObject {
         }
     }
     private let translations: [String: [String]] = [
+        "Copy last result": [
+            "Copy last result",
+            "Skopiuj ostatni wynik",
+            "Letztes Ergebnis kopieren",
+            "Copiar el último resultado",
+            "Copier le dernier résultat",
+            "Copia l'ultimo risultato",
+            "最後の結果をコピー",
+            "Copiar último resultado",
+            "复制最后的结果"
+        ],
         "Overlay Appearance": [
             "Overlay Appearance",
             "Wygląd nakładki",

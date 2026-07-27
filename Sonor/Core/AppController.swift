@@ -11,6 +11,7 @@ class AppController: NSObject, ObservableObject {
     @Published var activeDictionaryNotification: DictionaryNotification? = nil
     @Published var activeCopyNotification: String? = nil
     @Published var isPopoverOpen = false
+    @Published var lastTranscription: String? = nil
     private var wasPopoverOpenBeforeRecording = false
     
     /// Displays the current status of the app in the HUD (e.g. "Listening...", "Processing")
@@ -466,6 +467,9 @@ class AppController: NSObject, ObservableObject {
             let duration = Double(samples.count) / 16000.0
             UsageTrackingService.shared.recordUsage(duration: duration, text: rawText)
             let correctedText = TextProcessingService.shared.applyCorrections(to: rawText)
+            await MainActor.run {
+                self.lastTranscription = correctedText
+            }
             await AssistantWorkflowService.shared.execute(
                 correctedText: correctedText,
                 selectedMode: selectedMode,

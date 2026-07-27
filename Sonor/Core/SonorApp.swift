@@ -16,8 +16,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct SonorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var controller = AppController()
-    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @State private var controller = AppController()
     init() {
         NSApplication.shared.setActivationPolicy(.accessory)
         let mainMenu = NSMenu()
@@ -64,11 +63,79 @@ struct SonorApp: App {
     }
     private var menuBarExtraScene: some Scene {
         MenuBarExtra("Sonor", image: "MenuBarIcon") {
-            menuContent
+            MenuContentView(controller: controller)
         }
     }
-    @ViewBuilder
-    private var menuContent: some View {
+}
+
+struct MenuContentView: View {
+    let controller: AppController
+    @State private var isCopyDisabled: Bool
+    @AppStorage("appLanguage") private var appLanguage: String = "en"
+    
+    init(controller: AppController) {
+        self.controller = controller
+        self._isCopyDisabled = State(initialValue: controller.lastTranscription == nil)
+    }
+    
+    var body: some View {
+        let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
+        Text("Sonor v\(appVersion)")
+        
+        Divider()
+        
+        Button(t("Copy last result")) {
+            if let lastText = controller.lastTranscription {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(lastText, forType: .string)
+            }
+        }
+        .disabled(isCopyDisabled)
+        .onReceive(controller.$lastTranscription) { text in
+            isCopyDisabled = (text == nil)
+        }
+        
+        Divider()
+        
+        Menu(t("Language")) {
+            Toggle("English", isOn: Binding(
+                get: { appLanguage == "en" },
+                set: { if $0 { LocalizationManager.shared.appLanguage = "en" } }
+            ))
+            Toggle("Polski", isOn: Binding(
+                get: { appLanguage == "pl" },
+                set: { if $0 { LocalizationManager.shared.appLanguage = "pl" } }
+            ))
+            Toggle("Deutsch", isOn: Binding(
+                get: { appLanguage == "de" },
+                set: { if $0 { LocalizationManager.shared.appLanguage = "de" } }
+            ))
+            Toggle("Español", isOn: Binding(
+                get: { appLanguage == "es" },
+                set: { if $0 { LocalizationManager.shared.appLanguage = "es" } }
+            ))
+            Toggle("Français", isOn: Binding(
+                get: { appLanguage == "fr" },
+                set: { if $0 { LocalizationManager.shared.appLanguage = "fr" } }
+            ))
+            Toggle("Italiano", isOn: Binding(
+                get: { appLanguage == "it" },
+                set: { if $0 { LocalizationManager.shared.appLanguage = "it" } }
+            ))
+            Toggle("日本語", isOn: Binding(
+                get: { appLanguage == "ja" },
+                set: { if $0 { LocalizationManager.shared.appLanguage = "ja" } }
+            ))
+            Toggle("Português", isOn: Binding(
+                get: { appLanguage == "pt" },
+                set: { if $0 { LocalizationManager.shared.appLanguage = "pt" } }
+            ))
+            Toggle("中文", isOn: Binding(
+                get: { appLanguage == "zh" },
+                set: { if $0 { LocalizationManager.shared.appLanguage = "zh" } }
+            ))
+        }
+        
         Button(t("Dashboard")) {
             WindowManager.shared.openSettings()
         }
