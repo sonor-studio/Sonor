@@ -25,7 +25,10 @@ struct GeneralSettingsView: View {
     @State private var pressedModifiers: Set<UInt16> = []
     @State private var maxPressedModifiers: Set<UInt16> = []
     @State private var audioDevices: [AudioDevice] = []
+    @State private var audioOutputDevices: [AudioDevice] = []
     @AppStorage("selectedAudioDeviceUID") private var selectedDeviceUID = ""
+    @AppStorage("selectedAudioOutputDeviceUID") private var selectedOutputDeviceUID = ""
+    @AppStorage("appVolume") private var appVolume: Double = 1.0
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
             HStack {
@@ -43,14 +46,17 @@ struct GeneralSettingsView: View {
             audioSourceSection
             appSoundsSection
             autoUpdateDictionarySection
+            appDataDirectorySection
             footerSection
         }
         .onAppear {
             setupEventMonitor()
             DispatchQueue.global(qos: .userInitiated).async {
                 let devices = AudioManager().getAudioInputDevices()
+                let outDevices = AudioManager().getAudioOutputDevices()
                 DispatchQueue.main.async {
                     self.audioDevices = devices
+                    self.audioOutputDevices = outDevices
                 }
             }
         }
@@ -309,6 +315,26 @@ struct GeneralSettingsView: View {
                 .labelsHidden()
                 .font(.system(size: 13))
             }
+            
+            Divider()
+                .background(Color.white.opacity(0.05))
+
+            HStack {
+                Image(systemName: "speaker.wave.2.fill")
+                    .font(.system(size: 16))
+                Text(t("Select output device:"))
+                    .font(.system(size: 13))
+                Spacer()
+                Picker("", selection: $selectedOutputDeviceUID) {
+                    Text(t("Default system")).tag("")
+                    ForEach(audioOutputDevices) { device in
+                        Text(device.name).tag(device.uid)
+                    }
+                }
+                .pickerStyle(.menu)
+                .labelsHidden()
+                .font(.system(size: 13))
+            }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -324,8 +350,26 @@ struct GeneralSettingsView: View {
     @ViewBuilder
     private var appSoundsSection: some View {
         VStack(alignment: .leading, spacing: 15) {
-            Text(t("App sounds"))
-                .font(.system(size: 16, weight: .semibold))
+            HStack {
+                Text(t("App sounds"))
+                    .font(.system(size: 16, weight: .semibold))
+                Spacer()
+                HStack(spacing: 8) {
+                    Image(systemName: "speaker.fill")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 12))
+                    Slider(value: $appVolume, in: 0...1)
+                        .frame(width: 150)
+                        .accentColor(appColorScheme == .dark ? .white : .black)
+                    Image(systemName: "speaker.wave.3.fill")
+                        .foregroundColor(.secondary)
+                        .font(.system(size: 12))
+                    Text("\(Int(appVolume * 100))%")
+                        .font(.system(size: 12))
+                        .frame(width: 35, alignment: .trailing)
+                }
+            }
+
             Toggle(t("Play sounds"), isOn: $playAnySound)
                 .toggleStyle(CustomToggleStyle())
                 .font(.system(size: 14, weight: .bold))
@@ -389,6 +433,61 @@ struct GeneralSettingsView: View {
                 .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
+    @ViewBuilder
+    private var appDataDirectorySection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("App Data Directory"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            HStack(spacing: 10) {
+                Text(MessageMemoryManager.shared.sonorURL.path)
+                    .font(.system(size: 13))
+                    .foregroundColor(.primary)
+                    .textSelection(.enabled)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.primary.opacity(0.05))
+                    .cornerRadius(6)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                    )
+                
+                Button(action: {
+                    NSWorkspace.shared.selectFile(nil, inFileViewerRootedAtPath: MessageMemoryManager.shared.sonorURL.path)
+                }) {
+                    HStack {
+                        Image(systemName: "folder")
+                            .font(.system(size: 13))
+                        Text(t("Open in Finder"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(0.1))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Text(t("Location where your local history and audio files are stored."))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+
     @ViewBuilder
     private var footerSection: some View {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"

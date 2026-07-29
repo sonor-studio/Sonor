@@ -25,6 +25,50 @@ public class LocalizationManager: ObservableObject {
         }
     }
     private let translations: [String: [String]] = [
+        "App Data Directory": [
+            "App Data Directory",
+            "Katalog danych aplikacji",
+            "App-Datenverzeichnis",
+            "Directorio de datos de la aplicación",
+            "Répertoire de données de l'application",
+            "Directory dei dati dell'app",
+            "アプリデータディレクトリ",
+            "Diretório de dados do aplicativo",
+            "应用数据目录"
+        ],
+        "Location where your local history and audio files are stored.": [
+            "Location where your local history and audio files are stored.",
+            "Miejsce przechowywania lokalnej historii i plików audio.",
+            "Ort, an dem Ihr lokaler Verlauf und Ihre Audiodateien gespeichert werden.",
+            "Ubicación donde se almacenan su historial local y archivos de audio.",
+            "Emplacement où sont stockés votre historique local et vos fichiers audio.",
+            "Posizione in cui sono memorizzati la cronologia locale e i file audio.",
+            "ローカル履歴とオーディオファイルが保存される場所。",
+            "Local onde seu histórico local e arquivos de áudio são armazenados.",
+            "存储本地历史记录和音频文件的位置。"
+        ],
+        "Open in Finder": [
+            "Open in Finder",
+            "Otwórz w Finderze",
+            "Im Finder öffnen",
+            "Abrir en el Finder",
+            "Ouvrir dans le Finder",
+            "Apri nel Finder",
+            "Finder で開く",
+            "Abrir no Finder",
+            "在 Finder 中打开"
+        ],
+        "Select output device:": [
+            "Select output device:",
+            "Wybierz urządzenie wyjściowe:",
+            "Ausgabegerät auswählen:",
+            "Seleccionar dispositivo de salida:",
+            "Sélectionnez le périphérique de sortie :",
+            "Seleziona dispositivo di output:",
+            "出力デバイスを選択:",
+            "Selecione o dispositivo de saída:",
+            "选择输出设备："
+        ],
         "Copy last result": [
             "Copy last result",
             "Skopiuj ostatni wynik",
@@ -389,6 +433,237 @@ public class LocalizationManager: ObservableObject {
             "全著作権所有。",
             "Todos os direitos reservados.",
             "版权所有。"
+        ],
+        "Feedback": [
+            "Feedback",
+            "Zgłoszenia",
+            "Feedback",
+            "Comentarios",
+            "Commentaires",
+            "Feedback",
+            "フィードバック",
+            "Feedback",
+            "反馈"
+        ],
+        "Send Feedback": [
+            "Send Feedback",
+            "Wyślij zgłoszenie",
+            "Feedback senden",
+            "Enviar comentarios",
+            "Envoyer des commentaires",
+            "Invia feedback",
+            "フィードバックを送信",
+            "Enviar feedback",
+            "发送反馈"
+        ],
+        "Type": [
+            "Type",
+            "Typ",
+            "Typ",
+            "Tipo",
+            "Type",
+            "Tipo",
+            "タイプ",
+            "Tipo",
+            "类型"
+        ],
+        "Idea": [
+            "Idea",
+            "Pomysł",
+            "Idee",
+            "Idea",
+            "Idée",
+            "Idea",
+            "アイデア",
+            "Ideia",
+            "想法"
+        ],
+        "Bug Report": [
+            "Bug Report",
+            "Zgłoszenie błędu",
+            "Fehlerbericht",
+            "Informe de error",
+            "Rapport de bug",
+            "Segnalazione bug",
+            "バグレポート",
+            "Relatório de Bug",
+            "错误报告"
+        ],
+        "Question": [
+            "Question",
+            "Pytanie",
+            "Frage",
+            "Pregunta",
+            "Question",
+            "Domanda",
+            "質問",
+            "Pergunta",
+            "问题"
+        ],
+        "Other": [
+            "Other",
+            "Inne",
+            "Andere",
+            "Otro",
+            "Autre",
+            "Altro",
+            "その他",
+            "Outro",
+            "其他"
+        ],
+        "Submit Feedback": [
+            "Submit Feedback",
+            "Prześlij zgłoszenie",
+            "Feedback einreichen",
+            "Enviar comentarios",
+            "Soumettre",
+            "Invia",
+            "送信",
+            "Enviar",
+            "提交"
+        ],
+        "Community & Support": [
+            "Community & Support",
+            "Społeczność i wsparcie",
+            "Community & Support",
+            "Comunidad y soporte",
+            "Communauté et support",
+            "Comunità e supporto",
+            "コミュニティとサポート",
+            "Comunidade e Suporte",
+            "社区与支持"
+        ],
+        "We value your input! Share your thoughts, report issues, or suggest new features to help us improve Sonor.": [
+            "We value your input! Share your thoughts, report issues, or suggest new features to help us improve Sonor.",
+            "Cenimy Twoją opinię! Podziel się swoimi pomysłami, zgłoś błędy lub zasugeruj nowe funkcje, aby pomóc nam ulepszać aplikację Sonor.",
+            "Wir schätzen Ihr Feedback! Teilen Sie Ihre Gedanken mit, melden Sie Fehler oder schlagen Sie neue Funktionen vor.",
+            "¡Valoramos tus comentarios! Comparte tus pensamientos, reporta problemas o sugiere nuevas funciones.",
+            "Nous apprécions vos commentaires ! Partagez vos idées, signalez des bugs ou suggérez de nouvelles fonctionnalités.",
+            "Apprezziamo il tuo feedback! Condividi le tue idee, segnala problemi o suggerisci nuove funzionalità.",
+            "フィードバックを大切にしています！ご意見を共有したり、バグを報告したり、新機能を提案してください。",
+            "Valorizamos a sua opinião! Compartilhe seus pensamentos, relate problemas ou sugira novos recursos.",
+            "我们重视您的反馈！分享您的想法、报告问题或建议新功能。"
+        ],
+        "Sonor is an open platform. We track bugs, feature requests, and community discussions on GitHub. You can also view existing issues to see what we are currently working on.": [
+            "Sonor is an open platform. We track bugs, feature requests, and community discussions on GitHub. You can also view existing issues to see what we are currently working on.",
+            "Sonor to otwarta platforma. Śledzimy błędy, prośby o nowe funkcje i dyskusje na GitHubie. Możesz tam również sprawdzić, nad czym aktualnie pracujemy.",
+            "Sonor ist eine offene Plattform. Wir verfolgen Fehler, Funktionswünsche und Diskussionen auf GitHub.",
+            "Sonor es una plataforma abierta. Rastreamos errores y solicitudes en GitHub.",
+            "Sonor est une plateforme ouverte. Nous suivons les bugs et demandes sur GitHub.",
+            "Sonor è una piattaforma aperta. Teniamo traccia dei bug su GitHub.",
+            "Sonorはオープンなプラットフォームです。バグや機能リクエストをGitHubで追跡しています。",
+            "O Sonor é uma plataforma aberta. Rastreamos bugs e solicitações no GitHub.",
+            "Sonor 是一个开放平台。我们在 GitHub 上跟踪错误和功能请求。"
+        ],
+        "Open GitHub Issues": [
+            "Open GitHub Issues",
+            "Otwórz zgłoszenia na GitHub",
+            "GitHub-Probleme öffnen",
+            "Abrir problemas en GitHub",
+            "Ouvrir les problèmes GitHub",
+            "Apri problemi su GitHub",
+            "GitHubの問題を開く",
+            "Abrir problemas no GitHub",
+            "打开 GitHub 问题"
+        ],
+        "Write your feedback here...": [
+            "Write your feedback here...",
+            "Wpisz swoje zgłoszenie tutaj...",
+            "Schreiben Sie Ihr Feedback hier...",
+            "Escribe tus comentarios aquí...",
+            "Écrivez vos commentaires ici...",
+            "Scrivi qui il tuo feedback...",
+            "ここにフィードバックを記入してください...",
+            "Escreva seu feedback aqui...",
+            "在此处写下您的反馈..."
+        ],
+        "Changelog": [
+            "Changelog",
+            "Dziennik zmian",
+            "Änderungsprotokoll",
+            "Registro de cambios",
+            "Journal des modifications",
+            "Registro delle modifiche",
+            "変更履歴",
+            "Registro de alterações",
+            "更新日志"
+        ],
+        "Thank You!": [
+            "Thank You!",
+            "Dziękujemy!",
+            "Danke!",
+            "¡Gracias!",
+            "Merci !",
+            "Grazie!",
+            "ありがとうございます！",
+            "Obrigado!",
+            "谢谢！"
+        ],
+        "An error occurred. Please try again.": [
+            "An error occurred. Please try again.",
+            "Wystąpił błąd. Spróbuj ponownie.",
+            "Ein Fehler ist aufgetreten. Bitte versuche es erneut.",
+            "Ocurrió un error. Por favor, inténtalo de nuevo.",
+            "Une erreur s'est produite. Veuillez réessayer.",
+            "Si è verificato un errore. Riprova.",
+            "エラーが発生しました。もう一度お試しください。",
+            "Ocorreu um erro. Por favor, tente novamente.",
+            "发生错误。请重试。"
+        ],
+        "Enter custom category...": [
+            "Enter custom category...",
+            "Wpisz własną kategorię...",
+            "Eigene Kategorie eingeben...",
+            "Ingresa una categoría personalizada...",
+            "Entrez une catégorie personnalisée...",
+            "Inserisci una categoria personalizzata...",
+            "カスタムカテゴリを入力...",
+            "Insira uma categoria personalizada...",
+            "输入自定义类别..."
+        ],
+        "Optional: Email address": [
+            "Optional: Email address",
+            "Opcjonalnie: Adres e-mail",
+            "Optional: E-Mail-Adresse",
+            "Opcional: Correo electrónico",
+            "Facultatif : Adresse e-mail",
+            "Opzionale: Indirizzo email",
+            "任意：メールアドレス",
+            "Opcional: Endereço de e-mail",
+            "可选：电子邮件地址"
+        ],
+        "Invalid email address": [
+            "Invalid email address",
+            "Nieprawidłowy adres e-mail",
+            "Ungültige E-Mail-Adresse",
+            "Dirección de correo electrónico no válida",
+            "Adresse e-mail invalide",
+            "Indirizzo email non valido",
+            "無効なメールアドレス",
+            "Endereço de e-mail inválido",
+            "无效的电子邮件地址"
+        ],
+        "This field is required": [
+            "This field is required",
+            "To pole jest wymagane",
+            "Dieses Feld ist erforderlich",
+            "Este campo es obligatorio",
+            "Ce champ est obligatoire",
+            "Questo campo è obbligatorio",
+            "このフィールドは必須です",
+            "Este campo é obrigatório",
+            "此字段为必填项"
+        ],
+        "We carefully review all reports, ideas, and questions to improve Sonor. While we may not be able to reply to every message personally, your feedback is highly appreciated and helps shape our future updates.": [
+            "We carefully review all reports, ideas, and questions to improve Sonor. While we may not be able to reply to every message personally, your feedback is highly appreciated and helps shape our future updates.",
+            "Uważnie analizujemy wszystkie zgłoszenia, pomysły i pytania, aby ulepszać Sonor. Chociaż nie jesteśmy w stanie odpowiedzieć na każdą wiadomość osobiście, Twój feedback jest dla nas niezwykle cenny i pomaga kształtować przyszłe aktualizacje.",
+            "Wir prüfen alle Berichte, Ideen und Fragen sorgfältig, um Sonor zu verbessern. Auch wenn wir nicht jede Nachricht persönlich beantworten können, schätzen wir Ihr Feedback sehr, da es unsere zukünftigen Updates mitgestaltet.",
+            "Revisamos cuidadosamente todos los informes, ideas y preguntas para mejorar Sonor. Aunque no podamos responder a cada mensaje personalmente, valoramos enormemente sus comentarios, ya que ayudan a dar forma a nuestras futuras actualizaciones.",
+            "Nous examinons attentivement tous les rapports, idées et questions pour améliorer Sonor. Bien que nous ne puissions pas répondre personnellement à chaque message, vos commentaires sont grandement appréciés et contribuent à façonner nos futures mises à jour.",
+            "Esaminiamo attentamente tutte le segnalazioni, le idee e le domande per migliorare Sonor. Pur non potendo rispondere personalmente a ogni messaggio, il tuo feedback è molto apprezzato e ci aiuta a dare forma ai futuri aggiornamenti.",
+            "Sonorを改善するため、すべての報告、アイデア、質問を慎重に確認しています。すべてのメッセージに個人的に返信することはできないかもしれませんが、皆様からのフィードバックは非常に高く評価されており、今後のアップデートの形成に役立っています。",
+            "Analisamos cuidadosamente todos os relatórios, ideias e perguntas para melhorar o Sonor. Embora não possamos responder a cada mensagem pessoalmente, seu feedback é muito apreciado e ajuda a moldar nossas atualizações futuras.",
+            "我们会仔细审查所有报告、想法和问题，以改进 Sonor。虽然我们可能无法亲自回复每条消息，但我们非常感谢您的反馈，这有助于塑造我们未来的更新。"
         ],
         "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License": [
             "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License",

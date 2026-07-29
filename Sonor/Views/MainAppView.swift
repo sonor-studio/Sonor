@@ -13,6 +13,8 @@ enum SettingsTab: String {
     case snippets = "Snippety"
     case models = "Modele"
     case settings = "Ustawienia"
+    case changelog = "Changelog"
+    case feedback = "Feedback"
 }
 
 enum HotkeyMode: String, CaseIterable, Identifiable {
@@ -81,6 +83,10 @@ struct MainAppView: View {
                                 ModelsSettingsView()
                             case .settings:
                                 GeneralSettingsView()
+                            case .changelog:
+                                ChangelogView()
+                            case .feedback:
+                                FeedbackView()
                             }
                             Spacer()
                         }
@@ -140,6 +146,9 @@ struct MainAppView: View {
                         .preferredColorScheme(effectiveColorScheme)
                 }
         )
+        .onReceive(NotificationCenter.default.publisher(for: Notification.Name("OpenChangelogTab"))) { _ in
+            selectedTab = .changelog
+        }
         .onAppear {
             loadModes()
             updateWindowAppearance()

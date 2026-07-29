@@ -43,7 +43,8 @@ struct SonorApp: App {
             let isReturningUser = lastSeenVersion != "0.0.0" || UserDefaults.standard.bool(forKey: "hasSeenOnboardingLocally")
             if isReturningUser {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    WindowManager.shared.openChangelogWindow()
+                    WindowManager.shared.openSettings(showSupportWindow: false)
+                    NotificationCenter.default.post(name: Notification.Name("OpenChangelogTab"), object: nil)
                 }
             }
         }

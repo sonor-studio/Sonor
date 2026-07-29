@@ -23,6 +23,7 @@ class AssistantWorkflowService {
         initialPID: pid_t,
         targetAXElement: AXUIElement?,
         wasTextFieldFocusedAtStart: Bool,
+        audioSamples: [Float]? = nil,
         onStatusChange: @escaping @MainActor (String) -> Void,
         onAutoLearnTrigger: @escaping @MainActor (pid_t, String) -> Void,
         onCopyNotificationTrigger: @escaping @MainActor (String) -> Void
@@ -48,7 +49,7 @@ class AssistantWorkflowService {
         
         if !shouldRunLLM {
             // Skip LLM generation and paste directly.
-            MessageMemoryManager.shared.saveMessage(correctedText)
+            MessageMemoryManager.shared.saveMessage(correctedText, samples: audioSamples)
             
             if willPaste {
                 DispatchQueue.global(qos: .userInteractive).async {
@@ -230,7 +231,7 @@ class AssistantWorkflowService {
                 await SoundPlayer.shared.playSound(named: "Error")
             }
             
-            MessageMemoryManager.shared.saveMessage(fullGeneratedText)
+            MessageMemoryManager.shared.saveMessage(fullGeneratedText, samples: audioSamples)
             if finalFocused || initialWillPaste {
                 await MainActor.run {
                     onAutoLearnTrigger(finalPID, fullGeneratedText)

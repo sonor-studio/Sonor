@@ -1,13 +1,10 @@
 import Foundation
 import AVFoundation
-import AppKit
 
-@MainActor
-class SoundPlayer: NSObject, AVAudioPlayerDelegate {
+class SoundPlayer: NSObject {
     static let shared = SoundPlayer()
-    private var activePlayers: [AVAudioPlayer] = []
-    private var continuations: [AVAudioPlayer: CheckedContinuation<Void, Never>] = [:]
-    private var cachedUrls: [String: URL] = [:]
+    
+    private var cachedBuffers: [String: AVAudioPCMBuffer] = [:]
     
     private override init() {
         super.init()
@@ -17,13 +14,20 @@ class SoundPlayer: NSObject, AVAudioPlayerDelegate {
     private func preloadSounds() {
         let soundsToPreload = ["Start", "End", "Error"]
         for name in soundsToPreload {
-            if let url = Bundle.main.url(forResource: name, withExtension: "wav") {
-                cachedUrls[name] = url
+            let url: URL?
+            if let bUrl = Bundle.main.url(forResource: name, withExtension: "wav") {
+                url = bUrl
             } else {
                 let localURL = URL(fileURLWithPath: "/Users/macbook/Desktop/Dev/Sonor/Sonor/\(name).wav")
                 if FileManager.default.fileExists(atPath: localURL.path) {
-                    cachedUrls[name] = localURL
-                }
+                    url = localURL
+                } else { url = nil }
+            }
+            
+            if let url = url, let file = try? AVAudioFile(forReading: url),
+               let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) {
+                try? file.read(into: buffer)
+                cachedBuffers[name] = buffer
             }
         }
     }
@@ -34,32 +38,63 @@ class SoundPlayer: NSObject, AVAudioPlayerDelegate {
         let playSpecificSound = defaults.object(forKey: "playSound_\(name)") == nil ? true : defaults.bool(forKey: "playSound_\(name)")
         
         guard playAnySound && playSpecificSound else { return }
+        guard let buffer = cachedBuffers[name] else { return }
         
-        return await withCheckedContinuation { continuation in
-            guard let url = cachedUrls[name], let player = try? AVAudioPlayer(contentsOf: url) else {
-                continuation.resume()
-                return
+        let appVolume = defaults.object(forKey: "appVolume") == nil ? 1.0 : defaults.double(forKey: "appVolume")
+        let outputDeviceUID = defaults.string(forKey: "selectedAudioOutputDeviceUID") ?? ""
+        
+        // Odtwarzanie asynchronicznie, tak jak thread::spawn w Rust
+        await Task.detached(priority: .userInitiated) {
+            let engine = AVAudioEngine()
+            let playerNode = AVAudioPlayerNode()
+            
+            engine.attach(playerNode)
+            
+            // Konfiguracja sprzętu
+            if !outputDeviceUID.isEmpty && outputDeviceUID != "Default" {
+                if let dev = AudioManager().getAudioOutputDevices().first(where: { $0.uid == outputDeviceUID }) {
+                    if let audioUnit = engine.outputNode.audioUnit {
+                        var devId = dev.id
+                        AudioUnitSetProperty(
+                            audioUnit,
+                            kAudioOutputUnitProperty_CurrentDevice,
+                            kAudioUnitScope_Global,
+                            0,
+                            &devId,
+                            UInt32(MemoryLayout<AudioDeviceID>.size)
+                        )
+                    }
+                }
             }
             
-            player.delegate = self
-            activePlayers.append(player)
-            continuations[player] = continuation
+            engine.connect(playerNode, to: engine.mainMixerNode, format: buffer.format)
             
-            if !player.play() {
-                activePlayers.removeAll { $0 == player }
-                continuations.removeValue(forKey: player)
-                continuation.resume()
+            playerNode.volume = Float(appVolume)
+            
+            do {
+                try engine.start()
+                
+                let semaphore = DispatchSemaphore(value: 0)
+                
+                playerNode.scheduleBuffer(buffer, at: nil, options: []) {
+                    semaphore.signal()
+                }
+                
+                playerNode.play()
+                
+                // Blokujące oczekiwanie na zakończenie strumienia (sink.sleep_until_end)
+                semaphore.wait()
+                
+                // Opóźnienie na zrzut bufora do hardware'u żeby nie ucięło ogona
+                usleep(50_000)
+                
+                playerNode.stop()
+                engine.stop()
+            } catch {
+                print("Error playing sound '\(name)': \(error)")
             }
-        }
-    }
-    
-    nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-        Task { @MainActor in
-            if let continuation = continuations[player] {
-                continuation.resume()
-                continuations.removeValue(forKey: player)
-            }
-            activePlayers.removeAll { $0 == player }
-        }
+        }.value
     }
 }
+
+

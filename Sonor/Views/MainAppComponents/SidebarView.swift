@@ -38,14 +38,27 @@ struct SidebarView: View {
                 MenuButton(title: t("Snippets"), icon: "scissors", isSelected: selectedTab == .snippets) {
                     selectedTab = .snippets
                 }
+                
+                Divider()
+                    .background(Color.white.opacity(0.1))
+                    .padding(.vertical, 5)
+                
+                MenuButton(title: t("Models"), icon: "shippingbox.fill", isSelected: selectedTab == .models) {
+                    selectedTab = .models
+                }
             }
             .padding(.horizontal, 10)
             
             Spacer()
             
-
-            MenuButton(title: t("Models"), icon: "shippingbox.fill", isSelected: selectedTab == .models) {
-                selectedTab = .models
+            MenuButton(title: t("Changelog"), icon: "gift.fill", isSelected: selectedTab == .changelog) {
+                selectedTab = .changelog
+            }
+            .padding(.horizontal, 10)
+            .padding(.bottom, 5)
+            
+            MenuButton(title: t("Feedback"), icon: "envelope.fill", isSelected: selectedTab == .feedback) {
+                selectedTab = .feedback
             }
             .padding(.horizontal, 10)
             .padding(.bottom, 5)

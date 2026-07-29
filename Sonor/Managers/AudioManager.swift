@@ -74,16 +74,29 @@ class AudioManager: ObservableObject {
         }
     }
     @objc private func handleConfigurationChange(notification: Notification) {
-        NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: audioEngine)
+        guard let engine = audioEngine else { return }
+        
         if isTapInstalled {
-            audioEngine?.inputNode.removeTap(onBus: 0)
+            engine.inputNode.removeTap(onBus: 0)
             isTapInstalled = false
         }
-        audioEngine?.stop()
-        audioEngine = nil
-        do {
-            try startRecording(clearSamples: false)
-        } catch {
+        
+        engine.stop()
+        
+        let inputFormat = engine.inputNode.inputFormat(forBus: 0)
+        if let target = targetFormat {
+            audioConverter = AVAudioConverter(from: inputFormat, to: target)
+            engine.inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] (buffer, time) in
+                self?.processAudio(buffer: buffer)
+            }
+            isTapInstalled = true
+            
+            engine.prepare()
+            do {
+                try engine.start()
+            } catch {
+                print("Failed to restart engine after config change: \(error)")
+            }
         }
     }
     /// Stops the audio engine and returns the accumulated audio samples.
@@ -104,7 +117,21 @@ class AudioManager: ObservableObject {
         return samplesQueue.sync {
             var samples = accumulatedSamples
             let chunkSize = 800 
-            let silenceThreshold: Float = 0.01
+            
+            var maxRms: Float = 0.0001
+            var chunkIndex = 0
+            while chunkIndex <= samples.count - chunkSize {
+                var sumSq: Float = 0.0
+                for j in chunkIndex..<chunkIndex+chunkSize {
+                    sumSq += samples[j] * samples[j]
+                }
+                let rms = sqrt(sumSq / Float(chunkSize))
+                if rms > maxRms { maxRms = rms }
+                chunkIndex += chunkSize
+            }
+            
+            let silenceThreshold = maxRms * 0.1 // 10% of peak volume
+            
             var i = samples.count
             while i >= chunkSize {
                 let start = i - chunkSize
@@ -247,5 +274,79 @@ class AudioManager: ObservableObject {
             devices.append(AudioDevice(id: id, uid: uid, name: name))
         }
         return devices
+    }
+
+    func getAudioOutputDevices() -> [AudioDevice] {
+        var devices: [AudioDevice] = []
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        var size: UInt32 = 0
+        let status = AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size)
+        if status != noErr { return devices }
+        
+        let count = Int(size) / MemoryLayout<AudioDeviceID>.size
+        var deviceIDs = [AudioDeviceID](repeating: 0, count: count)
+        AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &deviceIDs)
+        
+        for id in deviceIDs {
+            var streamAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyStreams,
+                mScope: kAudioDevicePropertyScopeOutput,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var streamSize: UInt32 = 0
+            if AudioObjectGetPropertyDataSize(id, &streamAddress, 0, nil, &streamSize) != noErr || streamSize == 0 {
+                continue 
+            }
+            
+            var nameAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioObjectPropertyName,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var nameSize = UInt32(MemoryLayout<CFString>.size)
+            var coreName: Unmanaged<CFString>? = nil
+            AudioObjectGetPropertyData(id, &nameAddress, 0, nil, &nameSize, &coreName)
+            let name = (coreName?.takeRetainedValue() as String?) ?? "Unknown Device"
+            
+            var uidAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyDeviceUID,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var uidSize = UInt32(MemoryLayout<CFString>.size)
+            var coreUID: Unmanaged<CFString>? = nil
+            AudioObjectGetPropertyData(id, &uidAddress, 0, nil, &uidSize, &coreUID)
+            let uid = (coreUID?.takeRetainedValue() as String?) ?? UUID().uuidString
+            
+            devices.append(AudioDevice(id: id, uid: uid, name: name))
+        }
+        return devices
+    }
+
+    func getDefaultAudioOutputDeviceUID() -> String? {
+        var defaultOutputDeviceID = kAudioObjectUnknown
+        var size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        if AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &size, &defaultOutputDeviceID) == noErr {
+            var uidSize = UInt32(MemoryLayout<CFString>.size)
+            var uidAddress = AudioObjectPropertyAddress(
+                mSelector: kAudioDevicePropertyDeviceUID,
+                mScope: kAudioObjectPropertyScopeGlobal,
+                mElement: kAudioObjectPropertyElementMain
+            )
+            var coreUID: Unmanaged<CFString>? = nil
+            if AudioObjectGetPropertyData(defaultOutputDeviceID, &uidAddress, 0, nil, &uidSize, &coreUID) == noErr {
+                return coreUID?.takeRetainedValue() as String?
+            }
+        }
+        return nil
     }
 }

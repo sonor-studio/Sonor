@@ -126,6 +126,9 @@ struct RamHistoryView: View {
                                     onCardHover: { hovering in
                                         hoveredCardId = hovering ? msg.id : nil
                                     },
+                                    onPlayHover: { hovering in
+                                        // Optional: Handle play hover at parent level if needed
+                                    },
                                     onDelete: {
                                         memoryManager.deleteMessage(id: msg.id)
                                     }
@@ -210,9 +213,12 @@ struct MessageCardView: View {
     let onCopyHover: (Bool) -> Void
     let onDeleteHover: (Bool) -> Void
     let onCardHover: (Bool) -> Void
+    let onPlayHover: (Bool) -> Void
     let onDelete: () -> Void
     @State private var isCopied = false
     @State private var isExpanded = false
+    @State private var audioDuration: Double = 0.0
+    @ObservedObject private var audioPlayer = HistoryAudioPlayer.shared
     private var copyBgColor: Color {
         if isCopyHovered {
             return colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.06)
@@ -241,6 +247,24 @@ struct MessageCardView: View {
             return Color.secondary
         }
     }
+    private var playBgColor: Color {
+        if isPlayHovered {
+            return colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.06)
+        } else {
+            return Color.clear
+        }
+    }
+    private var playFgColor: Color {
+        if isPlayHovered {
+            return colorScheme == .dark ? Color.white : Color.black
+        } else {
+            return Color.secondary
+        }
+    }
+    private var isPlayHovered: Bool {
+        return _isPlayHovered
+    }
+    @State private var _isPlayHovered = false
     private var cardBgColor: Color {
         if colorScheme == .dark {
             return isCardHovered ? Color.white.opacity(0.05) : Color.white.opacity(0.025)
@@ -333,9 +357,75 @@ struct MessageCardView: View {
                 .lineSpacing(3)
                 .lineLimit(isExpanded ? nil : 3)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                
+            if msg.hasAudio == true {
+                let isPlaying = audioPlayer.playingID == msg.id
+                let duration = isPlaying ? audioPlayer.duration : audioDuration
+                let current = isPlaying ? audioPlayer.currentTime : 0.0
+                
+                Divider()
+                    .padding(.vertical, 4)
+                
+                HStack(spacing: 12) {
+                    Button(action: {
+                        if isPlaying {
+                            audioPlayer.stop()
+                        } else {
+                            if let data = MessageMemoryManager.shared.getAudioData(for: msg.id) {
+                                audioPlayer.play(id: msg.id, data: data)
+                            }
+                        }
+                    }) {
+                        Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                            .font(.system(size: 12))
+                            .foregroundColor(.primary)
+                            .frame(width: 26, height: 26)
+                            .background(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.06))
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule()
+                                .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1))
+                                .frame(height: 6)
+                            
+                            Capsule()
+                                .fill(Color.primary)
+                                .frame(width: max(0, geo.size.width * CGFloat(duration > 0 ? current / duration : 0)), height: 6)
+                        }
+                        .contentShape(Rectangle())
+                        .gesture(
+                            DragGesture(minimumDistance: 0)
+                                .onChanged { value in
+                                    if isPlaying {
+                                        let percent = max(0, min(1, value.location.x / geo.size.width))
+                                        audioPlayer.seek(to: Double(percent) * duration)
+                                    }
+                                }
+                        )
+                    }
+                    .frame(height: 10)
+                    
+                    Text("\(formatTime(current)) / \(formatTime(duration))")
+                        .font(.system(size: 11, weight: .medium).monospacedDigit())
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 4)
+                .padding(.bottom, 2)
+            }
         }
         .padding(14)
         .contentShape(Rectangle())
+        .onAppear {
+            if msg.hasAudio == true {
+                if let data = MessageMemoryManager.shared.getAudioData(for: msg.id) {
+                    let samplesBytes = max(0, data.count - 44)
+                    audioDuration = Double(samplesBytes) / 32000.0
+                }
+            }
+        }
         .onTapGesture {
             withAnimation(.easeInOut(duration: 0.2)) {
                 isExpanded.toggle()
@@ -355,5 +445,12 @@ struct MessageCardView: View {
                 onCardHover(hovering)
             }
         }
+    }
+    
+    private func formatTime(_ seconds: Double) -> String {
+        guard seconds >= 0 && !seconds.isNaN else { return "0:00" }
+        let min = Int(seconds) / 60
+        let sec = Int(seconds) % 60
+        return String(format: "%d:%02d", min, sec)
     }
 }

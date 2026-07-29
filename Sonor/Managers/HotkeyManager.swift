@@ -205,6 +205,28 @@ class HotkeyManager {
         }
         let isHoldMode = self.activeIsHoldMode
         
+        var ignoredModifiers = NSEvent.ModifierFlags()
+        if self.isKeyDown {
+            if mainHotkey.isOnlyModifier {
+                var mainTriggerFlag = NSEvent.ModifierFlags()
+                switch mainHotkey.code {
+                case 54, 55: mainTriggerFlag = .command
+                case 56, 60: mainTriggerFlag = .shift
+                case 58, 61: mainTriggerFlag = .option
+                case 59, 62: mainTriggerFlag = .control
+                default: break
+                }
+                ignoredModifiers = mainHotkey.targetModifiers.union(mainTriggerFlag)
+            } else {
+                ignoredModifiers = mainHotkey.targetModifiers
+            }
+        }
+        
+        func modifiersMatch(_ target: NSEvent.ModifierFlags, current: NSEvent.ModifierFlags) -> Bool {
+            let extra = current.subtracting(target)
+            return extra.isSubset(of: ignoredModifiers) && target.isSubset(of: current)
+        }
+        
         if type == .flagsChanged {
             let code = Int(nsEvent.keyCode)
             let modifiers = nsEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
@@ -282,7 +304,7 @@ class HotkeyManager {
                 
                 if code == cancelHotkey.code && isPressed {
                     let activeOthers = modifiers.subtracting(cancelTriggerFlag)
-                    if activeOthers == cancelHotkey.targetModifiers {
+                    if modifiersMatch(cancelHotkey.targetModifiers, current: activeOthers) {
                         if !self.isCancelKeyDown {
                             self.isCancelKeyDown = true
                             self.modifierOnlyHotkeyAborted = false
@@ -317,7 +339,7 @@ class HotkeyManager {
                 
                 if code == pauseHotkey.code && isPressed {
                     let activeOthers = modifiers.subtracting(pauseTriggerFlag)
-                    if activeOthers == pauseHotkey.targetModifiers {
+                    if modifiersMatch(pauseHotkey.targetModifiers, current: activeOthers) {
                         if !self.isPauseKeyDown {
                             self.isPauseKeyDown = true
                             self.modifierOnlyHotkeyAborted = false
@@ -352,7 +374,7 @@ class HotkeyManager {
                 
                 if code == assistantHotkey.code && isPressed {
                     let activeOthers = modifiers.subtracting(assistantTriggerFlag)
-                    if activeOthers == assistantHotkey.targetModifiers {
+                    if modifiersMatch(assistantHotkey.targetModifiers, current: activeOthers) {
                         if !self.isAssistantKeyDown {
                             self.isAssistantKeyDown = true
                             self.modifierOnlyHotkeyAborted = false
@@ -399,17 +421,17 @@ class HotkeyManager {
                 return nil
             }
             
-            if !cancelHotkey.isOnlyModifier && code == cancelHotkey.code && modifiers == cancelHotkey.targetModifiers {
+            if !cancelHotkey.isOnlyModifier && code == cancelHotkey.code && modifiersMatch(cancelHotkey.targetModifiers, current: modifiers) {
                 DispatchQueue.main.async { self.onCancelKeyDown?() }
                 capturedKeys.insert(code)
                 return nil
             }
-            if !pauseHotkey.isOnlyModifier && code == pauseHotkey.code && modifiers == pauseHotkey.targetModifiers {
+            if !pauseHotkey.isOnlyModifier && code == pauseHotkey.code && modifiersMatch(pauseHotkey.targetModifiers, current: modifiers) {
                 DispatchQueue.main.async { self.onPauseKeyDown?() }
                 capturedKeys.insert(code)
                 return nil
             }
-            if !assistantHotkey.isOnlyModifier && code == assistantHotkey.code && modifiers == assistantHotkey.targetModifiers {
+            if !assistantHotkey.isOnlyModifier && code == assistantHotkey.code && modifiersMatch(assistantHotkey.targetModifiers, current: modifiers) {
                 DispatchQueue.main.async { self.onAssistantKeyDown?() }
                 capturedKeys.insert(code)
                 return nil

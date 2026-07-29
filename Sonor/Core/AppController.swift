@@ -273,9 +273,12 @@ class AppController: NSObject, ObservableObject {
                 Task {
                     if Task.isCancelled { return }
                     guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
+                    
                     Task {
                         await SoundPlayer.shared.playSound(named: "Start")
                     }
+                    try? await Task.sleep(nanoseconds: 150_000_000)
+                    
                     await MainActor.run {
                         if Task.isCancelled { return }
                         guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
@@ -476,6 +479,7 @@ class AppController: NSObject, ObservableObject {
                 initialPID: self.targetAppPID,
                 targetAXElement: self.targetAXElement,
                 wasTextFieldFocusedAtStart: self.wasTextFieldFocusedAtStart,
+                audioSamples: samples,
                 onStatusChange: { newStatus in
                     self.statusText = newStatus
                 },

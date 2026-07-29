@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct ChangelogView: View {
-    let onComplete: () -> Void
     @Environment(\.colorScheme) var colorScheme
     
     private var currentVersion: String {
@@ -51,24 +50,6 @@ struct ChangelogView: View {
             .padding(.horizontal, 32)
             
             Spacer()
-            
-            Button(action: {
-                onComplete()
-            }) {
-                Text(t_changelog("Understood"))
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundColor(colorScheme == .dark ? .black : .white)
-                    .frame(width: 200)
-                    .padding(.vertical, 12)
-                    .background(colorScheme == .dark ? Color.white : Color.black)
-                    .cornerRadius(8)
-            }
-            .buttonStyle(.plain)
-            .focusable(false)
-            .keyboardShortcut(.defaultAction)
-            .padding(.bottom, 24)
         }
-        .frame(width: 440, height: 480)
-        .background(colorScheme == .dark ? Color.black : Color.white)
     }
 }
