@@ -19,6 +19,7 @@ struct GeneralSettingsView: View {
     @AppStorage("playSound_End") private var playSound_End = true
     @ObservedObject private var memoryManager = MessageMemoryManager.shared
     @State private var isShowingSwitchToRamAlert = false
+    @State private var isShowingDeleteAudioAlert = false
     @State private var isShowingDuplicateShortcutAlert = false
     @State private var activeRecordingType: RecordingHotkeyType? = nil
     @State private var eventMonitor: Any?
@@ -29,6 +30,7 @@ struct GeneralSettingsView: View {
     @AppStorage("selectedAudioDeviceUID") private var selectedDeviceUID = ""
     @AppStorage("selectedAudioOutputDeviceUID") private var selectedOutputDeviceUID = ""
     @AppStorage("appVolume") private var appVolume: Double = 1.0
+    @AppStorage("historySavesAudio") private var historySavesAudio = true
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
             HStack {
@@ -73,6 +75,19 @@ struct GeneralSettingsView: View {
             }
         } message: {
             Text(t("Switching to RAM-only means your persistent history file will be deleted and your current history will disappear forever once you close the application. Are you sure you want to continue?"))
+        }
+        .alert(t("Delete Audio History"), isPresented: $isShowingDeleteAudioAlert) {
+            Button(t("Delete Audio"), role: .destructive) {
+                withAnimation {
+                    MessageMemoryManager.shared.clearAllAudio()
+                    historySavesAudio = false
+                }
+            }
+            Button(t("Cancel"), role: .cancel) {
+                historySavesAudio = true
+            }
+        } message: {
+            Text(t("Disabling audio history will permanently delete all currently saved audio recordings. Are you sure you want to continue?"))
         }
         .alert(t("Duplicate Shortcut"), isPresented: $isShowingDuplicateShortcutAlert) {
             Button("OK", role: .cancel) { }
@@ -139,6 +154,22 @@ struct GeneralSettingsView: View {
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
+                
+            Divider()
+                .padding(.vertical, 5)
+                
+            Toggle(t("Save Audio with History"), isOn: Binding(
+                get: { historySavesAudio },
+                set: { newValue in
+                    if !newValue {
+                        isShowingDeleteAudioAlert = true
+                    } else {
+                        historySavesAudio = true
+                    }
+                }
+            ))
+            .toggleStyle(CustomToggleStyle())
+            .font(.system(size: 14, weight: .medium))
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -510,7 +541,7 @@ struct GeneralSettingsView: View {
                             .frame(width: 28, height: 28)
                             .foregroundColor(.primary)
                     }
-                    .help("https://github.com/sonor-studio/Sonor")
+                    .help("GitHub")
                     .buttonStyle(.plain)
                 }
             }

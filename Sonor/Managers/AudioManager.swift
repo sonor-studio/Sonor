@@ -115,44 +115,7 @@ class AudioManager: ObservableObject {
             self.audioLevel = 0.0
         }
         return samplesQueue.sync {
-            var samples = accumulatedSamples
-            let chunkSize = 800 
-            
-            var maxRms: Float = 0.0001
-            var chunkIndex = 0
-            while chunkIndex <= samples.count - chunkSize {
-                var sumSq: Float = 0.0
-                for j in chunkIndex..<chunkIndex+chunkSize {
-                    sumSq += samples[j] * samples[j]
-                }
-                let rms = sqrt(sumSq / Float(chunkSize))
-                if rms > maxRms { maxRms = rms }
-                chunkIndex += chunkSize
-            }
-            
-            let silenceThreshold = maxRms * 0.1 // 10% of peak volume
-            
-            var i = samples.count
-            while i >= chunkSize {
-                let start = i - chunkSize
-                let end = i
-                var sumSq: Float = 0.0
-                for j in start..<end {
-                    let val = samples[j]
-                    sumSq += val * val
-                }
-                let rms = sqrt(sumSq / Float(chunkSize))
-                if rms < silenceThreshold {
-                    for j in start..<end {
-                        samples[j] = 0.0
-                    }
-                    i -= chunkSize
-                } else {
-                    break
-                }
-            }
-
-            
+            let samples = accumulatedSamples
             accumulatedSamples = []
             return samples
         }

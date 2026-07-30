@@ -220,8 +220,6 @@ class AppController: NSObject, ObservableObject {
             let behavior = selectedMode.audioBehavior ?? .keep
             if self.sonorContext == nil {
                 self.statusText = "Initializing"
-            } else if behavior == .mute {
-                self.statusText = "Preparing..."
             } else {
                 self.statusText = "Listening..."
             }
@@ -266,17 +264,18 @@ class AppController: NSObject, ObservableObject {
                 if Task.isCancelled { return }
                 guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
                 
-                if behavior == .mute {
-                    MediaControlService.shared.pauseMultimedia(behavior: .mute)
-                }
-                
                 Task {
                     if Task.isCancelled { return }
                     guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
                     
+                    if behavior == .mute {
+                        MediaControlService.shared.pauseMultimedia(behavior: .mute)
+                    }
+                    
                     Task {
                         await SoundPlayer.shared.playSound(named: "Start")
                     }
+                    
                     try? await Task.sleep(nanoseconds: 150_000_000)
                     
                     await MainActor.run {

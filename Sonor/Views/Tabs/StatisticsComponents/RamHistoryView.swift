@@ -218,6 +218,8 @@ struct MessageCardView: View {
     @State private var isCopied = false
     @State private var isExpanded = false
     @State private var audioDuration: Double = 0.0
+    @State private var localDragPercent: Double? = nil
+    @State private var wasPlayingBeforeDrag = false
     @ObservedObject private var audioPlayer = HistoryAudioPlayer.shared
     private var copyBgColor: Color {
         if isCopyHovered {
@@ -359,17 +361,19 @@ struct MessageCardView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 
             if msg.hasAudio == true {
-                let isPlaying = audioPlayer.playingID == msg.id
-                let duration = isPlaying ? audioPlayer.duration : audioDuration
-                let current = isPlaying ? audioPlayer.currentTime : 0.0
+                let isActive = audioPlayer.playingID == msg.id
+                let duration = isActive ? audioPlayer.duration : audioDuration
+                let current = isActive ? audioPlayer.currentTime : 0.0
+                let isPlaying = isActive && !audioPlayer.isPaused
+                let dragTime = localDragPercent != nil ? (localDragPercent! * duration) : current
                 
                 Divider()
                     .padding(.vertical, 4)
                 
                 HStack(spacing: 12) {
                     Button(action: {
-                        if isPlaying {
-                            audioPlayer.stop()
+                        if isActive && isPlaying {
+                            audioPlayer.pause()
                         } else {
                             if let data = MessageMemoryManager.shared.getAudioData(for: msg.id) {
                                 audioPlayer.play(id: msg.id, data: data)
@@ -385,30 +389,55 @@ struct MessageCardView: View {
                     }
                     .buttonStyle(.plain)
                     
-                    GeometryReader { geo in
-                        ZStack(alignment: .leading) {
-                            Capsule()
-                                .fill(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.1))
-                                .frame(height: 6)
-                            
-                            Capsule()
-                                .fill(Color.primary)
-                                .frame(width: max(0, geo.size.width * CGFloat(duration > 0 ? current / duration : 0)), height: 6)
-                        }
-                        .contentShape(Rectangle())
-                        .gesture(
-                            DragGesture(minimumDistance: 0)
-                                .onChanged { value in
-                                    if isPlaying {
-                                        let percent = max(0, min(1, value.location.x / geo.size.width))
-                                        audioPlayer.seek(to: Double(percent) * duration)
+                    Slider(
+                        value: Binding(
+                            get: {
+                                if let drag = localDragPercent {
+                                    return drag * duration
+                                }
+                                return min(max(0, current), max(0.1, duration))
+                            },
+                            set: { newValue in
+                                localDragPercent = max(0, min(1, newValue / max(0.1, duration)))
+                            }
+                        ),
+                        in: 0...max(0.1, duration),
+                        onEditingChanged: { editing in
+                            if editing {
+                                if isActive {
+                                    wasPlayingBeforeDrag = !audioPlayer.isPaused
+                                    if wasPlayingBeforeDrag {
+                                        audioPlayer.pause()
+                                    }
+                                } else {
+                                    wasPlayingBeforeDrag = false
+                                }
+                            } else {
+                                if let percent = localDragPercent {
+                                    let seekTime = percent * duration
+                                    if !isActive {
+                                        if let data = MessageMemoryManager.shared.getAudioData(for: msg.id) {
+                                            audioPlayer.play(id: msg.id, data: data)
+                                            audioPlayer.seek(to: seekTime)
+                                            if !wasPlayingBeforeDrag { audioPlayer.pause() }
+                                        }
+                                    } else {
+                                        audioPlayer.seek(to: seekTime)
+                                        if wasPlayingBeforeDrag {
+                                            if let data = MessageMemoryManager.shared.getAudioData(for: msg.id) {
+                                                audioPlayer.play(id: msg.id, data: data)
+                                            }
+                                        }
                                     }
                                 }
-                        )
-                    }
-                    .frame(height: 10)
+                                localDragPercent = nil
+                            }
+                        }
+                    )
+                    .controlSize(.mini)
+                    .tint(.primary)
                     
-                    Text("\(formatTime(current)) / \(formatTime(duration))")
+                    Text("\(formatTime(dragTime)) / \(formatTime(duration))")
                         .font(.system(size: 11, weight: .medium).monospacedDigit())
                         .foregroundColor(.secondary)
                 }

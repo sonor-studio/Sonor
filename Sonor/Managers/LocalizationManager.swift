@@ -4331,6 +4331,50 @@ public class LocalizationManager: ObservableObject {
             "Mudar para 'Apenas RAM' significa que seu arquivo de histórico persistente será excluído e seu histórico atual desaparecerá para sempre quando você fechar o aplicativo. Tem certeza de que deseja continuar?", 
             "切换到仅使用 RAM 意味着您的持久历史记录文件将被删除，一旦您关闭应用程序，当前的历史记录将永远消失。您确定要继续吗？", 
         ],
+        "Delete Audio History": [
+            "Delete Audio History",
+            "Usuń historię dźwięku",
+            "Audio-Verlauf löschen",
+            "Eliminar historial de audio",
+            "Supprimer l'historique audio",
+            "Elimina cronologia audio",
+            "音声履歴を削除",
+            "Excluir histórico de áudio",
+            "删除音频历史记录"
+        ],
+        "Delete Audio": [
+            "Delete Audio",
+            "Usuń dźwięk",
+            "Audio löschen",
+            "Eliminar audio",
+            "Supprimer l'audio",
+            "Elimina audio",
+            "音声を削除",
+            "Excluir áudio",
+            "删除音频"
+        ],
+        "Disabling audio history will permanently delete all currently saved audio recordings. Are you sure you want to continue?": [
+            "Disabling audio history will permanently delete all currently saved audio recordings. Are you sure you want to continue?",
+            "Wyłączenie historii dźwięku trwale usunie wszystkie obecnie zapisane nagrania audio. Czy na pewno chcesz kontynuować?",
+            "Das Deaktivieren des Audio-Verlaufs löscht alle aktuell gespeicherten Audioaufnahmen dauerhaft. Sind Sie sicher, dass Sie fortfahren möchten?",
+            "Desactivar el historial de audio eliminará permanentemente todas las grabaciones de audio guardadas actualmente. ¿Está seguro de que desea continuar?",
+            "Désactiver l'historique audio supprimera définitivement tous les enregistrements audio actuellement sauvegardés. Êtes-vous sûr de vouloir continuer ?",
+            "La disattivazione della cronologia audio eliminerà in modo permanente tutte le registrazioni audio attualmente salvate. Sei sicuro di voler continuare?",
+            "音声履歴を無効にすると、現在保存されているすべての音声録音が完全に削除されます。本当に続行しますか？",
+            "Desativar o histórico de áudio excluirá permanentemente todas as gravações de áudio salvas no momento. Tem certeza de que deseja continuar?",
+            "禁用音频历史记录将永久删除当前保存的所有录音。您确定要继续吗？"
+        ],
+        "Save Audio with History": [
+            "Save Audio with History",
+            "Zapisuj dźwięk w historii",
+            "Audio mit Verlauf speichern",
+            "Guardar audio con historial",
+            "Enregistrer l'audio avec l'historique",
+            "Salva audio con cronologia",
+            "履歴と一緒に音声を保存",
+            "Salvar áudio com histórico",
+            "保存音频至历史记录"
+        ],
         "Proceed to RAM": [
             "Proceed to RAM", 
             "Przejdź na RAM", 

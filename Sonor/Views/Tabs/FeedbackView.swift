@@ -82,6 +82,7 @@ struct FeedbackView: View {
                 ZStack(alignment: .topLeading) {
                     TextEditor(text: $feedbackText)
                         .font(.body)
+                        .scrollContentBackground(.hidden)
                         .padding(12)
                         .background(colorScheme == .dark ? Color.black.opacity(0.2) : Color.white)
                         .cornerRadius(12)

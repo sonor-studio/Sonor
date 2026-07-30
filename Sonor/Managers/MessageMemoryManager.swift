@@ -127,7 +127,8 @@ class MessageMemoryManager: ObservableObject {
         }
         
         let id = UUID()
-        let hasAudio = samples != nil && !samples!.isEmpty
+        let audioEnabled = UserDefaults.standard.object(forKey: "historySavesAudio") == nil ? true : UserDefaults.standard.bool(forKey: "historySavesAudio")
+        let hasAudio = audioEnabled && samples != nil && !samples!.isEmpty
         let msg = MemoryMessage(id: id, text: trimmed, date: Date(), hasAudio: hasAudio)
         messages.append(msg)
         
@@ -159,6 +160,20 @@ class MessageMemoryManager: ObservableObject {
         ramAudioSamples.removeAll()
         if historyStorageType == "File" {
             deleteDiskFile()
+        }
+    }
+    
+    func clearAllAudio() {
+        for i in 0..<messages.count {
+            messages[i].hasAudio = false
+        }
+        if historyStorageType == "File" {
+            saveToDisk()
+        }
+        ramAudioSamples.removeAll()
+        let audioDir = audioDirectoryURL
+        if FileManager.default.fileExists(atPath: audioDir.path) {
+            try? FileManager.default.removeItem(at: audioDir)
         }
     }
     

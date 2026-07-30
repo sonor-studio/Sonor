@@ -26,11 +26,18 @@ class MediaControlService {
         self.activeAudioBehavior = behavior
         
         if behavior == .mute {
-            if !isAlreadyManagingMute {
-                self.wasMutedBeforeRecording = getSystemMute()
-            }
-            if !self.wasMutedBeforeRecording {
-                setSystemMuteAppleScript(true)
+            Task.detached(priority: .userInitiated) {
+                var wasMuted = false
+                if !isAlreadyManagingMute {
+                    wasMuted = self.getSystemMute()
+                    await MainActor.run { self.wasMutedBeforeRecording = wasMuted }
+                } else {
+                    wasMuted = await MainActor.run { return self.wasMutedBeforeRecording }
+                }
+                
+                if !wasMuted {
+                    self.setSystemMuteAppleScript(true)
+                }
             }
         }
     }
