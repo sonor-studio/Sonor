@@ -26,7 +26,7 @@ struct CapsuleHUDView: View {
     private var targetWidth: CGFloat {
         if isInitializing || isFinalState {
             return 284.0
-        } else if controller.isRecording && controller.activeHotkeyMode == .click {
+        } else if controller.isRecording {
             return 180.0
         } else {
             return 232.0
@@ -420,7 +420,7 @@ struct CapsuleHUDView: View {
         .colorScheme(effectiveColorScheme)
         .onAppear {
             controller.reloadModes()
-            showPauseButton = controller.activeHotkeyMode == .click && controller.isRecording
+            showPauseButton = controller.isRecording
             width = targetWidth
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
                 opacity = 1.0
@@ -437,7 +437,7 @@ struct CapsuleHUDView: View {
             } else {
                 recordingDuration = 0
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
-                    showPauseButton = controller.activeHotkeyMode == .click
+                    showPauseButton = true
                     width = targetWidth
                     height = 40
                     isProcessing = controller.statusText != "Listening..." && controller.statusText != "Paused"

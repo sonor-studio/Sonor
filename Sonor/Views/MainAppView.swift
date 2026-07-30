@@ -20,6 +20,7 @@ enum SettingsTab: String {
 enum HotkeyMode: String, CaseIterable, Identifiable {
     case click = "Click"
     case hold = "Hold"
+    case automatic = "Automatic"
     var id: String { self.rawValue }
 }
 

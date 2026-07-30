@@ -11,24 +11,36 @@ struct StatisticsView: View {
     @State private var isShowingExplanationFromInfoButton = false
     @State private var pendingIncognitoAnimation = false
     @State private var localIncognitoMode = false
+    @AppStorage("saveStatsEnabled") private var saveStatsEnabled = true
+    @AppStorage("hasSeenStatsDisabledMessage") private var hasSeenStatsDisabledMessage = true
+    @State private var showDisabledPanel = false
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
             headerView
-            VStack(alignment: .leading, spacing: 10) {
-                HStack(spacing: 8) {
-                    Image(systemName: "chart.bar.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(.primary)
-                    Text(t("Statistics"))
-                        .font(.system(size: 20, weight: .bold))
+            if saveStatsEnabled || showDisabledPanel {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "chart.bar.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.primary)
+                        Text(t("Statistics"))
+                            .font(.system(size: 20, weight: .bold))
+                    }
+                    if saveStatsEnabled {
+                        heroBannerView
+                        summaryCardsView
+                        chartsView
+                    } else {
+                        statsDisabledView
+                            .transition(.scale.combined(with: .opacity))
+                    }
                 }
-                heroBannerView
-                summaryCardsView
-                chartsView
+                .padding(.top, 10)
             }
-            .padding(.top, 10)
-            Divider()
-                .padding(.vertical, 10)
+            if saveStatsEnabled || showDisabledPanel {
+                Divider()
+                    .padding(.vertical, 10)
+            }
             VStack(alignment: .leading, spacing: 10) {
                 ramHistoryView
             }
@@ -44,6 +56,15 @@ struct StatisticsView: View {
         .onAppear {
             localIncognitoMode = isIncognitoMode
             loadStats()
+            if !saveStatsEnabled && !hasSeenStatsDisabledMessage {
+                showDisabledPanel = true
+                hasSeenStatsDisabledMessage = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                    withAnimation(.spring(response: 0.6, dampingFraction: 0.8)) {
+                        showDisabledPanel = false
+                    }
+                }
+            }
         }
         .onChange(of: isIncognitoMode) {
             localIncognitoMode = isIncognitoMode
@@ -390,6 +411,25 @@ struct StatisticsView: View {
             return a.date < b.date
         }
         return sorted
+    }
+    
+    @ViewBuilder
+    private var statsDisabledView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+            Image(systemName: "eye.slash.fill")
+                .font(.system(size: 48))
+                .foregroundColor(.secondary)
+            Text(t("Statistics are disabled"))
+                .font(.system(size: 20, weight: .semibold))
+            Text(t("You have disabled usage tracking in settings."))
+                .font(.system(size: 14))
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, minHeight: 200)
+        .padding()
     }
 }
 

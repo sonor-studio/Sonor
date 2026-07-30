@@ -51,7 +51,7 @@ struct SidebarView: View {
             
             Spacer()
             
-            MenuButton(title: t("Changelog"), icon: "gift.fill", isSelected: selectedTab == .changelog) {
+            MenuButton(title: t("Changelog"), icon: "newspaper.fill", isSelected: selectedTab == .changelog) {
                 selectedTab = .changelog
             }
             .padding(.horizontal, 10)

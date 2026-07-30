@@ -24,32 +24,43 @@ struct ChangelogView: View {
             }
             .padding(.bottom, 24)
             
-            VStack(alignment: .leading, spacing: 16) {
-                let features = ChangelogLocalization.shared.getFeatures()
-                ForEach(features) { feature in
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: feature.icon)
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(colorScheme == .dark ? .white : .black)
-                            .frame(width: 24, alignment: .center)
-                            .padding(.top, 2)
-                        
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(feature.title)
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundColor(.primary)
-                            Text(feature.description)
-                                .font(.system(size: 12))
+            ScrollView(showsIndicators: true) {
+                VStack(alignment: .leading, spacing: 32) {
+                    let sections = ChangelogLocalization.shared.getSections()
+                    ForEach(sections) { section in
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text(section.title)
+                                .font(.system(size: 12, weight: .bold))
                                 .foregroundColor(.secondary)
-                                .lineSpacing(2)
-                                .fixedSize(horizontal: false, vertical: true)
+                                .textCase(.uppercase)
+                                .padding(.bottom, 2)
+                            
+                            ForEach(section.features) { feature in
+                                HStack(alignment: .top, spacing: 12) {
+                                    Image(systemName: feature.icon)
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundColor(colorScheme == .dark ? .white : .black)
+                                        .frame(width: 24, alignment: .center)
+                                        .padding(.top, 2)
+                                    
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(feature.title)
+                                            .font(.system(size: 13, weight: .bold))
+                                            .foregroundColor(.primary)
+                                        Text(feature.description)
+                                            .font(.system(size: 12))
+                                            .foregroundColor(.secondary)
+                                            .lineSpacing(2)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
+                .padding(.horizontal, 32)
+                .padding(.bottom, 40)
             }
-            .padding(.horizontal, 32)
-            
-            Spacer()
         }
     }
 }

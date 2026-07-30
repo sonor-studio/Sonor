@@ -25,6 +25,61 @@ public class LocalizationManager: ObservableObject {
         }
     }
     private let translations: [String: [String]] = [
+        "Save Usage Statistics": [
+            "Save Usage Statistics",
+            "Zapisuj statystyki użytkowania",
+            "Nutzungsstatistiken speichern",
+            "Guardar estadísticas de uso",
+            "Enregistrer les statistiques",
+            "Salva statistiche di utilizzo",
+            "使用統計を保存",
+            "Salvar estatísticas de uso",
+            "保存使用统计"
+        ],
+        "Delete Statistics": [
+            "Delete Statistics",
+            "Usuń statystyki",
+            "Statistiken löschen",
+            "Eliminar estadísticas",
+            "Supprimer les statistiques",
+            "Elimina statistiche",
+            "統計を削除",
+            "Excluir estatísticas",
+            "删除统计信息"
+        ],
+        "Disabling statistics will permanently delete all your currently saved usage data. Are you sure you want to continue?": [
+            "Disabling statistics will permanently delete all your currently saved usage data. Are you sure you want to continue?",
+            "Wyłączenie statystyk trwale usunie wszystkie obecnie zapisane dane o użyciu. Czy na pewno chcesz kontynuować?",
+            "Wenn Sie die Statistiken deaktivieren, werden alle derzeit gespeicherten Nutzungsdaten dauerhaft gelöscht. Möchten Sie wirklich fortfahren?",
+            "Al desactivar las estadísticas se eliminarán permanentemente todos los datos de uso guardados. ¿Está seguro de que desea continuar?",
+            "La désactivation des statistiques supprimera définitivement toutes vos données d'utilisation actuelles. Voulez-vous vraiment continuer ?",
+            "Disabilitando le statistiche eliminerai definitivamente tutti i dati di utilizzo attualmente salvati. Sei sicuro di voler continuare?",
+            "統計を無効にすると、現在保存されているすべての使用データが完全に削除されます。続行してもよろしいですか？",
+            "A desativação das estatísticas excluirá permanentemente todos os dados de uso salvos. Tem certeza de que deseja continuar?",
+            "禁用统计信息将永久删除您当前保存的所有使用数据。您确定要继续吗？"
+        ],
+        "Statistics are disabled": [
+            "Statistics are disabled",
+            "Statystyki są wyłączone",
+            "Statistiken sind deaktiviert",
+            "Las estadísticas están desactivadas",
+            "Les statistiques sont désactivées",
+            "Le statistiche sono disabilitate",
+            "統計は無効になっています",
+            "As estatísticas estão desativadas",
+            "统计信息已禁用"
+        ],
+        "You have disabled usage tracking in settings.": [
+            "You have disabled usage tracking in settings.",
+            "Wyłączyłeś śledzenie użycia w ustawieniach.",
+            "Sie haben die Nutzungsverfolgung in den Einstellungen deaktiviert.",
+            "Ha desactivado el seguimiento de uso en la configuración.",
+            "Vous avez désactivé le suivi de l'utilisation dans les paramètres.",
+            "Hai disabilitato il monitoraggio dell'utilizzo nelle impostazioni.",
+            "設定で使用状況の追跡を無効にしました。",
+            "Você desativou o rastreamento de uso nas configurações.",
+            "您已在设置中禁用了使用跟踪。"
+        ],
         "App Data Directory": [
             "App Data Directory",
             "Katalog danych aplikacji",
@@ -664,6 +719,193 @@ public class LocalizationManager: ObservableObject {
             "Sonorを改善するため、すべての報告、アイデア、質問を慎重に確認しています。すべてのメッセージに個人的に返信することはできないかもしれませんが、皆様からのフィードバックは非常に高く評価されており、今後のアップデートの形成に役立っています。",
             "Analisamos cuidadosamente todos os relatórios, ideias e perguntas para melhorar o Sonor. Embora não possamos responder a cada mensagem pessoalmente, seu feedback é muito apreciado e ajuda a moldar nossas atualizações futuras.",
             "我们会仔细审查所有报告、想法和问题，以改进 Sonor。虽然我们可能无法亲自回复每条消息，但我们非常感谢您的反馈，这有助于塑造我们未来的更新。"
+        ],
+        "New Features": [
+            "New Features",
+            "Nowe funkcje",
+            "Neue Funktionen",
+            "Nuevas características",
+            "Nouvelles fonctionnalités",
+            "Nuove funzionalità",
+            "新機能",
+            "Novos recursos",
+            "新功能"
+        ],
+        "Improvements & Fixes": [
+            "Improvements & Fixes",
+            "Ulepszenia i poprawki",
+            "Verbesserungen & Fehlerbehebungen",
+            "Mejoras y correcciones",
+            "Améliorations et correctifs",
+            "Miglioramenti e correzioni",
+            "改善と修正",
+            "Melhorias e correções",
+            "改进与修复"
+        ],
+        "Under the Hood": [
+            "Under the Hood",
+            "Pod maską",
+            "Unter der Haube",
+            "Bajo el capó",
+            "Sous le capot",
+            "Dietro le quinte",
+            "舞台裏",
+            "Por baixo do capô",
+            "幕后"
+        ],
+        "Redesigned Sidebar & Navigation": [
+            "Redesigned Sidebar & Navigation",
+            "Przebudowane menu boczne i nawigacja",
+            "Neugestaltete Seitenleiste & Navigation",
+            "Barra lateral y navegación rediseñadas",
+            "Barre latérale et navigation repensées",
+            "Barra laterale e navigazione riprogettate",
+            "再設計されたサイドバーとナビゲーション",
+            "Barra lateral e navegação redesenhadas",
+            "重新设计的侧边栏和导航"
+        ],
+        "In-App Feedback System": [
+            "In-App Feedback System",
+            "System zgłaszania opinii w aplikacji",
+            "In-App-Feedback-System",
+            "Sistema de comentarios en la aplicación",
+            "Système de commentaires intégré",
+            "Sistema di feedback in-app",
+            "アプリ内フィードバックシステム",
+            "Sistema de feedback no aplicativo",
+            "应用内反馈系统"
+        ],
+        "Voice Request History": [
+            "Voice Request History",
+            "Historia poleceń głosowych",
+            "Sprachanfragen-Verlauf",
+            "Historial de solicitudes de voz",
+            "Historique des requêtes vocales",
+            "Cronologia delle richieste vocali",
+            "音声リクエスト履歴",
+            "Histórico de solicitações de voz",
+            "语音请求历史记录"
+        ],
+        "Audio Device Selection": [
+            "Audio Device Selection",
+            "Wybór urządzeń audio",
+            "Audio-Geräteauswahl",
+            "Selección de dispositivo de audio",
+            "Sélection du périphérique audio",
+            "Selezione del dispositivo audio",
+            "オーディオデバイスの選択",
+            "Seleção de dispositivo de áudio",
+            "音频设备选择"
+        ],
+        "Audio Playback Reliability": [
+            "Audio Playback Reliability",
+            "Niezawodność odtwarzania dźwięku",
+            "Zuverlässigkeit der Audiowiedergabe",
+            "Fiabilidad de la reproducción de audio",
+            "Fiabilité de la lecture audio",
+            "Affidabilità della riproduzione audio",
+            "オーディオ再生の信頼性",
+            "Confiabilidade da reprodução de áudio",
+            "音频播放可靠性"
+        ],
+        "Menu Bar Stability": [
+            "Menu Bar Stability",
+            "Stabilność paska menu",
+            "Stabilität der Menüleiste",
+            "Estabilidad de la barra de menús",
+            "Stabilité de la barre de menu",
+            "Stabilità della barra dei menu",
+            "メニューバーの安定性",
+            "Estabilidade da barra de menus",
+            "菜单栏稳定性"
+        ],
+        "Expanded Localizations": [
+            "Expanded Localizations",
+            "Rozszerzone tłumaczenia",
+            "Erweiterte Lokalisierungen",
+            "Localizaciones ampliadas",
+            "Traductions étendues",
+            "Localizzazioni estese",
+            "拡張されたローカリゼーション",
+            "Localizações expandidas",
+            "扩展的本地化"
+        ],
+        "The sidebar has been reorganized for better clarity with updated icons, clearer separators, and a more intuitive layout.": [
+            "The sidebar has been reorganized for better clarity with updated icons, clearer separators, and a more intuitive layout.",
+            "Menu boczne zostało zreorganizowane dla lepszej czytelności dzięki zaktualizowanym ikonom, wyraźniejszym separatorom i bardziej intuicyjnemu układowi.",
+            "Die Seitenleiste wurde für bessere Übersichtlichkeit mit aktualisierten Symbolen, deutlicheren Trennlinien und einem intuitiveren Layout neu organisiert.",
+            "La barra lateral se ha reorganizado para mayor claridad con iconos actualizados, separadores más claros y un diseño más intuitivo.",
+            "La barre latérale a été réorganisée pour plus de clarté avec des icônes mises à jour, des séparateurs plus clairs et une disposition plus intuitive.",
+            "La barra laterale è stata riorganizzata per una maggiore chiarezza con icone aggiornate, separatori più chiari e un layout più intuitivo.",
+            "サイドバーは、更新されたアイコン、より明確な区切り線、直感的なレイアウトにより、わかりやすく再編成されました。",
+            "A barra lateral foi reorganizada para maior clareza com ícones atualizados, separadores mais claros e um layout mais intuitivo.",
+            "侧边栏经过重新组织以提高清晰度，包含更新的图标、更清晰的分隔线和更直观的布局。"
+        ],
+        "You can now submit ideas, bug reports, and questions directly from the app. Includes custom categories and optional email contact.": [
+            "You can now submit ideas, bug reports, and questions directly from the app. Includes custom categories and optional email contact.",
+            "Możesz teraz przesyłać pomysły, zgłoszenia błędów i pytania bezpośrednio z aplikacji. Obejmuje własne kategorie i opcjonalny kontakt e-mail.",
+            "Sie können jetzt Ideen, Fehlerberichte und Fragen direkt aus der App einreichen. Beinhaltet benutzerdefinierte Kategorien und optionalen E-Mail-Kontakt.",
+            "Ahora puedes enviar ideas, informes de errores y preguntas directamente desde la aplicación. Incluye categorías personalizadas y contacto por correo electrónico opcional.",
+            "Vous pouvez désormais soumettre des idées, des rapports de bogues et des questions directement depuis l'application. Comprend des catégories personnalisées et un contact e-mail facultatif.",
+            "Ora puoi inviare idee, segnalazioni di bug e domande direttamente dall'app. Include categorie personalizzate e un contatto e-mail opzionale.",
+            "アプリから直接、アイデア、バグレポート、質問を送信できるようになりました。カスタムカテゴリとオプションのメール連絡先が含まれています。",
+            "Agora você pode enviar ideias, relatórios de bugs e perguntas diretamente do aplicativo. Inclui categorias personalizadas e contato opcional por e-mail.",
+            "现在您可以直接从应用程序提交想法、错误报告和问题。包括自定义类别和可选的电子邮件联系方式。"
+        ],
+        "Added the ability to browse and replay your past voice requests directly from the new statistics dashboard.": [
+            "Added the ability to browse and replay your past voice requests directly from the new statistics dashboard.",
+            "Dodano możliwość przeglądania i odtwarzania wcześniejszych żądań głosowych bezpośrednio z nowego pulpitu statystyk.",
+            "Es wurde die Möglichkeit hinzugefügt, Ihre vergangenen Sprachanfragen direkt über das neue Statistik-Dashboard zu durchsuchen und abzuspielen.",
+            "Se agregó la capacidad de navegar y reproducir sus solicitudes de voz anteriores directamente desde el nuevo panel de estadísticas.",
+            "Ajout de la possibilité de parcourir et de rejouer vos requêtes vocales passées directement depuis le nouveau tableau de bord des statistiques.",
+            "Aggiunta la possibilità di sfogliare e riprodurre le tue richieste vocali passate direttamente dalla nuova dashboard delle statistiche.",
+            "新しい統計ダッシュボードから直接、過去の音声リクエストを閲覧および再生する機能を追加しました。",
+            "Adicionada a capacidade de navegar e reproduzir suas solicitações de voz anteriores diretamente do novo painel de estatísticas.",
+            "添加了直接从新统计仪表板浏览和重放您过去的语音请求的功能。"
+        ],
+        "A new General Settings tab allows you to explicitly select your preferred input (microphone) and output (speaker) devices.": [
+            "A new General Settings tab allows you to explicitly select your preferred input (microphone) and output (speaker) devices.",
+            "Nowa zakładka Ustawienia ogólne pozwala na jawne wybranie preferowanych urządzeń wejściowych (mikrofon) i wyjściowych (głośniki).",
+            "Eine neue Registerkarte für allgemeine Einstellungen ermöglicht die explizite Auswahl Ihrer bevorzugten Eingabe- (Mikrofon) und Ausgabe- (Lautsprecher) geräte.",
+            "Una nueva pestaña de Configuración general le permite seleccionar explícitamente sus dispositivos de entrada (micrófono) y salida (altavoz) preferidos.",
+            "Un nouvel onglet Paramètres généraux vous permet de sélectionner explicitement vos périphériques d'entrée (microphone) et de sortie (haut-parleur) préférés.",
+            "Una nuova scheda Impostazioni generali consente di selezionare in modo esplicito i dispositivi di input (microfono) e output (altoparlante) preferiti.",
+            "新しい一般設定タブを使用すると、好みの入力（マイク）および出力（スピーカー）デバイスを明示的に選択できます。",
+            "Uma nova guia de Configurações gerais permite selecionar explicitamente seus dispositivos de entrada (microfone) e saída (alto-falante) preferidos.",
+            "新的“常规设置”选项卡允许您明确选择首选的输入（麦克风）和输出（扬声器）设备。"
+        ],
+        "Completely refactored the internal audio engine to resolve memory leaks and fix playback clipping issues.": [
+            "Completely refactored the internal audio engine to resolve memory leaks and fix playback clipping issues.",
+            "Całkowicie zrefaktoryzowano wewnętrzny silnik audio, aby rozwiązać problemy z wyciekami pamięci i ucinaniem odtwarzania.",
+            "Die interne Audio-Engine wurde komplett überarbeitet, um Speicherlecks zu beheben und Probleme mit dem Abschneiden der Wiedergabe zu lösen.",
+            "Se refactorizó completamente el motor de audio interno para resolver fugas de memoria y solucionar problemas de recortes de reproducción.",
+            "Le moteur audio interne a été entièrement refactorisé pour résoudre les fuites de mémoire et corriger les problèmes de coupure de lecture.",
+            "Rifattorizzato completamente il motore audio interno per risolvere perdite di memoria e problemi di clipping della riproduzione.",
+            "メモリリークを解決し、再生の途切れの問題を修正するために、内部オーディオエンジンを完全にリファクタリングしました。",
+            "O motor de áudio interno foi completamente refatorado para resolver vazamentos de memória e corrigir problemas de corte de reprodução.",
+            "彻底重构了内部音频引擎，以解决内存泄漏并修复播放剪切问题。"
+        ],
+        "Fixed visual flickering and layout issues in the Menu Bar extra, providing a much smoother experience.": [
+            "Fixed visual flickering and layout issues in the Menu Bar extra, providing a much smoother experience.",
+            "Naprawiono migotanie wizualne i problemy z układem w menu na pasku zadań, zapewniając znacznie płynniejsze działanie.",
+            "Visuelles Flackern und Layout-Probleme in der Menüleisten-Erweiterung wurden behoben, was ein viel reibungsloseres Erlebnis bietet.",
+            "Se solucionaron los parpadeos visuales y los problemas de diseño en la extensión de la barra de menús, proporcionando una experiencia mucho más fluida.",
+            "Correction des scintillements visuels et des problèmes de disposition dans l'extension de la barre de menus, offrant une expérience beaucoup plus fluide.",
+            "Risolto lo sfarfallio visivo e i problemi di layout nell'estensione della barra dei menu, offrendo un'esperienza molto più fluida.",
+            "メニューバーエクストラの視覚的なちらつきとレイアウトの問題を修正し、よりスムーズな操作性を実現しました。",
+            "Corrigida a cintilação visual e os problemas de layout na extensão da barra de menus, proporcionando uma experiência muito mais suave.",
+            "修复了菜单栏扩展中的视觉闪烁和布局问题，提供了更流畅的体验。"
+        ],
+        "Added missing translations for all new features, ensuring 100% coverage across all 9 supported languages.": [
+            "Added missing translations for all new features, ensuring 100% coverage across all 9 supported languages.",
+            "Dodano brakujące tłumaczenia dla wszystkich nowych funkcji, zapewniając 100% pokrycia we wszystkich 9 obsługiwanych językach.",
+            "Fehlende Übersetzungen für alle neuen Funktionen hinzugefügt, um eine 100%ige Abdeckung in allen 9 unterstützten Sprachen zu gewährleisten.",
+            "Se agregaron las traducciones faltantes para todas las funciones nuevas, lo que garantiza una cobertura del 100 % en los 9 idiomas admitidos.",
+            "Ajout des traductions manquantes pour toutes les nouvelles fonctionnalités, garantissant une couverture à 100 % pour les 9 langues prises en charge.",
+            "Aggiunte le traduzioni mancanti per tutte le nuove funzionalità, garantendo una copertura del 100% in tutte e 9 le lingue supportate.",
+            "すべての新機能の不足している翻訳を追加し、サポートされている全9言語で100%のカバレッジを確保しました。",
+            "Foram adicionadas traduções ausentes para todos os novos recursos, garantindo 100% de cobertura nos 9 idiomas suportados.",
+            "添加了所有新功能的缺失翻译，确保完全覆盖所有 9 种支持的语言。"
         ],
         "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License": [
             "Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International Public License",

@@ -7,7 +7,9 @@ class UsageTrackingService {
     
     // Store minimal usage statistics locally in UserDefaults.
     func recordUsage(duration: Double, text: String) {
-        if UserDefaults.standard.bool(forKey: "isIncognitoMode") {
+        let isStatsEnabled = UserDefaults.standard.object(forKey: "saveStatsEnabled") == nil ? true : UserDefaults.standard.bool(forKey: "saveStatsEnabled")
+        
+        if UserDefaults.standard.bool(forKey: "isIncognitoMode") || !isStatsEnabled {
             return
         }
         let wordCount = text.split(separator: " ").count
@@ -26,5 +28,10 @@ class UsageTrackingService {
             return stats
         }
         return []
+    }
+    
+    func clearStats() {
+        UserDefaults.standard.removeObject(forKey: "usageStats")
+        NotificationCenter.default.post(name: Notification.Name("UsageStatsUpdated"), object: nil)
     }
 }

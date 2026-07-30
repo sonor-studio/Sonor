@@ -31,6 +31,8 @@ struct GeneralSettingsView: View {
     @AppStorage("selectedAudioOutputDeviceUID") private var selectedOutputDeviceUID = ""
     @AppStorage("appVolume") private var appVolume: Double = 1.0
     @AppStorage("historySavesAudio") private var historySavesAudio = true
+    @AppStorage("saveStatsEnabled") private var saveStatsEnabled = true
+    @State private var isShowingDeleteStatsAlert = false
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
             HStack {
@@ -88,6 +90,20 @@ struct GeneralSettingsView: View {
             }
         } message: {
             Text(t("Disabling audio history will permanently delete all currently saved audio recordings. Are you sure you want to continue?"))
+        }
+        .alert(t("Delete Statistics"), isPresented: $isShowingDeleteStatsAlert) {
+            Button(t("Delete"), role: .destructive) {
+                withAnimation {
+                    UsageTrackingService.shared.clearStats()
+                    saveStatsEnabled = false
+                    UserDefaults.standard.set(false, forKey: "hasSeenStatsDisabledMessage")
+                }
+            }
+            Button(t("Cancel"), role: .cancel) {
+                saveStatsEnabled = true
+            }
+        } message: {
+            Text(t("Disabling statistics will permanently delete all your currently saved usage data. Are you sure you want to continue?"))
         }
         .alert(t("Duplicate Shortcut"), isPresented: $isShowingDuplicateShortcutAlert) {
             Button("OK", role: .cancel) { }
@@ -170,6 +186,25 @@ struct GeneralSettingsView: View {
             ))
             .toggleStyle(CustomToggleStyle())
             .font(.system(size: 14, weight: .medium))
+            
+            Toggle(t("Save Usage Statistics"), isOn: Binding(
+                get: { saveStatsEnabled },
+                set: { newValue in
+                    if !newValue {
+                        let stats = UsageTrackingService.shared.getStats()
+                        if stats.isEmpty {
+                            saveStatsEnabled = false
+                            UserDefaults.standard.set(false, forKey: "hasSeenStatsDisabledMessage")
+                        } else {
+                            isShowingDeleteStatsAlert = true
+                        }
+                    } else {
+                        saveStatsEnabled = true
+                    }
+                }
+            ))
+            .toggleStyle(CustomToggleStyle())
+            .font(.system(size: 14, weight: .medium))
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -211,6 +246,7 @@ struct GeneralSettingsView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                
                 Button(action: {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
                         hotkeyMode = .hold
@@ -234,16 +270,37 @@ struct GeneralSettingsView: View {
                     )
                 }
                 .buttonStyle(.plain)
+                
+                Button(action: {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                        hotkeyMode = .automatic
+                    }
+                    HotkeyManager.shared.startListening()
+                }) {
+                    VStack(spacing: 10) {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 20))
+                        Text(t("Automatic"))
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(hotkeyMode == .automatic ? Color.primary.opacity(0.1) : Color.clear)
+                    .cornerRadius(10)
+                    .contentShape(Rectangle())
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(hotkeyMode == .automatic ? Color.primary : Color.primary.opacity(0.2), lineWidth: hotkeyMode == .automatic ? 2 : 1)
+                    )
+                }
+                .buttonStyle(.plain)
             }
             Divider()
                 .background(Color.white.opacity(0.05))
             VStack(alignment: .leading, spacing: 10) {
                 hotkeyRow(title: "Start/Stop Recording", type: .main, hotkeyStringVal: hotkeyString)
                 hotkeyRow(title: "Cancel Recording", type: .cancel, hotkeyStringVal: hotkeyStringCancel)
-                if hotkeyMode == .click {
-                    hotkeyRow(title: "Pause/Resume", type: .pause, hotkeyStringVal: hotkeyStringPause)
-                        .transition(.opacity.combined(with: .offset(y: -10)))
-                }
+                hotkeyRow(title: "Pause/Resume", type: .pause, hotkeyStringVal: hotkeyStringPause)
                 hotkeyRow(title: "Change Assistant", type: .assistant, hotkeyStringVal: hotkeyStringAssistant)
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: hotkeyMode)

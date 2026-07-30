@@ -321,6 +321,7 @@ struct OnboardingView: View {
                         }
                         .buttonStyle(.plain)
                         .focusable(false)
+                        
                         Button(action: {
                             withAnimation(.spring()) {
                                 hotkeyMode = .hold
@@ -340,6 +341,30 @@ struct OnboardingView: View {
                             .overlay(
                                 RoundedRectangle(cornerRadius: 10)
                                     .stroke(hotkeyMode == .hold ? (colorScheme == .dark ? Color.white : Color.black) : Color.secondary.opacity(0.3), lineWidth: hotkeyMode == .hold ? 2 : 1)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .focusable(false)
+                        
+                        Button(action: {
+                            withAnimation(.spring()) {
+                                hotkeyMode = .automatic
+                            }
+                        }) {
+                            VStack(spacing: 8) {
+                                Image(systemName: "bolt.fill")
+                                    .font(.system(size: 18))
+                                Text(t("Automatic"))
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(hotkeyMode == .automatic ? (colorScheme == .dark ? Color.white.opacity(0.15) : Color.black.opacity(0.1)) : Color.clear)
+                            .cornerRadius(10)
+                            .contentShape(Rectangle())
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(hotkeyMode == .automatic ? (colorScheme == .dark ? Color.white : Color.black) : Color.secondary.opacity(0.3), lineWidth: hotkeyMode == .automatic ? 2 : 1)
                             )
                         }
                         .buttonStyle(.plain)

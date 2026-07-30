@@ -201,7 +201,8 @@ class HotkeyManager {
         }
 
         if !self.isKeyDown {
-            self.activeIsHoldMode = self.cachedHotkeyModeString == "Hold"
+            let mode = self.cachedHotkeyModeString
+            self.activeIsHoldMode = (mode == "Hold" || mode == "Automatic")
         }
         let isHoldMode = self.activeIsHoldMode
         

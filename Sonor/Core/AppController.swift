@@ -84,14 +84,24 @@ class AppController: NSObject, ObservableObject {
             _ = self.audioManager.stopRecording()
         }
     }
+    private var hotkeyDownTime: Date = Date()
+    
     private func setupHotkey() {
         HotkeyManager.shared.onHotkeyDown = { [weak self] in
+            self?.hotkeyDownTime = Date()
             self?.toggleRecording()
         }
         HotkeyManager.shared.onHotkeyUp = { [weak self] in
             guard let self = self else { return }
-            if self.isRecording && self.activeHotkeyMode == .hold {
-                self.stopRecordingAndTranscribe()
+            if self.isRecording {
+                if self.activeHotkeyMode == .hold {
+                    self.stopRecordingAndTranscribe()
+                } else if self.activeHotkeyMode == .automatic {
+                    let duration = Date().timeIntervalSince(self.hotkeyDownTime)
+                    if duration > 0.4 {
+                        self.stopRecordingAndTranscribe()
+                    }
+                }
             }
         }
         HotkeyManager.shared.onCancelKeyDown = { [weak self] in
@@ -189,7 +199,9 @@ class AppController: NSObject, ObservableObject {
             }
 
             let modeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
-            self.activeHotkeyMode = (modeString == "Hold") ? .hold : .click
+            if modeString == "Hold" { self.activeHotkeyMode = .hold }
+            else if modeString == "Automatic" { self.activeHotkeyMode = .automatic }
+            else { self.activeHotkeyMode = .click }
             guard case .downloaded = ModelManager.shared.whisperState else {
                 self.isRecording = false
                 WindowManager.shared.openSettings()
@@ -294,7 +306,9 @@ class AppController: NSObject, ObservableObject {
     private func performStartRecording(sessionID: UUID) {
         self.isPaused = false
         let modeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
-        self.activeHotkeyMode = (modeString == "Hold") ? .hold : .click
+        if modeString == "Hold" { self.activeHotkeyMode = .hold }
+        else if modeString == "Automatic" { self.activeHotkeyMode = .automatic }
+        else { self.activeHotkeyMode = .click }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             do {
