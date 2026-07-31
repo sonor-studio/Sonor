@@ -4,6 +4,7 @@ import MLXHuggingFace
 import Hub
 import HuggingFace
 import CryptoKit
+import SwiftUI
 
 /// Represents the current state of a model file on disk.
 enum DownloadState: Equatable {
@@ -17,25 +18,88 @@ enum DownloadState: Equatable {
 @MainActor
 final class ModelManager: ObservableObject {
     static let shared = ModelManager()
-    @Published var whisperState: DownloadState = .notDownloaded
+    @Published var whisperStates: [String: DownloadState] = [:]
     @Published var gemmaState: DownloadState = .notDownloaded
     
     @Published var showModelsRequiredModal = false
     @Published var downloadError: String? = nil
     @Published var showDownloadErrorModal = false
+    @Published var showWhisperModelSelector = false
     let modelsDirectory: URL
     let gemmaModelId = "mlx-community/gemma-3-4b-it-qat-4bit"
-    private let whisperModelId = "ggerganov/whisper.cpp"
-    private let whisperFilename = "ggml-large-v3-turbo-q5_0.bin"
+    struct WhisperModel: Identifiable, Equatable {
+        let id: String
+        let name: String
+        let repoId: String
+        let filename: String
+        let description: String
+        let expectedSize: Int64
+        let expectedSHA256: String?
+    }
+
+    let availableWhisperModels: [WhisperModel] = [
+        WhisperModel(
+            id: "tiny.en",
+            name: "Tiny (English)",
+            repoId: "ggerganov/whisper.cpp",
+            filename: "ggml-tiny.en.bin",
+            description: String(localized: "Extremely fast, very low memory usage. Good for basic english dictation. Approx. 75 MB."),
+            expectedSize: 77_704_715,
+            expectedSHA256: nil
+        ),
+        WhisperModel(
+            id: "base.en",
+            name: "Base (English)",
+            repoId: "ggerganov/whisper.cpp",
+            filename: "ggml-base.en.bin",
+            description: String(localized: "Fast, low memory usage. Better accuracy than Tiny. Approx. 140 MB."),
+            expectedSize: 147_964_211,
+            expectedSHA256: nil
+        ),
+        WhisperModel(
+            id: "small.en",
+            name: "Small (English)",
+            repoId: "ggerganov/whisper.cpp",
+            filename: "ggml-small.en.bin",
+            description: String(localized: "Good balance of speed and accuracy for English. Approx. 480 MB."),
+            expectedSize: 487_614_201,
+            expectedSHA256: nil
+        ),
+        WhisperModel(
+            id: "large-v3-turbo",
+            name: "Large v3 Turbo (Multilingual)",
+            repoId: "ggerganov/whisper.cpp",
+            filename: "ggml-large-v3-turbo-q5_0.bin",
+            description: String(localized: "Best overall accuracy, multilingual support. Approx. 580 MB."),
+            expectedSize: 574_041_195,
+            expectedSHA256: "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2"
+        )
+    ]
+
+    @Published var selectedWhisperModelId: String {
+        didSet {
+            UserDefaults.standard.set(selectedWhisperModelId, forKey: "selectedWhisperModelId")
+            NotificationCenter.default.post(name: Notification.Name("ReleaseWhisperContext"), object: nil)
+        }
+    }
+
     private var gemmaDownloadTask: Task<Void, Never>?
     private var activeWhisperDownloader: WhisperDownloader?
+    private var activeWhisperModelId: String?
     private var activeGemmaDownloader: GemmaDownloader?
     private var gemmaProgressObservation: NSKeyValueObservation?
+    
     var whisperModelURL: URL {
+        return urlForWhisperModel(id: selectedWhisperModelId) ?? urlForWhisperModel(id: "large-v3-turbo")!
+    }
+
+    func urlForWhisperModel(id: String) -> URL? {
+        guard let model = availableWhisperModels.first(where: { $0.id == id }) else { return nil }
         let api = HubApi(downloadBase: modelsDirectory, cache: nil)
-        return api.localRepoLocation(Hub.Repo(id: whisperModelId)).appendingPathComponent(whisperFilename)
+        return api.localRepoLocation(Hub.Repo(id: model.repoId)).appendingPathComponent(model.filename)
     }
     private init() {
+        self.selectedWhisperModelId = UserDefaults.standard.string(forKey: "selectedWhisperModelId") ?? "large-v3-turbo"
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         modelsDirectory = appSupport.appendingPathComponent("Sonor").appendingPathComponent("Models")
         createModelsDirectoryIfNeeded()
@@ -53,52 +117,55 @@ final class ModelManager: ObservableObject {
     /// Validates the existence and integrity of models on app startup.
     /// Uses SHA256 checksums to verify that downloaded models aren't corrupted.
     func checkInitialStates() {
-        let whisperPath = whisperModelURL.path
-        let whisperIncompletePath = whisperPath + ".incomplete"
-        let whisperExists = FileManager.default.fileExists(atPath: whisperPath)
-        let whisperIncompleteExists = FileManager.default.fileExists(atPath: whisperIncompletePath)
-        
-        let expectedSizeInBytes: Int64 = 574_041_195
-        let expectedSize: Double = Double(expectedSizeInBytes)
-        let expectedSHA256 = "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2"
-        
-        if whisperExists {
-            if let attributes = try? FileManager.default.attributesOfItem(atPath: whisperPath),
-               let size = attributes[.size] as? Int64 {
-                if size == expectedSizeInBytes {
-                    // Check SHA256 in background to not block UI
-                    Task.detached {
-                        if let fileData = try? Data(contentsOf: URL(fileURLWithPath: whisperPath), options: .mappedIfSafe) {
-                            let hash = CryptoKit.SHA256.hash(data: fileData)
-                            let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
-                            await MainActor.run {
-                                if hashString == expectedSHA256 {
-                                } else {
-                                    try? FileManager.default.removeItem(atPath: whisperPath)
-                                    self.whisperState = .notDownloaded
+        for model in availableWhisperModels {
+            guard let url = urlForWhisperModel(id: model.id) else { continue }
+            let whisperPath = url.path
+            let whisperIncompletePath = whisperPath + ".incomplete"
+            let whisperExists = FileManager.default.fileExists(atPath: whisperPath)
+            let whisperIncompleteExists = FileManager.default.fileExists(atPath: whisperIncompletePath)
+            
+            let expectedSizeInBytes = model.expectedSize
+            let expectedSize: Double = Double(expectedSizeInBytes)
+            
+            if whisperExists {
+                if let attributes = try? FileManager.default.attributesOfItem(atPath: whisperPath),
+                   let size = attributes[.size] as? Int64 {
+                    if size >= expectedSizeInBytes - 1000 {
+                        if let expectedSHA256 = model.expectedSHA256 {
+                            Task.detached {
+                                if let fileData = try? Data(contentsOf: URL(fileURLWithPath: whisperPath), options: .mappedIfSafe) {
+                                    let hash = CryptoKit.SHA256.hash(data: fileData)
+                                    let hashString = hash.compactMap { String(format: "%02x", $0) }.joined()
+                                    await MainActor.run {
+                                        if hashString != expectedSHA256 {
+                                            try? FileManager.default.removeItem(atPath: whisperPath)
+                                            self.whisperStates[model.id] = .notDownloaded
+                                        }
+                                    }
                                 }
                             }
                         }
+                        whisperStates[model.id] = .downloaded
+                    } else {
+                        try? FileManager.default.removeItem(atPath: whisperPath)
+                        whisperStates[model.id] = .notDownloaded
                     }
-                    whisperState = .downloaded
                 } else {
-                    try? FileManager.default.removeItem(atPath: whisperPath)
-                    whisperState = .notDownloaded
+                    whisperStates[model.id] = .downloaded
+                }
+            } else if whisperIncompleteExists {
+                if let attributes = try? FileManager.default.attributesOfItem(atPath: whisperIncompletePath),
+                   let size = attributes[.size] as? Int64 {
+                    let progress = min(Double(size) / expectedSize, 0.99)
+                    whisperStates[model.id] = .paused(progress: progress)
+                } else {
+                    whisperStates[model.id] = .paused(progress: 0.0)
                 }
             } else {
-                whisperState = .downloaded
+                whisperStates[model.id] = .notDownloaded
             }
-        } else if whisperIncompleteExists {
-            if let attributes = try? FileManager.default.attributesOfItem(atPath: whisperIncompletePath),
-               let size = attributes[.size] as? Int64 {
-                let progress = min(Double(size) / expectedSize, 0.99)
-                whisperState = .paused(progress: progress)
-            } else {
-                whisperState = .paused(progress: 0.0)
-            }
-        } else {
-            whisperState = .notDownloaded
         }
+        
         gemmaState = checkGemmaState(repoId: gemmaModelId, totalKey: "GemmaTotalExpectedBytes", downloadedKey: "GemmaTotalDownloadedBytes", defaultThreshold: 2_000_000_000, maxExpectedSize: 3_000_000_000.0)
     }
 
@@ -143,22 +210,31 @@ final class ModelManager: ObservableObject {
     }
     /// Initiates or resumes the download of the Whisper model.
     /// Resumes from an `.incomplete` file if a previous download was paused or interrupted.
-    func downloadWhisper() {
-        if case .downloading = whisperState { return }
-        if case .downloaded = whisperState { return }
+    func downloadWhisper(modelId: String) {
+        guard let model = availableWhisperModels.first(where: { $0.id == modelId }),
+              let modelURL = urlForWhisperModel(id: modelId) else { return }
+        
+        if case .downloading = whisperStates[modelId] { return }
+        if case .downloaded = whisperStates[modelId] { return }
         var initialWhisperProgress: Double = 0.0
-        let whisperIncompletePath = whisperModelURL.path + ".incomplete"
+        let whisperIncompletePath = modelURL.path + ".incomplete"
         if FileManager.default.fileExists(atPath: whisperIncompletePath),
            let attributes = try? FileManager.default.attributesOfItem(atPath: whisperIncompletePath),
            let size = attributes[.size] as? Int64 {
-            let expectedSize: Double = 574_041_195.0
+            let expectedSize = Double(model.expectedSize)
             initialWhisperProgress = min(Double(size) / expectedSize, 0.99)
         }
-        whisperState = .downloading(progress: initialWhisperProgress)
+        whisperStates[modelId] = .downloading(progress: initialWhisperProgress)
         activeWhisperDownloader?.cancel()
-        let downloader = WhisperDownloader(destinationURL: whisperModelURL)
+        
+        if let activeId = activeWhisperModelId {
+            pauseWhisperDownload(modelId: activeId)
+        }
+        
+        let downloader = WhisperDownloader(destinationURL: modelURL)
         self.activeWhisperDownloader = downloader
-        let whisperDownloadURL = URL(string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin")!
+        self.activeWhisperModelId = modelId
+        let whisperDownloadURL = URL(string: "https://huggingface.co/\(model.repoId)/resolve/main/\(model.filename)")!
         var lastEmittedProgress: Double = initialWhisperProgress
         var lastEmissionTime = Date()
         downloader.start(from: whisperDownloadURL) { [weak self, weak downloader] progress in
@@ -172,7 +248,7 @@ final class ModelManager: ObservableObject {
                 lastEmissionTime = now
                 DispatchQueue.main.async {
                     guard self.activeWhisperDownloader === downloader else { return }
-                    self.whisperState = .downloading(progress: clampedProgress)
+                    self.whisperStates[modelId] = .downloading(progress: clampedProgress)
                 }
             }
         } completion: { [weak self, weak downloader] result in
@@ -180,75 +256,87 @@ final class ModelManager: ObservableObject {
             DispatchQueue.main.async {
                 guard self.activeWhisperDownloader === downloader else { return }
                 self.activeWhisperDownloader = nil
+                self.activeWhisperModelId = nil
                 switch result {
                 case .success:
-                    self.whisperState = .downloaded
+                    self.whisperStates[modelId] = .downloaded
                 case .failure(let error):
                     let nsError = error as NSError
                     if !(nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled) {
                         var finalProgress = lastEmittedProgress >= 0 ? lastEmittedProgress : 0.0
                         if finalProgress == 0.0 {
-                            let incompleteURL = self.whisperModelURL.deletingLastPathComponent().appendingPathComponent(self.whisperModelURL.lastPathComponent + ".incomplete")
+                            let incompleteURL = modelURL.deletingLastPathComponent().appendingPathComponent(modelURL.lastPathComponent + ".incomplete")
                             if let attrs = try? FileManager.default.attributesOfItem(atPath: incompleteURL.path),
                                let size = attrs[.size] as? Int64 {
-                                finalProgress = min(Double(size) / 574_041_195.0, 0.99)
+                                finalProgress = min(Double(size) / Double(model.expectedSize), 0.99)
                             }
                         }
                         self.downloadError = error.localizedDescription
                         self.showDownloadErrorModal = true
-                        self.whisperState = .paused(progress: finalProgress)
+                        self.whisperStates[modelId] = .paused(progress: finalProgress)
                     }
                 }
             }
         }
     }
-    func pauseWhisperDownload() {
-        activeWhisperDownloader?.cancel()
-        activeWhisperDownloader = nil
+    
+    func pauseWhisperDownload(modelId: String) {
+        if activeWhisperModelId == modelId {
+            activeWhisperDownloader?.cancel()
+            activeWhisperDownloader = nil
+            activeWhisperModelId = nil
+        }
+        guard let model = availableWhisperModels.first(where: { $0.id == modelId }),
+              let modelURL = urlForWhisperModel(id: modelId) else { return }
+              
         var finalProgress = 0.0
-        let incompleteURL = whisperModelURL.deletingLastPathComponent().appendingPathComponent(whisperModelURL.lastPathComponent + ".incomplete")
+        let incompleteURL = modelURL.deletingLastPathComponent().appendingPathComponent(modelURL.lastPathComponent + ".incomplete")
         if let attrs = try? FileManager.default.attributesOfItem(atPath: incompleteURL.path),
            let size = attrs[.size] as? Int64 {
-            finalProgress = min(Double(size) / 574_041_195.0, 0.99)
+            finalProgress = min(Double(size) / Double(model.expectedSize), 0.99)
         }
-        whisperState = .paused(progress: finalProgress)
+        whisperStates[modelId] = .paused(progress: finalProgress)
     }
 
-    func cancelWhisperDownload() {
-        activeWhisperDownloader?.cancel()
-        activeWhisperDownloader = nil
-        whisperState = .notDownloaded
-        let incompleteURL = whisperModelURL.deletingLastPathComponent().appendingPathComponent(whisperModelURL.lastPathComponent + ".incomplete")
+    func cancelWhisperDownload(modelId: String) {
+        if activeWhisperModelId == modelId {
+            activeWhisperDownloader?.cancel()
+            activeWhisperDownloader = nil
+            activeWhisperModelId = nil
+        }
+        whisperStates[modelId] = .notDownloaded
+        guard let modelURL = urlForWhisperModel(id: modelId) else { return }
+        let incompleteURL = modelURL.deletingLastPathComponent().appendingPathComponent(modelURL.lastPathComponent + ".incomplete")
         try? FileManager.default.removeItem(at: incompleteURL)
     }
+    
     func pauseAllDownloads() {
-        if case .downloading = whisperState {
-            pauseWhisperDownload()
+        if let activeId = activeWhisperModelId {
+            pauseWhisperDownload(modelId: activeId)
         }
         if case .downloading = gemmaState {
             pauseGemmaDownload()
         }
-
     }
-    func uninstallWhisper() {
-        cancelWhisperDownload()
-        NotificationCenter.default.post(name: Notification.Name("ReleaseWhisperContext"), object: nil)
+    
+    func uninstallWhisper(modelId: String) {
+        cancelWhisperDownload(modelId: modelId)
+        
+        guard let model = availableWhisperModels.first(where: { $0.id == modelId }),
+              let modelURL = urlForWhisperModel(id: modelId) else { return }
+              
+        if selectedWhisperModelId == modelId {
+            NotificationCenter.default.post(name: Notification.Name("ReleaseWhisperContext"), object: nil)
+        }
         URLCache.shared.removeAllCachedResponses()
-        let api = HubApi(downloadBase: modelsDirectory, cache: nil)
-        let repoDir = api.localRepoLocation(Hub.Repo(id: whisperModelId))
         do {
-            if FileManager.default.fileExists(atPath: repoDir.path) {
-                try FileManager.default.removeItem(at: repoDir)
+            if FileManager.default.fileExists(atPath: modelURL.path) {
+                try FileManager.default.removeItem(at: modelURL)
             }
         } catch {
             // Ignore deletion errors
         }
-        let ggerganovDir = modelsDirectory.appendingPathComponent("models").appendingPathComponent("ggerganov")
-        if FileManager.default.fileExists(atPath: ggerganovDir.path) {
-            try? FileManager.default.removeItem(at: ggerganovDir)
-        }
-        cleanHubCache(repoName: "models--ggerganov--whisper.cpp")
-        whisperState = .notDownloaded
+        whisperStates[modelId] = .notDownloaded
     }
     /// Initiates or resumes the download of the Gemma LLM model from Hugging Face.
     func downloadGemma() {

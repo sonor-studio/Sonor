@@ -202,7 +202,8 @@ class AppController: NSObject, ObservableObject {
             if modeString == "Hold" { self.activeHotkeyMode = .hold }
             else if modeString == "Automatic" { self.activeHotkeyMode = .automatic }
             else { self.activeHotkeyMode = .click }
-            guard case .downloaded = ModelManager.shared.whisperState else {
+            let selectedModelId = ModelManager.shared.selectedWhisperModelId
+            guard case .downloaded = ModelManager.shared.whisperStates[selectedModelId] else {
                 self.isRecording = false
                 WindowManager.shared.openSettings()
                 DispatchQueue.main.async {

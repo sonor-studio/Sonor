@@ -52,7 +52,7 @@ class WindowManager {
         hudWindow?.hasShadow = false
         
         if hudWindow?.isVisible == false {
-            hudWindow?.orderFrontRegardless()
+            hudWindow?.orderFront(nil)
         }
     }
     

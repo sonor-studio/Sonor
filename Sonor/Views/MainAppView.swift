@@ -146,6 +146,9 @@ struct MainAppView: View {
                     ModelDownloadErrorView(error: modelManager.downloadError ?? t("An unknown network error occurred."))
                         .preferredColorScheme(effectiveColorScheme)
                 }
+                .sheet(isPresented: $modelManager.showWhisperModelSelector) {
+                    WhisperModelSelectorView()
+                }
         )
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("OpenChangelogTab"))) { _ in
             selectedTab = .changelog

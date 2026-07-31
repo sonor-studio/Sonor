@@ -6,7 +6,7 @@ struct ModelsSettingsView: View {
     @State private var showUninstallConfirmation = false
     @State private var modelToUninstall: ModelType? = nil
     enum ModelType {
-        case whisper
+        case whisper(id: String)
         case gemma
     }
     var body: some View {
@@ -23,66 +23,80 @@ struct ModelsSettingsView: View {
                 .foregroundColor(.secondary)
                 .padding(.bottom, 10)
             VStack(spacing: 20) {
-                ModelCard(
-                    title: "Whisper (Speech-to-Text)",
-                    description: t("Required for transcribing your voice to text. Approx. 580 MB."),
-                    state: manager.whisperState,
-                    onDownload: { manager.downloadWhisper() },
-                    onCancel: { manager.cancelWhisperDownload() },
-                    onUninstall: {
-                        self.modelToUninstall = .whisper
-                        self.showUninstallConfirmation = true
+                // Transcription Models Section
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Text(t("Transcription Models"))
+                            .font(.system(size: 18, weight: .semibold))
+                        Spacer()
+                        Button(action: { manager.showWhisperModelSelector = true }) {
+                            Text(t("Add Model"))
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundColor(colorScheme == .dark ? .white : .black)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05))
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
                     }
-                )
-                ModelCard(
-                    title: "Gemma (Text Correction)",
-                    description: t("Required for advanced text rewriting and smart corrections. Approx. 3 GB."),
-                    state: manager.gemmaState,
-                    onDownload: { manager.downloadGemma() },
-                    onPause: { manager.pauseGemmaDownload() },
-                    onCancel: { manager.cancelGemmaDownload() },
-                    onUninstall: {
-                        self.modelToUninstall = .gemma
-                        self.showUninstallConfirmation = true
-                    }
-                )
-            }
-            
-            Spacer().frame(height: 24)
-            
-            VStack(spacing: 12) {
-                HStack(spacing: 16) {
-                    Rectangle()
-                        .fill(LinearGradient(gradient: Gradient(colors: [.clear, .secondary.opacity(0.3)]), startPoint: .leading, endPoint: .trailing))
-                        .frame(height: 1)
                     
-                    Text(t("Coming Soon"))
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .tracking(3)
-                        .foregroundStyle(
-                            LinearGradient(
-                                colors: [.primary.opacity(0.9), .secondary.opacity(0.8)],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
+                    let activeOrDownloadingWhisperModels = manager.availableWhisperModels.filter { model in
+                        guard let state = manager.whisperStates[model.id] else { return false }
+                        switch state {
+                        case .notDownloaded: return false
+                        default: return true
+                        }
+                    }
+                    
+                    if activeOrDownloadingWhisperModels.isEmpty {
+                        Text(t("No transcription models downloaded. Click 'Add Model' to download one."))
+                            .font(.system(size: 13))
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 10)
+                    } else {
+                        ForEach(activeOrDownloadingWhisperModels) { model in
+                            ModelCard(
+                                title: model.name,
+                                description: model.description,
+                                state: manager.whisperStates[model.id] ?? .notDownloaded,
+                                isActive: manager.selectedWhisperModelId == model.id,
+                                onSetActive: {
+                                    manager.selectedWhisperModelId = model.id
+                                },
+                                onDownload: { manager.downloadWhisper(modelId: model.id) },
+                                onPause: { manager.pauseWhisperDownload(modelId: model.id) },
+                                onCancel: { manager.cancelWhisperDownload(modelId: model.id) },
+                                onUninstall: {
+                                    self.modelToUninstall = .whisper(id: model.id)
+                                    self.showUninstallConfirmation = true
+                                }
                             )
-                        )
-                        .textCase(.uppercase)
-                    
-                    Rectangle()
-                        .fill(LinearGradient(gradient: Gradient(colors: [.secondary.opacity(0.3), .clear]), startPoint: .leading, endPoint: .trailing))
-                        .frame(height: 1)
+                        }
+                    }
                 }
-                .padding(.horizontal, 40)
                 
-                Text(t("Sonor is constantly evolving. Future updates will bring a wider selection of advanced AI models tailored to your workflow."))
-                    .font(.system(size: 13, weight: .regular))
-                    .foregroundColor(.secondary.opacity(0.85))
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-                    .padding(.horizontal, 32)
+                Divider().padding(.vertical, 8)
+                
+                // LLM Models Section
+                VStack(alignment: .leading, spacing: 16) {
+                    Text(t("LLM Models"))
+                        .font(.system(size: 18, weight: .semibold))
+                    
+                    ModelCard(
+                        title: "Gemma (Text Correction)",
+                        description: t("Required for advanced text rewriting and smart corrections. Approx. 3 GB."),
+                        state: manager.gemmaState,
+                        onDownload: { manager.downloadGemma() },
+                        onPause: { manager.pauseGemmaDownload() },
+                        onCancel: { manager.cancelGemmaDownload() },
+                        onUninstall: {
+                            self.modelToUninstall = .gemma
+                            self.showUninstallConfirmation = true
+                        }
+                    )
+                }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 24)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(
@@ -94,8 +108,8 @@ struct ModelsSettingsView: View {
                         primaryButton: .destructive(Text(t("Uninstall"))) {
                             if let model = modelToUninstall {
                                 switch model {
-                                case .whisper:
-                                    manager.uninstallWhisper()
+                                case .whisper(let id):
+                                    manager.uninstallWhisper(modelId: id)
                                 case .gemma:
                                     manager.uninstallGemma()
                                 }
@@ -237,5 +251,68 @@ struct ModelCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
+    }
+}
+
+struct WhisperModelSelectorView: View {
+    @ObservedObject var manager = ModelManager.shared
+    @Environment(\.colorScheme) var colorScheme
+    @State private var showUninstallConfirmation = false
+    @State private var modelToUninstall: String? = nil
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack {
+                Text(t("Select Transcription Model"))
+                    .font(.system(size: 20, weight: .bold))
+                Spacer()
+                Button(action: { manager.showWhisperModelSelector = false }) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.bottom, 10)
+            
+            ScrollView {
+                VStack(spacing: 16) {
+                    ForEach(manager.availableWhisperModels) { model in
+                        ModelCard(
+                            title: model.name,
+                            description: model.description,
+                            state: manager.whisperStates[model.id] ?? .notDownloaded,
+                            isActive: manager.selectedWhisperModelId == model.id,
+                            onSetActive: {
+                                manager.selectedWhisperModelId = model.id
+                                manager.showWhisperModelSelector = false
+                            },
+                            onDownload: { manager.downloadWhisper(modelId: model.id) },
+                            onPause: { manager.pauseWhisperDownload(modelId: model.id) },
+                            onCancel: { manager.cancelWhisperDownload(modelId: model.id) },
+                            onUninstall: {
+                                self.modelToUninstall = model.id
+                                self.showUninstallConfirmation = true
+                            }
+                        )
+                    }
+                }
+            }
+        }
+        .padding(24)
+        .frame(width: 500, height: 450)
+        .preferredColorScheme(colorScheme)
+        .alert(isPresented: $showUninstallConfirmation) {
+            Alert(
+                title: Text(t("Uninstall Model")),
+                message: Text(t("Are you sure you want to uninstall this model?")),
+                primaryButton: .destructive(Text(t("Uninstall"))) {
+                    if let id = modelToUninstall {
+                        manager.uninstallWhisper(modelId: id)
+                    }
+                },
+                secondaryButton: .cancel(Text(t("Cancel")))
+            )
+        }
     }
 }
