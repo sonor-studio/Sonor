@@ -12,11 +12,6 @@ class AssistantWorkflowService {
     
     /// Orchestrates the entire post-transcription workflow, including optional LLM modifications,
     /// pasting text via Accessibility (AX) APIs, or falling back to the clipboard.
-    /// - Parameters:
-    ///   - correctedText: The transcribed string (after initial dictionary corrections).
-    ///   - selectedMode: The active VoiceMode, determining if/how the LLM modifies the text.
-    ///   - initialPID: Process ID of the target application to paste into.
-    ///   - targetAXElement: The focused text field element where text will be injected.
     func execute(
         correctedText: String,
         selectedMode: VoiceMode,
@@ -24,6 +19,8 @@ class AssistantWorkflowService {
         targetAXElement: AXUIElement?,
         wasTextFieldFocusedAtStart: Bool,
         audioSamples: [Float]? = nil,
+        historyMessageID: UUID? = nil,
+        isBackgroundRetry: Bool = false,
         onStatusChange: @escaping @MainActor (String) -> Void,
         onAutoLearnTrigger: @escaping @MainActor (pid_t, String) -> Void,
         onCopyNotificationTrigger: @escaping @MainActor (String) -> Void
@@ -40,16 +37,24 @@ class AssistantWorkflowService {
         }
         
         // willPaste: only paste if a text field was actually found — same behavior regardless of fallbackToClipboard
-        var willPaste = isTextFieldDetected
+        var willPaste = isBackgroundRetry ? false : isTextFieldDetected
         
         // willFallbackToClipboard: copy text to clipboard when no field found, only if user enabled this option
-        let willFallbackToClipboard = !isTextFieldDetected && (selectedMode.fallbackToClipboard == true)
+        let willFallbackToClipboard = isBackgroundRetry ? false : (!isTextFieldDetected && (selectedMode.fallbackToClipboard == true))
         
         let shouldRunLLM = !selectedMode.prompt.isEmpty
         
         if !shouldRunLLM {
             // Skip LLM generation and paste directly.
-            MessageMemoryManager.shared.saveMessage(correctedText, samples: audioSamples)
+            if let historyMessageID = historyMessageID {
+                let appName: String? = isBackgroundRetry ? nil : (willPaste ? (NSRunningApplication(processIdentifier: initialPID)?.localizedName ?? "Unknown App") : (willFallbackToClipboard ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None")))
+                let whisperModel = TranscriptionManager.shared.activeModelName
+                MessageMemoryManager.shared.updateMessage(id: historyMessageID, newText: correctedText, isError: false, appName: appName, transcriptionModel: whisperModel, llmModel: nil, modeName: selectedMode.name, updateMetadata: true)
+            } else {
+                let appName = willPaste ? (NSRunningApplication(processIdentifier: initialPID)?.localizedName ?? "Unknown App") : (willFallbackToClipboard ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None"))
+                let whisperModel = TranscriptionManager.shared.activeModelName
+                MessageMemoryManager.shared.saveMessage(correctedText, samples: audioSamples, appName: appName, transcriptionModel: whisperModel, modeName: selectedMode.name)
+            }
             
             if willPaste {
                 DispatchQueue.global(qos: .userInteractive).async {
@@ -61,13 +66,13 @@ class AssistantWorkflowService {
             } else if willFallbackToClipboard {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(correctedText, forType: .string)
-            } else if !isTextFieldDetected {
+            } else if !isTextFieldDetected && !isBackgroundRetry {
                 await MainActor.run {
                     onCopyNotificationTrigger(correctedText)
                 }
             }
             // Play Error sound if no text field was detected (regardless of fallbackToClipboard setting)
-            if !isTextFieldDetected {
+            if !isTextFieldDetected && !isBackgroundRetry {
                 await SoundPlayer.shared.playSound(named: "Error")
             }
             
@@ -191,7 +196,7 @@ class AssistantWorkflowService {
                 }
                 
                 finalPID = currentFrontPID
-                finalFocused = PasteManager.shared.isTextFieldFocused(pid: finalPID)
+                finalFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: finalPID)
                 
             } else {
                 // start mode: "what is currently active"
@@ -201,10 +206,10 @@ class AssistantWorkflowService {
                     frontmostPID = frontApp.processIdentifier
                 }
                 finalPID = frontmostPID
-                finalFocused = PasteManager.shared.isTextFieldFocused(pid: finalPID)
+                finalFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: finalPID)
             }
             
-            let willDoFinalPaste = finalFocused && (!initialWillPaste || !willPaste)
+            let willDoFinalPaste = isBackgroundRetry ? false : (finalFocused && (!initialWillPaste || !willPaste))
             
             if willDoFinalPaste {
                 var textToPaste = fullGeneratedText
@@ -218,7 +223,7 @@ class AssistantWorkflowService {
                         PasteManager.shared.typeTextDirectly(text: textToPaste, targetPID: finalPID, forceFocusElement: nil)
                     }
                 }
-            } else if !finalFocused && !willPaste {
+            } else if !finalFocused && !willPaste && !isBackgroundRetry {
                 // Play Error sound if no text field was detected at the end
                 if willFallbackToClipboard {
                     NSPasteboard.general.clearContents()
@@ -231,7 +236,17 @@ class AssistantWorkflowService {
                 await SoundPlayer.shared.playSound(named: "Error")
             }
             
-            MessageMemoryManager.shared.saveMessage(fullGeneratedText, samples: audioSamples)
+            if let historyMessageID = historyMessageID {
+                let appName: String? = isBackgroundRetry ? nil : (willPaste ? (NSRunningApplication(processIdentifier: initialPID)?.localizedName ?? "Unknown App") : (willFallbackToClipboard ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None")))
+                let whisperModel = TranscriptionManager.shared.activeModelName
+                let gemmaModel = "Gemma 3"
+                MessageMemoryManager.shared.updateMessage(id: historyMessageID, newText: fullGeneratedText, isError: false, appName: appName, transcriptionModel: whisperModel, llmModel: gemmaModel, modeName: selectedMode.name, updateMetadata: true)
+            } else {
+                let appName = willPaste ? (NSRunningApplication(processIdentifier: initialPID)?.localizedName ?? "Unknown App") : (willFallbackToClipboard ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None"))
+                let whisperModel = TranscriptionManager.shared.activeModelName
+                let gemmaModel = "Gemma 3"
+                MessageMemoryManager.shared.saveMessage(fullGeneratedText, samples: audioSamples, appName: appName, transcriptionModel: whisperModel, llmModel: gemmaModel, modeName: selectedMode.name)
+            }
             if finalFocused || initialWillPaste {
                 await MainActor.run {
                     onAutoLearnTrigger(finalPID, fullGeneratedText)

@@ -25,6 +25,424 @@ public class LocalizationManager: ObservableObject {
         }
     }
     private let translations: [String: [String]] = [
+        "No details available": [
+            "No details available",
+            "Brak szczegółowych danych",
+            "Keine Details verfügbar",
+            "Sin detalles disponibles",
+            "Aucun détail disponible",
+            "Nessun dettaglio disponibile",
+            "利用可能な詳細はありません",
+            "Sem detalhes disponíveis",
+            "无可用详情"
+        ],
+        "App": [
+            "App",
+            "Aplikacja",
+            "App",
+            "Aplicación",
+            "App",
+            "App",
+            "アプリ",
+            "App",
+            "应用"
+        ],
+        "Mode": [
+            "Mode",
+            "Tryb",
+            "Modus",
+            "Modo",
+            "Mode",
+            "Modalità",
+            "モード",
+            "Modo",
+            "模式"
+        ],
+        "Transcription": [
+            "Transcription",
+            "Transkrypcja",
+            "Transkription",
+            "Transcripción",
+            "Transcription",
+            "Trascrizione",
+            "文字起こし",
+            "Transcrição",
+            "转录"
+        ],
+        "LLM": [
+            "LLM",
+            "LLM",
+            "LLM",
+            "LLM",
+            "LLM",
+            "LLM",
+            "LLM",
+            "LLM",
+            "LLM"
+        ],
+        "None": [
+            "None",
+            "Brak",
+            "Keine",
+            "Ninguno",
+            "Aucun",
+            "Nessuno",
+            "なし",
+            "Nenhum",
+            "无"
+        ],
+        "MLX Models": [
+            "MLX Models",
+            "Modele MLX",
+            "MLX-Modelle",
+            "Modelos MLX",
+            "Modèles MLX",
+            "Modelli MLX",
+            "MLX モデル",
+            "Modelos MLX",
+            "MLX 模型"
+        ],
+        "Whisper Models": [
+            "Whisper Models",
+            "Modele Whisper",
+            "Whisper-Modelle",
+            "Modelos Whisper",
+            "Modèles Whisper",
+            "Modelli Whisper",
+            "Whisper モデル",
+            "Modelos Whisper",
+            "Whisper 模型"
+        ],
+        "Select Transcription Model": [
+            "Select Transcription Model",
+            "Wybierz Model Transkrypcji",
+            "Transkriptionsmodell Auswählen",
+            "Seleccionar Modelo de Transcripción",
+            "Sélectionner le Modèle de Transcription",
+            "Seleziona Modello di Trascrizione",
+            "転写モデルを選択",
+            "Selecionar Modelo de Transcrição",
+            "选择转录模型"
+        ],
+        "Transcription Models": [
+            "Transcription Models",
+            "Modele Transkrypcji",
+            "Transkriptionsmodelle",
+            "Modelos de Transcripción",
+            "Modèles de Transcription",
+            "Modelli di Trascrizione",
+            "転写モデル",
+            "Modelos de Transcrição",
+            "转录模型"
+        ],
+        "LLM Models": [
+            "LLM Models",
+            "Modele LLM",
+            "LLM-Modelle",
+            "Modelos LLM",
+            "Modèles LLM",
+            "Modelli LLM",
+            "LLMモデル",
+            "Modelos LLM",
+            "LLM 模型"
+        ],
+        "Add Model": [
+            "Add Model",
+            "Dodaj model",
+            "Modell hinzufügen",
+            "Añadir Modelo",
+            "Ajouter un Modèle",
+            "Aggiungi Modello",
+            "モデルを追加",
+            "Adicionar Modelo",
+            "添加模型"
+        ],
+        "Available:": [
+            "Available:",
+            "Dostępne:",
+            "Verfügbar:",
+            "Disponibles:",
+            "Disponibles :",
+            "Disponibili:",
+            "利用可能:",
+            "Disponíveis:",
+            "可用："
+        ],
+        "Industry standard open-source transcription model from OpenAI. Highly accurate.": [
+            "Industry standard open-source transcription model from OpenAI. Highly accurate.",
+            "Standardowy model transkrypcji open-source od OpenAI. Wysoce dokładny.",
+            "Industriestandard-Open-Source-Transkriptionsmodell von OpenAI. Hochpräzise.",
+            "Modelo de transcripción de código abierto estándar de la industria de OpenAI. Altamente preciso.",
+            "Modèle de transcription open source standard de l'industrie d'OpenAI. Très précis.",
+            "Modello di trascrizione open source standard di settore di OpenAI. Altamente accurato.",
+            "OpenAIによる業界標準のオープンソース転写モデル。高精度。",
+            "Modelo de transcrição de código aberto padrão da indústria da OpenAI. Altamente preciso.",
+            "来自OpenAI的行业标准开源转录模型。高度准确。"
+        ],
+        "Ultra-fast multilingual model with excellent accent recognition from Alibaba.": [
+            "Ultra-fast multilingual model with excellent accent recognition from Alibaba.",
+            "Ultraszybki wielojęzyczny model z doskonałym rozpoznawaniem akcentów od Alibaby.",
+            "Ultraschnelles mehrsprachiges Modell mit exzellenter Akzenterkennung von Alibaba.",
+            "Modelo multilingüe ultrarrápido con excelente reconocimiento de acentos de Alibaba.",
+            "Modèle multilingue ultra-rapide avec une excellente reconnaissance des accents d'Alibaba.",
+            "Modello multilingue ultraveloce con eccellente riconoscimento degli accenti di Alibaba.",
+            "Alibabaの優れたアクセント認識を備えた超高速多言語モデル。",
+            "Modelo multilíngue ultrarrápido com excelente reconhecimento de sotaque da Alibaba.",
+            "来自阿里巴巴的具有出色口音识别能力的超快速多语言模型。"
+        ],
+        "Tiny, highly optimized models for resource-constrained environments from UsefulSensors.": [
+            "Tiny, highly optimized models for resource-constrained environments from UsefulSensors.",
+            "Malutkie, wysoce zoptymalizowane modele dla środowisk o ograniczonych zasobach od UsefulSensors.",
+            "Winzige, hochoptimierte Modelle für ressourcenbeschränkte Umgebungen von UsefulSensors.",
+            "Modelos diminutos y altamente optimizados para entornos con recursos limitados de UsefulSensors.",
+            "Modèles minuscules et hautement optimisés pour les environnements à ressources limitées de UsefulSensors.",
+            "Modelli minuscoli e altamente ottimizzati per ambienti con risorse limitate da UsefulSensors.",
+            "UsefulSensorsからのリソース制約環境向けの小型で高度に最適化されたモデル。",
+            "Modelos minúsculos e altamente otimizados para ambientes com recursos limitados da UsefulSensors.",
+            "来自UsefulSensors的针对资源受限环境的小型、高度优化的模型。"
+        ],
+        "High accuracy ASR models built on the NeMo framework from NVIDIA.": [
+            "High accuracy ASR models built on the NeMo framework from NVIDIA.",
+            "Modele ASR o wysokiej dokładności zbudowane na frameworku NeMo od NVIDIA.",
+            "Hochpräzise ASR-Modelle, basierend auf dem NeMo-Framework von NVIDIA.",
+            "Modelos ASR de alta precisión creados en el marco NeMo de NVIDIA.",
+            "Modèles ASR de haute précision construits sur le framework NeMo de NVIDIA.",
+            "Modelli ASR ad alta precisione basati sul framework NeMo di NVIDIA.",
+            "NVIDIAのNeMoフレームワーク上に構築された高精度ASRモデル。",
+            "Modelos ASR de alta precisão construídos no framework NeMo da NVIDIA.",
+            "基于NVIDIA的NeMo框架构建的高精度ASR模型。"
+        ],
+        "Large, powerful multilingual models with high reasoning capability from Alibaba.": [
+            "Large, powerful multilingual models with high reasoning capability from Alibaba.",
+            "Duże, potężne wielojęzyczne modele o wysokich zdolnościach wnioskowania od Alibaby.",
+            "Große, leistungsstarke mehrsprachige Modelle mit hoher logischer Fähigkeit von Alibaba.",
+            "Modelos multilingües grandes y potentes con alta capacidad de razonamiento de Alibaba.",
+            "Grands et puissants modèles multilingues avec une grande capacité de raisonnement d'Alibaba.",
+            "Grandi e potenti modelli multilingue con elevata capacità di ragionamento di Alibaba.",
+            "Alibabaの推論能力が高い、大規模で強力な多言語モデル。",
+            "Grandes e poderosos modelos multilíngues com alta capacidade de raciocínio da Alibaba.",
+            "来自阿里巴巴的具有高推理能力的大型强大跨语言模型。"
+        ],
+        "Extremely fast, very low memory usage. Good for basic english dictation.": [
+            "Extremely fast, very low memory usage. Good for basic english dictation.",
+            "Wyjątkowo szybki, bardzo niskie zużycie pamięci. Dobry do podstawowego dyktowania w j. angielskim.",
+            "Extrem schnell, sehr geringer Speicherverbrauch. Gut für einfaches englisches Diktat.",
+            "Extremadamente rápido, muy bajo uso de memoria. Bueno para el dictado básico en inglés.",
+            "Extrêmement rapide, très faible utilisation de la mémoire. Bon pour la dictée anglaise de base.",
+            "Estremamente veloce, uso della memoria molto basso. Ottimo per la dettatura di base in inglese.",
+            "非常に高速で、メモリ使用量が非常に少ない。基本的な英語のディクテーションに適しています。",
+            "Extremamente rápido, uso muito baixo de memória. Bom para ditado básico em inglês.",
+            "速度极快，内存占用极低。适合基础英语听写。"
+        ],
+        "Fast, low memory usage. Better accuracy than Tiny.": [
+            "Fast, low memory usage. Better accuracy than Tiny.",
+            "Szybki, niskie zużycie pamięci. Lepsza dokładność niż Tiny.",
+            "Schnell, geringer Speicherverbrauch. Bessere Genauigkeit als Tiny.",
+            "Rápido, bajo uso de memoria. Mejor precisión que Tiny.",
+            "Rapide, faible utilisation de la mémoire. Meilleure précision que Tiny.",
+            "Veloce, basso uso della memoria. Precisione migliore rispetto a Tiny.",
+            "高速でメモリ使用量が少ない。Tinyよりも精度が高い。",
+            "Rápido, baixo uso de memória. Melhor precisão do que o Tiny.",
+            "速度快，内存占用低。精度优于Tiny。"
+        ],
+        "Good balance of speed and accuracy for English.": [
+            "Good balance of speed and accuracy for English.",
+            "Dobry balans szybkości i dokładności dla języka angielskiego.",
+            "Gutes Gleichgewicht zwischen Geschwindigkeit und Genauigkeit für Englisch.",
+            "Buen equilibrio de velocidad y precisión para inglés.",
+            "Bon équilibre de vitesse et de précision pour l'anglais.",
+            "Buon equilibrio tra velocità e precisione per l'inglese.",
+            "英語の速度と精度のバランスが良い。",
+            "Bom equilíbrio entre velocidade e precisão para inglês.",
+            "英语听写的速度和准确性的良好平衡。"
+        ],
+        "Best overall accuracy, multilingual support.": [
+            "Best overall accuracy, multilingual support.",
+            "Najlepsza ogólna dokładność, obsługa wielu języków.",
+            "Beste Gesamtgenauigkeit, mehrsprachige Unterstützung.",
+            "Mejor precisión general, soporte multilingüe.",
+            "Meilleure précision globale, support multilingue.",
+            "Migliore precisione complessiva, supporto multilingue.",
+            "全体的な最高の精度、多言語サポート。",
+            "Melhor precisão geral, suporte multilíngue.",
+            "最佳整体准确性，支持多语言。"
+        ],
+        "Extremely fast, excellent multilingual support and accent recognition.": [
+            "Extremely fast, excellent multilingual support and accent recognition.",
+            "Ekstremalnie szybki, doskonała obsługa wielu języków i rozpoznawanie akcentów.",
+            "Extrem schnell, hervorragende mehrsprachige Unterstützung und Akzenterkennung.",
+            "Extremadamente rápido, excelente soporte multilingüe y reconocimiento de acentos.",
+            "Extrêmement rapide, excellent support multilingue et reconnaissance des accents.",
+            "Estremamente veloce, eccellente supporto multilingue e riconoscimento degli accenti.",
+            "非常に高速で、優れた多言語サポートとアクセント認識。",
+            "Extremamente rápido, excelente suporte multilíngue e reconhecimento de sotaque.",
+            "速度极快，具有出色的多语言支持和口音识别能力。"
+        ],
+        "Very small and fast, optimized for resource-constrained environments.": [
+            "Very small and fast, optimized for resource-constrained environments.",
+            "Bardzo mały i szybki, zoptymalizowany dla środowisk o ograniczonych zasobach.",
+            "Sehr klein und schnell, optimiert für ressourcenbeschränkte Umgebungen.",
+            "Muy pequeño y rápido, optimizado para entornos con recursos limitados.",
+            "Très petit et rapide, optimisé pour les environnements à ressources limitées.",
+            "Molto piccolo e veloce, ottimizzato per ambienti con risorse limitate.",
+            "非常に小型で高速、リソース制約環境に最適化されています。",
+            "Muito pequeno e rápido, otimizado para ambientes com recursos limitados.",
+            "体积小、速度快，专为资源受限的环境进行了优化。"
+        ],
+        "Balanced accuracy and speed.": [
+            "Balanced accuracy and speed.",
+            "Zrównoważona dokładność i szybkość.",
+            "Ausgewogene Genauigkeit und Geschwindigkeit.",
+            "Precisión y velocidad equilibradas.",
+            "Précision et vitesse équilibrées.",
+            "Precisione e velocità bilanciate.",
+            "精度と速度のバランスが良い。",
+            "Precisão e velocidade equilibradas.",
+            "精度和速度的平衡。"
+        ],
+        "High accuracy model from NVIDIA NeMo.": [
+            "High accuracy model from NVIDIA NeMo.",
+            "Model o wysokiej dokładności od NVIDIA NeMo.",
+            "Hochpräzises Modell von NVIDIA NeMo.",
+            "Modelo de alta precisión de NVIDIA NeMo.",
+            "Modèle de haute précision de NVIDIA NeMo.",
+            "Modello ad alta precisione da NVIDIA NeMo.",
+            "NVIDIA NeMoからの高精度モデル。",
+            "Modelo de alta precisão do NVIDIA NeMo.",
+            "来自NVIDIA NeMo的高精度模型。"
+        ],
+        "Large and powerful ASR model for advanced transcription.": [
+            "Large and powerful ASR model for advanced transcription.",
+            "Duży i potężny model ASR do zaawansowanej transkrypcji.",
+            "Großes und leistungsstarkes ASR-Modell für fortgeschrittene Transkription.",
+            "Modelo ASR grande y potente para transcripción avanzada.",
+            "Grand et puissant modèle ASR pour la transcription avancée.",
+            "Grande e potente modello ASR per la trascrizione avanzata.",
+            "高度な転写のための大規模で強力なASRモデル。",
+            "Modelo ASR grande e poderoso para transcrição avançada.",
+            "用于高级转录的大型强大ASR模型。"
+        ],
+        "Accuracy": [
+            "Accuracy",
+            "Dokładność",
+            "Genauigkeit",
+            "Precisión",
+            "Précision",
+            "Precisione",
+            "精度",
+            "Precisão",
+            "准确性"
+        ],
+        "Speed": [
+            "Speed",
+            "Prędkość",
+            "Geschwindigkeit",
+            "Velocidad",
+            "Vitesse",
+            "Velocità",
+            "速度",
+            "Velocidade",
+            "速度"
+        ],
+        "Weight": [
+            "Weight",
+            "Waga",
+            "Gewicht",
+            "Peso",
+            "Poids",
+            "Peso",
+            "重量",
+            "Peso",
+            "重量"
+        ],
+        "Languages": [
+            "Languages",
+            "Języki",
+            "Sprachen",
+            "Idiomas",
+            "Langues",
+            "Lingue",
+            "言語",
+            "Idiomas",
+            "语言"
+        ],
+        "English": [
+            "English",
+            "Angielski",
+            "Englisch",
+            "Inglés",
+            "Anglais",
+            "Inglese",
+            "英語",
+            "Inglês",
+            "英语"
+        ],
+        "99+ Languages": [
+            "99+ Languages",
+            "99+ Języków",
+            "99+ Sprachen",
+            "Más de 99 idiomas",
+            "99+ Langues",
+            "99+ Lingue",
+            "99以上の言語",
+            "99+ Idiomas",
+            "99+ 种语言"
+        ],
+        "Multilingual (EN, ZH, JA, KO, YUE)": [
+            "Multilingual (EN, ZH, JA, KO, YUE)",
+            "Wielojęzyczny (EN, ZH, JA, KO, YUE)",
+            "Mehrsprachig (EN, ZH, JA, KO, YUE)",
+            "Multilingüe (EN, ZH, JA, KO, YUE)",
+            "Multilingue (EN, ZH, JA, KO, YUE)",
+            "Multilingue (EN, ZH, JA, KO, YUE)",
+            "多言語 (EN, ZH, JA, KO, YUE)",
+            "Multilíngue (EN, ZH, JA, KO, YUE)",
+            "多语言 (EN, ZH, JA, KO, YUE)"
+        ],
+        "Multilingual": [
+            "Multilingual",
+            "Wielojęzyczny",
+            "Mehrsprachig",
+            "Multilingüe",
+            "Multilingue",
+            "Multilingue",
+            "多言語",
+            "Multilíngue",
+            "多语言"
+        ],
+        "models available": [
+            "models available",
+            "dostępne modele",
+            "Modelle verfügbar",
+            "modelos disponibles",
+            "modèles disponibles",
+            "modelli disponibili",
+            "利用可能なモデル",
+            "modelos disponíveis",
+            "可用模型"
+        ],
+        "Set Active": [
+            "Set Active",
+            "Ustaw Aktywny",
+            "Als aktiv festlegen",
+            "Activar",
+            "Définir comme actif",
+            "Imposta attivo",
+            "アクティブに設定",
+            "Definir como ativo",
+            "设置为活跃状态"
+        ],
+        "Active": [
+            "Active",
+            "Aktywny",
+            "Aktiv",
+            "Activo",
+            "Actif",
+            "Attivo",
+            "アクティブ",
+            "Ativo",
+            "活跃"
+        ],
         "Save Usage Statistics": [
             "Save Usage Statistics",
             "Zapisuj statystyki użytkowania",
@@ -5061,6 +5479,28 @@ public class LocalizationManager: ObservableObject {
             "未使用の画面とオンボーディング手順を削除し、コア機能へのアクセスを迅速化しました。",
             "Remoção de telas e etapas de integração não utilizadas para acesso mais rápido aos recursos principais.",
             "删除了未使用的屏幕和引导步骤，以便更快地访问核心功能。"
+        ],
+        "Transcription failed": [
+            "Transcription failed",
+            "Błąd transkrypcji",
+            "Transkription fehlgeschlagen",
+            "Transcripción fallida",
+            "La transcription a échoué",
+            "Trascrizione fallita",
+            "文字起こしに失敗しました",
+            "Falha na transcrição",
+            "转录失败"
+        ],
+        "OOM Warning: Brakuje RAMu dla tego nagrania. Zamknij inne programy, albo użyj lżejszego modelu.": [
+            "OOM Warning: Not enough RAM for this recording. Close other programs or use a lighter model.",
+            "OOM Warning: Brakuje RAMu dla tego nagrania. Zamknij inne programy, albo użyj lżejszego modelu.",
+            "OOM Warning: Nicht genug RAM für diese Aufnahme. Schließen Sie andere Programme oder verwenden Sie ein leichteres Modell.",
+            "OOM Warning: No hay suficiente RAM para esta grabación. Cierra otros programas o usa un modelo más ligero.",
+            "OOM Warning: Pas assez de RAM pour cet enregistrement. Fermez d'autres programmes ou utilisez un modèle plus léger.",
+            "OOM Warning: RAM insufficiente per questa registrazione. Chiudi altri programmi o usa un modello più leggero.",
+            "OOM Warning: この録音にはRAMが不足しています。他のプログラムを閉じるか、より軽いモデルを使用してください。",
+            "OOM Warning: RAM insuficiente para esta gravação. Feche outros programas ou use um modelo mais leve.",
+            "OOM Warning: 此录音的RAM不足。请关闭其他程序或使用更轻量级的模型。"
         ]
     ]
 

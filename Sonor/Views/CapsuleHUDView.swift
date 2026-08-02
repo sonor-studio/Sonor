@@ -26,7 +26,7 @@ struct CapsuleHUDView: View {
     private var targetWidth: CGFloat {
         if isInitializing || isFinalState {
             return 284.0
-        } else if controller.isRecording {
+        } else if controller.isRecording || controller.canRetryTranscription {
             return 180.0
         } else {
             return 232.0
@@ -128,17 +128,20 @@ struct CapsuleHUDView: View {
                     removal: .move(edge: .bottom).combined(with: .opacity)
                 ))
             Spacer()
-            TimelineView(.animation) { timeline in
-                let time = timeline.date.timeIntervalSinceReferenceDate
-                let angle = time.truncatingRemainder(dividingBy: 1.0) * 360.0
-                Circle()
-                    .trim(from: 0, to: 0.6)
-                    .stroke(
-                        textColor,
-                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
-                    )
-                    .frame(width: 16, height: 16)
-                    .rotationEffect(Angle(degrees: angle))
+            if !controller.canRetryTranscription {
+                TimelineView(.animation) { timeline in
+                    let time = timeline.date.timeIntervalSinceReferenceDate
+                    let angle = time.truncatingRemainder(dividingBy: 1.0) * 360.0
+                    Circle()
+                        .trim(from: 0, to: 0.6)
+                        .stroke(
+                            textColor,
+                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
+                        )
+                        .frame(width: 16, height: 16)
+                        .rotationEffect(Angle(degrees: angle))
+                }
+                .transition(.asymmetric(insertion: .scale(scale: 0.5).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
             }
         }
         .padding(.horizontal, 14)
@@ -388,6 +391,23 @@ struct CapsuleHUDView: View {
                                 .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
                                 .zIndex(0)
                             }
+                            if controller.canRetryTranscription {
+                                Button(action: {
+                                    if !dragTracker.isDragging { controller.retryTranscription() }
+                                }) {
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundColor(textColor)
+                                        .frame(width: 40, height: 40)
+                                        .contentShape(Rectangle())
+                                        .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+                                }
+                                .buttonStyle(NoAnimButtonStyle())
+                                .focusable(false)
+                                .simultaneousGesture(dragGesture)
+                                .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
+                                .zIndex(0)
+                            }
                             if !isInitializing && !isFinalState {
                                 Button(action: {
                                     if !dragTracker.isDragging { controller.cancelRecording() }
@@ -442,6 +462,12 @@ struct CapsuleHUDView: View {
                     height = 40
                     isProcessing = controller.statusText != "Listening..." && controller.statusText != "Paused"
                 }
+            }
+        }
+        .onChange(of: controller.canRetryTranscription) {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
+                width = targetWidth
+                isProcessing = controller.statusText != "Listening..." && controller.statusText != "Paused"
             }
         }
         .onChange(of: controller.statusText) {

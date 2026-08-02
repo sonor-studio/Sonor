@@ -18,6 +18,11 @@ struct SonorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var controller = AppController()
     init() {
+        if CommandLine.arguments.contains("--worker-mode") {
+            WorkerProcess.run()
+            // Should not reach here because WorkerProcess calls exit()
+        }
+        
         NSApplication.shared.setActivationPolicy(.accessory)
         let mainMenu = NSMenu()
         let appMenuItem = NSMenuItem()
@@ -143,6 +148,60 @@ struct MenuContentView: View {
         Divider()
         Button(t("Quit")) {
             controller.quitApp()
+        }
+    }
+}
+
+// MARK: - Worker Process
+// This process runs in isolation to prevent MLX C++ aborts from crashing the main UI.
+struct WorkerProcess {
+    static func run() {
+        let args = CommandLine.arguments
+        guard let repoIndex = args.firstIndex(of: "--repo-id"), repoIndex + 1 < args.count,
+              let audioIndex = args.firstIndex(of: "--audio"), audioIndex + 1 < args.count else {
+            print("ERROR:Missing arguments")
+            exit(1)
+        }
+        
+        let repoId = args[repoIndex + 1]
+        let audioPath = args[audioIndex + 1]
+        
+        var language = "auto"
+        if let langIndex = args.firstIndex(of: "--language"), langIndex + 1 < args.count {
+            language = args[langIndex + 1]
+        }
+        
+        do {
+            let audioData = try Data(contentsOf: URL(fileURLWithPath: audioPath))
+            let audioSamples = audioData.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
+            
+            Task {
+                do {
+                    // Instantiate MLXEngine directly
+                    let engine = MLXEngine(modelId: "worker", repoId: repoId)
+                    try await engine.prepare()
+                    
+                    // We call performTranscription directly (skipping the worker proxy check)
+                    let result = try await engine.performTranscription(audioSamples: audioSamples, language: language, initialPrompt: nil)
+                    
+                    let encoded = result.data(using: .utf8)?.base64EncodedString() ?? ""
+                    print("SUCCESS:\(encoded)")
+                    exit(0)
+                } catch {
+                    print("ERROR:\(error.localizedDescription)")
+                    exit(1)
+                }
+            }
+            
+            // CRITICAL: We cannot use a semaphore to block the main thread here! 
+            // Metal shader compilation and MLX GPU dispatch rely on XPC messages that 
+            // often require the main thread's RunLoop to be active. 
+            // Blocking it causes a complete deadlock (infinite spinning without crash).
+            RunLoop.main.run()
+            
+        } catch {
+            print("ERROR:\(error.localizedDescription)")
+            exit(1)
         }
     }
 }

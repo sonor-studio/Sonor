@@ -8,6 +8,11 @@ struct MemoryMessage: Identifiable, Codable, Equatable {
     let text: String
     let date: Date
     var hasAudio: Bool? = false // Optional for backwards compatibility with existing JSON
+    var isError: Bool? = false
+    var appName: String? = nil
+    var transcriptionModel: String? = nil
+    var llmModel: String? = nil
+    var modeName: String? = nil
 }
 
 @MainActor
@@ -117,19 +122,20 @@ class MessageMemoryManager: ObservableObject {
         deleteDiskFile()
     }
     
-    func saveMessage(_ text: String, samples: [Float]? = nil) {
+    @discardableResult
+    func saveMessage(_ text: String, samples: [Float]? = nil, isError: Bool = false, appName: String? = nil, transcriptionModel: String? = nil, llmModel: String? = nil, modeName: String? = nil) -> UUID? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
-            return
+            return nil
         }
         if UserDefaults.standard.bool(forKey: "isIncognitoMode") {
-            return
+            return nil
         }
         
         let id = UUID()
         let audioEnabled = UserDefaults.standard.object(forKey: "historySavesAudio") == nil ? true : UserDefaults.standard.bool(forKey: "historySavesAudio")
         let hasAudio = audioEnabled && samples != nil && !samples!.isEmpty
-        let msg = MemoryMessage(id: id, text: trimmed, date: Date(), hasAudio: hasAudio)
+        let msg = MemoryMessage(id: id, text: trimmed, date: Date(), hasAudio: hasAudio, isError: isError, appName: appName, transcriptionModel: transcriptionModel, llmModel: llmModel, modeName: modeName)
         messages.append(msg)
         
         if hasAudio, let samples = samples, let wavData = convertToWAVData(samples: samples) {
@@ -148,13 +154,30 @@ class MessageMemoryManager: ObservableObject {
         for m in messages {
             totalBytes += m.text.utf8.count
         }
-        let kb = Double(totalBytes) / 1024.0
-        let mb = kb / 1024.0
-        if mb > 1.0 {
-        } else if kb > 1.0 {
-        } else {
+        return id
+    }
+    
+    func updateMessage(id: UUID, newText: String, isError: Bool = false, appName: String? = nil, transcriptionModel: String? = nil, llmModel: String? = nil, modeName: String? = nil, updateMetadata: Bool = false) {
+        if let index = messages.firstIndex(where: { $0.id == id }) {
+            let msg = messages[index]
+            let updated = MemoryMessage(
+                id: msg.id, 
+                text: newText, 
+                date: msg.date, 
+                hasAudio: msg.hasAudio, 
+                isError: isError, 
+                appName: updateMetadata ? (appName ?? msg.appName) : msg.appName, 
+                transcriptionModel: updateMetadata ? (transcriptionModel ?? msg.transcriptionModel) : msg.transcriptionModel, 
+                llmModel: updateMetadata ? llmModel : msg.llmModel, // llmModel can legitimately become nil if changed to a non-LLM mode
+                modeName: updateMetadata ? (modeName ?? msg.modeName) : msg.modeName
+            )
+            messages[index] = updated
+            if historyStorageType == "File" {
+                saveToDisk()
+            }
         }
     }
+
     func clearHistory() {
         messages.removeAll()
         ramAudioSamples.removeAll()
@@ -308,6 +331,23 @@ class MessageMemoryManager: ObservableObject {
         var fullData = header
         fullData.append(pcmData)
         return fullData
+    }
+    
+    func convertWAVToSamples(data: Data) -> [Float]? {
+        // Simple WAV parser (assuming 16kHz, 16-bit PCM Mono as we create it)
+        guard data.count > 44 else { return nil }
+        let pcmData = data.subdata(in: 44..<data.count)
+        var samples: [Float] = []
+        samples.reserveCapacity(pcmData.count / 2)
+        
+        pcmData.withUnsafeBytes { buffer in
+            let int16Pointer = buffer.bindMemory(to: Int16.self)
+            for i in 0..<int16Pointer.count {
+                let sample = Float(Int16(littleEndian: int16Pointer[i])) / 32767.0
+                samples.append(sample)
+            }
+        }
+        return samples
     }
 }
 

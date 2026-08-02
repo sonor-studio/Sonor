@@ -21,6 +21,7 @@
 		D6534C6F29F8B7E2B6DA47D2 /* Hub in Frameworks */ = {isa = PBXBuildFile; productRef = AF07F2F8533D00DF95F0205C /* Hub */; };
 		D9C0161012AA64376FF682C3 /* libggml-metal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ECDC90A23855A924F67A28E5 /* libggml-metal.a */; };
 		DA1A18BC76D9C0AAE959D6C7 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 8B63F6402F23B2F22D0DAB23 /* Tokenizers */; };
+		FACF56C1301D23D6005BF36E /* MLXAudioSTT in Frameworks */ = {isa = PBXBuildFile; productRef = FACF56C0301D23D6005BF36E /* MLXAudioSTT */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -144,6 +145,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A9BA8F21F7C1CA9EE1AB39F3 /* MLX in Frameworks */,
+				FACF56C1301D23D6005BF36E /* MLXAudioSTT in Frameworks */,
 				482F589EE138F7AEFCCE8E21 /* MLXLLM in Frameworks */,
 				4586A2E16FE5CEBBC5899C24 /* MLXLMCommon in Frameworks */,
 				34AC90E36DE79EEDDC3A0381 /* MLXHuggingFace in Frameworks */,
@@ -331,6 +333,7 @@
 				A443AD55CB178B6FA2B4E2F3 /* MLXHuggingFace */,
 				AF07F2F8533D00DF95F0205C /* Hub */,
 				8B63F6402F23B2F22D0DAB23 /* Tokenizers */,
+				FACF56C0301D23D6005BF36E /* MLXAudioSTT */,
 			);
 			productName = Sonor;
 			productReference = FA21F5512FA973670030EE83 /* Sonor.app */;
@@ -414,6 +417,7 @@
 				BBA881AD0739DBB04827434D /* XCRemoteSwiftPackageReference "mlx-swift" */,
 				96BA1D70BB01DA0DC5715BD9 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
 				E7AAB071A01BC180627CA7CA /* XCRemoteSwiftPackageReference "swift-transformers" */,
+				FACF56BF301D23D6005BF36E /* XCRemoteSwiftPackageReference "mlx-audio-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FA21F5522FA973670030EE83 /* Products */;
@@ -938,6 +942,14 @@
 				minimumVersion = 1.3.0;
 			};
 		};
+		FACF56BF301D23D6005BF36E /* XCRemoteSwiftPackageReference "mlx-audio-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/Blaizzy/mlx-audio-swift";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -970,6 +982,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E7AAB071A01BC180627CA7CA /* XCRemoteSwiftPackageReference "swift-transformers" */;
 			productName = Hub;
+		};
+		FACF56C0301D23D6005BF36E /* MLXAudioSTT */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FACF56BF301D23D6005BF36E /* XCRemoteSwiftPackageReference "mlx-audio-swift" */;
+			productName = MLXAudioSTT;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -136,20 +136,17 @@ struct MainAppView: View {
             TimeSavedMilestoneView(hoursSaved: milestoneHoursForSheet)
                 .preferredColorScheme(effectiveColorScheme)
         }
-        .background(
-            Color.clear
-                .sheet(isPresented: $modelManager.showModelsRequiredModal) {
-                    ModelsRequiredExplanationView()
-                        .preferredColorScheme(effectiveColorScheme)
-                }
-                .sheet(isPresented: $modelManager.showDownloadErrorModal) {
-                    ModelDownloadErrorView(error: modelManager.downloadError ?? t("An unknown network error occurred."))
-                        .preferredColorScheme(effectiveColorScheme)
-                }
-                .sheet(isPresented: $modelManager.showWhisperModelSelector) {
-                    WhisperModelSelectorView()
-                }
-        )
+        .sheet(isPresented: $modelManager.showModelsRequiredModal) {
+            ModelsRequiredExplanationView()
+                .preferredColorScheme(effectiveColorScheme)
+        }
+        .sheet(isPresented: $modelManager.showDownloadErrorModal) {
+            ModelDownloadErrorView(error: modelManager.downloadError ?? t("An unknown network error occurred."))
+                .preferredColorScheme(effectiveColorScheme)
+        }
+        .sheet(isPresented: $modelManager.showModelSelector) {
+            ModelSelectorView()
+        }
         .onReceive(NotificationCenter.default.publisher(for: Notification.Name("OpenChangelogTab"))) { _ in
             selectedTab = .changelog
         }
