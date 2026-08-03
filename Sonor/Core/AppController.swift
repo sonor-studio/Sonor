@@ -287,8 +287,8 @@ class AppController: NSObject, ObservableObject {
                     if Task.isCancelled { return }
                     guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
                     
-                    if behavior == .mute {
-                        MediaControlService.shared.pauseMultimedia(behavior: .mute)
+                    if behavior != .keep {
+                        MediaControlService.shared.pauseMultimedia(behavior: behavior)
                     }
                     
                     Task {

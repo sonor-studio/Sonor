@@ -124,12 +124,8 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                 modes.insert(defaultMode, at: insertIndex)
             }
         }
-        for i in 0..<modes.count {
-            if modes[i].audioBehavior == .pause {
-                modes[i].audioBehavior = .mute
-            }
-        }
         
+
         modes.sort { mode1, mode2 in
             let index1 = defaults.firstIndex(where: { $0.name == mode1.name })
             let index2 = defaults.firstIndex(where: { $0.name == mode2.name })

@@ -518,6 +518,32 @@ struct ModeEditorView: View {
                             .buttonStyle(.plain)
                             .help(t("Apply to all assistants"))
                         }
+                        HStack {
+                            Toggle(t("Pause media during recording"), isOn: Binding(
+                                get: { (modeBinding.wrappedValue.audioBehavior ?? .keep) == .pause },
+                                set: { newValue in
+                                    modeBinding.wrappedValue.audioBehavior = newValue ? .pause : .keep
+                                    saveModes()
+                                }
+                            ))
+                            .toggleStyle(CustomToggleStyle())
+                            .font(.system(size: 12))
+                            Button(action: {
+                                let newVal = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                for i in modes.indices {
+                                    modes[i].audioBehavior = newVal
+                                }
+                                saveModes()
+                            }) {
+                                Image(systemName: "rectangle.stack")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .padding(4)
+                                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.1)))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .help(t("Apply to all assistants"))
+                        }
 
                         HStack {
                             Picker(t("Paste target"), selection: Binding(

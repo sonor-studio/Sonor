@@ -21,6 +21,7 @@
 		D6534C6F29F8B7E2B6DA47D2 /* Hub in Frameworks */ = {isa = PBXBuildFile; productRef = AF07F2F8533D00DF95F0205C /* Hub */; };
 		D9C0161012AA64376FF682C3 /* libggml-metal.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ECDC90A23855A924F67A28E5 /* libggml-metal.a */; };
 		DA1A18BC76D9C0AAE959D6C7 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 8B63F6402F23B2F22D0DAB23 /* Tokenizers */; };
+		FA2C6165302027EE00C5C5D0 /* MediaRemoteAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = FA2C6164302027EE00C5C5D0 /* MediaRemoteAdapter */; };
 		FACF56C1301D23D6005BF36E /* MLXAudioSTT in Frameworks */ = {isa = PBXBuildFile; productRef = FACF56C0301D23D6005BF36E /* MLXAudioSTT */; };
 /* End PBXBuildFile section */
 
@@ -157,6 +158,7 @@
 				C0559876D8BD50DD812A8D0F /* libggml-base.a in Frameworks */,
 				8D7DC2017BA3ED6F2241D376 /* libggml-cpu.a in Frameworks */,
 				9892EA6D96893814CFA17626 /* libggml.a in Frameworks */,
+				FA2C6165302027EE00C5C5D0 /* MediaRemoteAdapter in Frameworks */,
 				66A007DAC5E714C7E96D4F3D /* libsonor.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -334,6 +336,7 @@
 				AF07F2F8533D00DF95F0205C /* Hub */,
 				8B63F6402F23B2F22D0DAB23 /* Tokenizers */,
 				FACF56C0301D23D6005BF36E /* MLXAudioSTT */,
+				FA2C6164302027EE00C5C5D0 /* MediaRemoteAdapter */,
 			);
 			productName = Sonor;
 			productReference = FA21F5512FA973670030EE83 /* Sonor.app */;
@@ -418,6 +421,7 @@
 				96BA1D70BB01DA0DC5715BD9 /* XCRemoteSwiftPackageReference "mlx-swift-lm" */,
 				E7AAB071A01BC180627CA7CA /* XCRemoteSwiftPackageReference "swift-transformers" */,
 				FACF56BF301D23D6005BF36E /* XCRemoteSwiftPackageReference "mlx-audio-swift" */,
+				FA2C6163302027EE00C5C5D0 /* XCRemoteSwiftPackageReference "mediaremote-adapter" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FA21F5522FA973670030EE83 /* Products */;
@@ -942,6 +946,14 @@
 				minimumVersion = 1.3.0;
 			};
 		};
+		FA2C6163302027EE00C5C5D0 /* XCRemoteSwiftPackageReference "mediaremote-adapter" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ejbills/mediaremote-adapter";
+			requirement = {
+				branch = master;
+				kind = branch;
+			};
+		};
 		FACF56BF301D23D6005BF36E /* XCRemoteSwiftPackageReference "mlx-audio-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/Blaizzy/mlx-audio-swift";
@@ -982,6 +994,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = E7AAB071A01BC180627CA7CA /* XCRemoteSwiftPackageReference "swift-transformers" */;
 			productName = Hub;
+		};
+		FA2C6164302027EE00C5C5D0 /* MediaRemoteAdapter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FA2C6163302027EE00C5C5D0 /* XCRemoteSwiftPackageReference "mediaremote-adapter" */;
+			productName = MediaRemoteAdapter;
 		};
 		FACF56C0301D23D6005BF36E /* MLXAudioSTT */ = {
 			isa = XCSwiftPackageProductDependency;
