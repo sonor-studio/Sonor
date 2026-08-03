@@ -22,7 +22,7 @@ class WindowManager {
                 backing: .buffered,
                 defer: false
             )
-            panel.contentView = NSHostingView(rootView: RootHUDView(controller: controller))
+            panel.contentView = NSHostingView(rootView: CapsuleHUDView(controller: controller))
             panel.isFloatingPanel = true
             panel.level = .statusBar
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
@@ -38,7 +38,7 @@ class WindowManager {
                 let modeStr = UserDefaults.standard.string(forKey: "hudPositionMode") ?? "free"
                 let mode = HUDPositionMode(rawValue: modeStr) ?? .free
                 
-                let currentPanelWidth: CGFloat = mode == .notch ? 600 : 350
+                let currentPanelWidth: CGFloat = 350
                 panel.setContentSize(NSSize(width: currentPanelWidth, height: 600))
                 
                 let leftMargin: CGFloat = 33
@@ -56,9 +56,6 @@ class WindowManager {
                 case .top:
                     startX = screenFrame.minX + (screenFrame.width - currentPanelWidth) / 2
                     startY = screenFrame.maxY - visibleHeight - 20
-                case .notch:
-                    startX = screen.frame.minX + (screen.frame.width - currentPanelWidth) / 2
-                    startY = screen.frame.maxY - 600 // Align exactly with top (panel height is 600)
                 case .bottom:
                     startX = screenFrame.minX + (screenFrame.width - currentPanelWidth) / 2
                     startY = screenFrame.minY + 20
@@ -88,7 +85,7 @@ class WindowManager {
         guard let panel = self.hudWindow, let screen = panel.screen ?? NSScreen.main else { return }
         
         let screenFrame = screen.visibleFrame
-        let panelWidth: CGFloat = mode == .notch ? 600 : 350
+        let panelWidth: CGFloat = 350
         panel.setContentSize(NSSize(width: panelWidth, height: 600))
         let visibleHeight: CGFloat = 88 // estimated height for positioning
         
@@ -101,10 +98,6 @@ class WindowManager {
         case .top:
             let y = screenFrame.maxY - visibleHeight - topMargin
             panel.setFrameOrigin(NSPoint(x: centerX, y: y))
-            
-        case .notch:
-            let notchY = screen.frame.maxY - panel.frame.height
-            panel.setFrameOrigin(NSPoint(x: centerX, y: notchY))
             
         case .bottom:
             let y = screenFrame.minY + bottomMargin

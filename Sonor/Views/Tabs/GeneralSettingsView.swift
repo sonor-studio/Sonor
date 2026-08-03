@@ -712,7 +712,7 @@ struct GeneralSettingsView: View {
                     .id(localizer.appLanguage)
                 }
                 
-                Text(t("Choose where the overlay appears. Top and Bottom lock the position, while Free allows you to drag it. Notch extends from the top edge."))
+                Text(t("Choose where the overlay appears. Top and Bottom lock the position, while Free allows you to drag it."))
                     .font(.system(size: 12))
                     .foregroundColor(.secondary)
             }
