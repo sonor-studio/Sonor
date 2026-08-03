@@ -10,9 +10,11 @@ struct GeneralSettingsView: View {
     @AppStorage("hotkeyString_cancel") private var hotkeyStringCancel = "Ctrl + Opt + Z"
     @AppStorage("hotkeyString_pause") private var hotkeyStringPause = "Ctrl + Opt + X"
     @AppStorage("hotkeyString_assistant") private var hotkeyStringAssistant = "Ctrl + Opt + C"
+    @AppStorage("hotkeyString_paste") private var hotkeyStringPaste = "None"
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
     @AppStorage("appTheme") private var appTheme = "system"
     @AppStorage("hudAppearance") private var hudAppearance = "glass"
+    @AppStorage("hudPositionMode") private var hudPositionMode: HUDPositionMode = .free
     @AppStorage("playAnySound") private var playAnySound = true
     @AppStorage("playSound_Start") private var playSound_Start = true
     @AppStorage("playSound_Error") private var playSound_Error = true
@@ -32,6 +34,8 @@ struct GeneralSettingsView: View {
     @AppStorage("appVolume") private var appVolume: Double = 1.0
     @AppStorage("historySavesAudio") private var historySavesAudio = true
     @AppStorage("saveStatsEnabled") private var saveStatsEnabled = true
+    @AppStorage("transcriptionUnloadTimeout") private var transcriptionUnloadTimeout: Int = 0
+    @AppStorage("llmUnloadTimeout") private var llmUnloadTimeout: Int = 0
     @State private var isShowingDeleteStatsAlert = false
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
@@ -45,6 +49,7 @@ struct GeneralSettingsView: View {
             appThemeSection
             hudAppearanceSection
             appLanguageSection
+            memoryManagementSection
             historyStorageSection
             keyboardShortcutSection
             audioSourceSection
@@ -302,6 +307,7 @@ struct GeneralSettingsView: View {
                 hotkeyRow(title: "Cancel Recording", type: .cancel, hotkeyStringVal: hotkeyStringCancel)
                 hotkeyRow(title: "Pause/Resume", type: .pause, hotkeyStringVal: hotkeyStringPause)
                 hotkeyRow(title: "Change Assistant", type: .assistant, hotkeyStringVal: hotkeyStringAssistant)
+                hotkeyRow(title: "Paste Last Transcription", type: .paste, hotkeyStringVal: hotkeyStringPaste)
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: hotkeyMode)
         }
@@ -683,6 +689,33 @@ struct GeneralSettingsView: View {
             Text(t("Choose whether the assistant overlay should be slightly transparent or have a solid background."))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
+            
+            Divider()
+                .padding(.vertical, 5)
+            
+            VStack(alignment: .leading, spacing: 15) {
+                Text(t("Overlay Position"))
+                    .font(.system(size: 16, weight: .semibold))
+                
+                HStack {
+                    Text(t("Overlay Position"))
+                        .font(.system(size: 13))
+                    Spacer()
+                    Picker("", selection: $hudPositionMode) {
+                        ForEach(HUDPositionMode.allCases) { mode in
+                            Text(t(mode.localizedName)).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .font(.system(size: 13))
+                    .id(localizer.appLanguage)
+                }
+                
+                Text(t("Choose where the overlay appears. Top and Bottom lock the position, while Free allows you to drag it. Notch extends from the top edge."))
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(20)
@@ -743,6 +776,59 @@ struct GeneralSettingsView: View {
                 .pickerStyle(.menu)
                 .labelsHidden()
                 .font(.system(size: 13))
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private var memoryManagementSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("Memory Management"))
+                .font(.system(size: 16, weight: .semibold))
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(t("Transcription Model Inactivity"))
+                        .font(.system(size: 13))
+                    Spacer()
+                    Picker("", selection: $transcriptionUnloadTimeout) {
+                        Text(t("Never")).tag(0)
+                        Text(t("1 min")).tag(1)
+                        Text(t("2 min")).tag(2)
+                        Text(t("5 min")).tag(5)
+                        Text(t("10 min")).tag(10)
+                        Text(t("30 min")).tag(30)
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 150)
+                }
+                HStack {
+                    Text(t("LLM Model Inactivity"))
+                        .font(.system(size: 13))
+                    Spacer()
+                    Picker("", selection: $llmUnloadTimeout) {
+                        Text(t("Never")).tag(0)
+                        Text(t("1 min")).tag(1)
+                        Text(t("2 min")).tag(2)
+                        Text(t("5 min")).tag(5)
+                        Text(t("10 min")).tag(10)
+                        Text(t("30 min")).tag(30)
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 150)
+                }
+                Text(t("Models will be unloaded from memory after the specified time of inactivity to free up RAM/VRAM."))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
             }
         }
         .padding(20)
@@ -909,7 +995,7 @@ struct GeneralSettingsView: View {
     }
     
     private func isShortcutInUse(keyCode: Int, modifiers: Int, ignoringType: RecordingHotkeyType?) -> Bool {
-        let types: [RecordingHotkeyType] = [.main, .cancel, .pause, .assistant]
+        let types: [RecordingHotkeyType] = [.main, .cancel, .pause, .assistant, .paste]
         for type in types {
             if type == ignoringType { continue }
             let codeKey = type == .main ? "hotkeyCode" : "hotkeyCode_\(type.rawValue)"

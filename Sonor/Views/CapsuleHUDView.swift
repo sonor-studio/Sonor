@@ -6,6 +6,7 @@ struct CapsuleHUDView: View {
     @ObservedObject var controller: AppController
     @ObservedObject var modelManager = ModelManager.shared
     @AppStorage("appTheme") private var appTheme = "system"
+    @AppStorage("hudPositionMode") private var hudPositionMode: HUDPositionMode = .free
     var effectiveColorScheme: ColorScheme {
         if appTheme == "dark" {
             return .dark
@@ -521,10 +522,14 @@ struct CapsuleHUDView: View {
                 recordingDuration += 1
             }
         }
+        .onChange(of: hudPositionMode) { newMode in
+            WindowManager.shared.updateHUDPosition(for: newMode)
+        }
     }
     var dragGesture: some Gesture {
         DragGesture(minimumDistance: 3)
             .onChanged { value in
+                guard hudPositionMode == .free else { return }
                 let currentMouse = NSEvent.mouseLocation
                 guard let window = WindowManager.shared.hudWindow else { return }
                 if dragTracker.startMouseLocation == nil {

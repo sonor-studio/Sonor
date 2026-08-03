@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import MLX
 import MLXLLM
 import MLXLMCommon
@@ -20,11 +21,13 @@ struct NativeHubDownloader: MLXLMCommon.Downloader {
 extension ChatSession: @unchecked @retroactive Sendable {}
 
 @MainActor
-final class LLMManager {
+final class LLMManager: ObservableObject {
     static let shared = LLMManager()
 
     private var modelContainer: ModelContainer?
     private(set) var isReady = false
+    @Published public var isLoaded: Bool = false
+    private var unloadTimer: Timer?
 
     private init() {}
 
@@ -72,7 +75,27 @@ final class LLMManager {
     func releaseModel() {
         self.modelContainer = nil
         self.isReady = false
+        self.isLoaded = false
+        self.unloadTimer?.invalidate()
+        self.unloadTimer = nil
         MLX.Memory.clearCache()
+    }
+    
+    public func cancelUnloadTimer() {
+        unloadTimer?.invalidate()
+        unloadTimer = nil
+    }
+
+    public func resetUnloadTimer() {
+        unloadTimer?.invalidate()
+        let timeout = UserDefaults.standard.integer(forKey: "llmUnloadTimeout")
+        guard timeout > 0 else { return }
+        
+        unloadTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(timeout * 60), repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.releaseModel()
+            }
+        }
     }
 
     private var containerTask: Task<ModelContainer, Error>?
@@ -93,6 +116,7 @@ final class LLMManager {
         self.containerTask = task
         let container = try await task.value
         self.modelContainer = container
+        self.isLoaded = true
         self.containerTask = nil
         return container
     }

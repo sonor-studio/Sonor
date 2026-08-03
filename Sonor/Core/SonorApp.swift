@@ -80,6 +80,8 @@ struct SonorApp: App {
 
 struct MenuContentView: View {
     let controller: AppController
+    @ObservedObject var transcriptionManager = TranscriptionManager.shared
+    @ObservedObject var llmManager = LLMManager.shared
     @State private var isCopyDisabled: Bool
     @AppStorage("appLanguage") private var appLanguage: String = "en"
     
@@ -150,6 +152,21 @@ struct MenuContentView: View {
             WindowManager.shared.openSettings()
         }
         Divider()
+        
+        if transcriptionManager.isLoaded {
+            Button(t("Unload Transcription Model")) {
+                transcriptionManager.resetEngine()
+            }
+        }
+        if llmManager.isLoaded {
+            Button(t("Unload LLM Model")) {
+                llmManager.releaseModel()
+            }
+        }
+        if transcriptionManager.isLoaded || llmManager.isLoaded {
+            Divider()
+        }
+        
         Button(t("Quit")) {
             controller.quitApp()
         }

@@ -22,11 +22,12 @@ class WindowManager {
                 backing: .buffered,
                 defer: false
             )
-            panel.contentView = NSHostingView(rootView: CapsuleHUDView(controller: controller))
+            panel.contentView = NSHostingView(rootView: RootHUDView(controller: controller))
             panel.isFloatingPanel = true
             panel.level = .statusBar
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             panel.hidesOnDeactivate = false
+            panel.animationBehavior = .none
             panel.appearance = NSAppearance(named: .darkAqua)
             if let screen = NSScreen.main {
                 let defaultX = (screen.frame.width - 350) / 2
@@ -34,16 +35,39 @@ class WindowManager {
                 var savedX = UserDefaults.standard.object(forKey: "hudWindowX") as? CGFloat ?? defaultX
                 var savedY = UserDefaults.standard.object(forKey: "hudWindowY") as? CGFloat ?? defaultY
                 let screenFrame = screen.visibleFrame
+                let modeStr = UserDefaults.standard.string(forKey: "hudPositionMode") ?? "free"
+                let mode = HUDPositionMode(rawValue: modeStr) ?? .free
+                
+                let currentPanelWidth: CGFloat = mode == .notch ? 600 : 350
+                panel.setContentSize(NSSize(width: currentPanelWidth, height: 600))
+                
                 let leftMargin: CGFloat = 33
-                let rightMargin: CGFloat = 350 - leftMargin
+                let rightMargin: CGFloat = currentPanelWidth - leftMargin
                 let visibleHeight: CGFloat = 88
                 let minXBound = screenFrame.minX - leftMargin
                 let maxXBound = screenFrame.maxX - rightMargin
                 let minYBound = screenFrame.minY
                 let maxYBound = screenFrame.maxY - visibleHeight
-                savedX = max(minXBound, min(savedX, maxXBound))
-                savedY = max(minYBound, min(savedY, maxYBound))
-                panel.setFrameOrigin(NSPoint(x: savedX, y: savedY))
+                
+                var startX = savedX
+                var startY = savedY
+                
+                switch mode {
+                case .top:
+                    startX = screenFrame.minX + (screenFrame.width - currentPanelWidth) / 2
+                    startY = screenFrame.maxY - visibleHeight - 20
+                case .notch:
+                    startX = screen.frame.minX + (screen.frame.width - currentPanelWidth) / 2
+                    startY = screen.frame.maxY - 600 // Align exactly with top (panel height is 600)
+                case .bottom:
+                    startX = screenFrame.minX + (screenFrame.width - currentPanelWidth) / 2
+                    startY = screenFrame.minY + 20
+                case .free:
+                    startX = max(minXBound, min(savedX, maxXBound))
+                    startY = max(minYBound, min(savedY, maxYBound))
+                }
+                
+                panel.setFrameOrigin(NSPoint(x: startX, y: startY))
             }
             self.hudWindow = panel
         }
@@ -54,12 +78,53 @@ class WindowManager {
         if hudWindow?.isVisible == false {
             hudWindow?.orderFront(nil)
         }
+        NotificationCenter.default.post(name: NSNotification.Name("HUDWindowDidShow"), object: nil)
+        
+        LLMManager.shared.cancelUnloadTimer()
+        TranscriptionManager.shared.cancelUnloadTimer()
+    }
+    
+    func updateHUDPosition(for mode: HUDPositionMode) {
+        guard let panel = self.hudWindow, let screen = panel.screen ?? NSScreen.main else { return }
+        
+        let screenFrame = screen.visibleFrame
+        let panelWidth: CGFloat = mode == .notch ? 600 : 350
+        panel.setContentSize(NSSize(width: panelWidth, height: 600))
+        let visibleHeight: CGFloat = 88 // estimated height for positioning
+        
+        let centerX = screenFrame.minX + (screenFrame.width - panelWidth) / 2
+        
+        let topMargin: CGFloat = 20
+        let bottomMargin: CGFloat = 20
+        
+        switch mode {
+        case .top:
+            let y = screenFrame.maxY - visibleHeight - topMargin
+            panel.setFrameOrigin(NSPoint(x: centerX, y: y))
+            
+        case .notch:
+            let notchY = screen.frame.maxY - panel.frame.height
+            panel.setFrameOrigin(NSPoint(x: centerX, y: notchY))
+            
+        case .bottom:
+            let y = screenFrame.minY + bottomMargin
+            panel.setFrameOrigin(NSPoint(x: centerX, y: y))
+            
+        case .free:
+            // Do not force move when switching to free
+            break
+        }
     }
     
     func hideHUD() {
         if hudWindow?.isVisible == true {
-            hudWindow?.orderOut(nil)
+            NotificationCenter.default.post(name: NSNotification.Name("HUDWindowWillHide"), object: nil)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.hudWindow?.orderOut(nil)
+            }
         }
+        LLMManager.shared.resetUnloadTimer()
+        TranscriptionManager.shared.resetUnloadTimer()
     }
     
 
