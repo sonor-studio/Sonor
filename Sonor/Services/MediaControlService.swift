@@ -142,6 +142,37 @@ class MediaControlService {
         }
     }
     
+    /// Updates the multimedia state dynamically while a recording is already active.
+    func updateMultimedia(from oldBehavior: AudioBehavior, to newBehavior: AudioBehavior) {
+        guard oldBehavior != newBehavior else { return }
+        print("[MediaControlService] updateMultimedia: from \(oldBehavior.rawValue) to \(newBehavior.rawValue)")
+        
+        let oldMute = (oldBehavior == .mute || oldBehavior == .muteAndPause)
+        let newMute = (newBehavior == .mute || newBehavior == .muteAndPause)
+        let oldPause = (oldBehavior == .pause || oldBehavior == .muteAndPause)
+        let newPause = (newBehavior == .pause || newBehavior == .muteAndPause)
+        
+        self.activeAudioBehavior = newBehavior
+        
+        // Unmute if previously muted but new mode doesn't mute
+        if oldMute && !newMute {
+            performUnmute(delay: 0)
+        }
+        // Resume if previously paused but new mode doesn't pause
+        if oldPause && !newPause {
+            performResume(delay: 0)
+        }
+        
+        // Mute if new mode mutes and we weren't already muting
+        if newMute && !oldMute {
+            performMute(isAlreadyManaging: false)
+        }
+        // Pause if new mode pauses and we weren't already pausing
+        if newPause && !oldPause {
+            performPause()
+        }
+    }
+    
     private func performMute(isAlreadyManaging: Bool) {
         muteWorkItem?.cancel()
         let item = DispatchWorkItem { [weak self] in
@@ -191,14 +222,14 @@ class MediaControlService {
             
             guard !Task.isCancelled else { return }
             
-            let isSameGeneration = await MainActor.run { self?.muteGeneration == myGeneration }
-            guard isSameGeneration else { return }
+            let isSameGeneration = await MainActor.run { [weak self] in self?.muteGeneration == myGeneration }
+            guard isSameGeneration == true else { return }
             
             if shouldUnmute {
                 _ = self?.setSystemMuted(false)
             }
             
-            await MainActor.run {
+            await MainActor.run { [weak self] in
                 self?.didMuteAudio = false
             }
         }
@@ -212,8 +243,13 @@ class MediaControlService {
         print("[MediaControlService] performPause: checking if media is playing...")
         
         // 1. Sprawdzamy czy COKOLWIEK gra, używając danych śledzonych na bieżąco.
-        // Dzięki temu unikamy pauzowania z opóźnieniem.
-        guard isMediaCurrentlyPlaying else {
+        // Jeśli adapter jeszcze nie złapał stanu, ratujemy się AppleScriptem.
+        var isPlaying = isMediaCurrentlyPlaying
+        if !isPlaying {
+            isPlaying = checkIfMediaIsPlayingAppleScript()
+        }
+        
+        guard isPlaying else {
             print("[MediaControlService] Nothing is currently playing, skipping pause.")
             wasPlayingBeforeRecording = false
             pausedMediaBundleId = nil
@@ -260,9 +296,10 @@ class MediaControlService {
                 }
             }
             
-            // Jeśli zaczął nagrywać ponownie, anuluj wznawianie
-            if self?.activeAudioBehavior != nil {
-                print("[MediaControlService] New recording started, skip resume")
+            // Jeśli nagrywa z trybem, który nadal wymaga pauzy, anuluj wznawianie
+            let active = self?.activeAudioBehavior
+            if active == .pause || active == .muteAndPause {
+                print("[MediaControlService] New recording started with pause, skip resume")
                 return
             }
             
@@ -270,7 +307,8 @@ class MediaControlService {
             controller.play()
             
             // Opcjonalny fallback, gdyby adapter nagle zawiódł
-            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.3) {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: 300_000_000)
                 if self?.isMediaCurrentlyPlaying == false {
                     print("[MediaControlService] Media still not playing, using HID fallback...")
                     HIDMediaKey.sendPlayPause()
@@ -331,5 +369,31 @@ class MediaControlService {
         
         status = AudioObjectSetPropertyData(deviceID, &address, 0, nil, propertySize, &muteValue)
         return status == noErr
+    }
+    
+    nonisolated private func checkIfMediaIsPlayingAppleScript() -> Bool {
+        let script = """
+        tell application "System Events"
+            set processList to name of every process whose background only is false
+        end tell
+        if "Music" is in processList then
+            try
+                run script "tell application \\"Music\\" to return (player state is playing)"
+                if result is true then return true
+            end try
+        end if
+        if "Spotify" is in processList then
+            try
+                run script "tell application \\"Spotify\\" to return (player state is playing)"
+                if result is true then return true
+            end try
+        end if
+        return false
+        """
+        var error: NSDictionary?
+        if let appleScript = NSAppleScript(source: script) {
+            return appleScript.executeAndReturnError(&error).booleanValue
+        }
+        return false
     }
 }

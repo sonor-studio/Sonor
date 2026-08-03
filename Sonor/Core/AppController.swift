@@ -31,7 +31,16 @@ class AppController: NSObject, ObservableObject {
     @Published var audioLevel: Float = 0.0
     @Published var audioLevels: [Float] = Array(repeating: 0.01, count: 40)
     @Published var availableModes: [VoiceMode] = []
-    @Published var currentMode: VoiceMode?
+    @Published var currentMode: VoiceMode? {
+        didSet {
+            guard isRecording, let newMode = currentMode, let oldMode = oldValue else { return }
+            let oldBehavior = oldMode.audioBehavior ?? .keep
+            let newBehavior = newMode.audioBehavior ?? .keep
+            if oldBehavior != newBehavior {
+                MediaControlService.shared.updateMultimedia(from: oldBehavior, to: newBehavior)
+            }
+        }
+    }
     @Published var activeHotkeyMode: HotkeyMode = .click
     @Published var isPaused = false {
         didSet {
