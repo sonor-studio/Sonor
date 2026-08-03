@@ -50,8 +50,10 @@ class MediaControlService {
     
     // === MUTING STATE ===
     private var muteWorkItem: DispatchWorkItem?
-    private var unmuteWorkItem: DispatchWorkItem?
-    private var wasMutedBeforeRecording: Bool = false
+    private var unmuteTask: Task<Void, Never>?
+    private var muteGeneration: Int = 0
+    private var didMuteAudio: Bool = false
+    private var wasAudioMutedBeforeRecording: Bool = false
     
     // === PAUSING STATE ===
     private var wasPlayingBeforeRecording = false
@@ -85,13 +87,13 @@ class MediaControlService {
     func pauseMultimedia(behavior: AudioBehavior) {
         print("[MediaControlService] pauseMultimedia: \(behavior.rawValue)")
         
-        let isCurrentlyRestoring = (unmuteWorkItem != nil) || (resumeWorkItem != nil)
+        let isCurrentlyRestoring = (unmuteTask != nil) || (resumeWorkItem != nil)
         
         // Cancel any pending restoration from a previous session
         muteWorkItem?.cancel()
         muteWorkItem = nil
-        unmuteWorkItem?.cancel()
-        unmuteWorkItem = nil
+        unmuteTask?.cancel()
+        unmuteTask = nil
         resumeWorkItem?.cancel()
         resumeWorkItem = nil
         
@@ -104,6 +106,12 @@ class MediaControlService {
         case .pause:
             self.activeAudioBehavior = behavior
             performPause()
+            
+        case .muteAndPause:
+            let isAlreadyManagingMute = (self.activeAudioBehavior == .muteAndPause) || isCurrentlyRestoring
+            self.activeAudioBehavior = behavior
+            performPause()
+            performMute(isAlreadyManaging: isAlreadyManagingMute)
             
         case .keep:
             self.activeAudioBehavior = nil
@@ -126,53 +134,76 @@ class MediaControlService {
             performUnmute(delay: delay)
         case .pause:
             performResume(delay: delay)
+        case .muteAndPause:
+            performResume(delay: delay)
+            performUnmute(delay: delay)
         case .keep, .none:
             break
         }
     }
     
     private func performMute(isAlreadyManaging: Bool) {
-        Task.detached(priority: .userInitiated) {
-            var wasMuted = false
-            if !isAlreadyManaging {
-                wasMuted = self.getSystemMute()
-                await MainActor.run { self.wasMutedBeforeRecording = wasMuted }
-            } else {
-                wasMuted = await MainActor.run { return self.wasMutedBeforeRecording }
-            }
-            
-            if !wasMuted {
-                self.setSystemMuteAppleScript(true)
+        muteWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            Task.detached(priority: .userInitiated) { [weak self] in
+                guard let self = self else { return }
+                
+                // Wolne calle do CoreAudio wykonujemy w tle
+                let currentlyMuted = self.isSystemAudioMuted()
+                
+                await MainActor.run {
+                    self.unmuteTask?.cancel()
+                    self.unmuteTask = nil
+                    self.muteGeneration += 1
+                    
+                    if currentlyMuted {
+                        if self.didMuteAudio {
+                            self.wasAudioMutedBeforeRecording = false
+                        } else {
+                            self.wasAudioMutedBeforeRecording = true
+                            self.didMuteAudio = false
+                        }
+                    } else {
+                        self.wasAudioMutedBeforeRecording = false
+                    }
+                }
+                
+                if !currentlyMuted {
+                    let success = self.setSystemMuted(true)
+                    await MainActor.run {
+                        self.didMuteAudio = success
+                    }
+                }
             }
         }
+        muteWorkItem = item
+        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.5, execute: item)
     }
     
     private func performUnmute(delay: TimeInterval) {
-        // Natychmiastowe sprawdzenie flagi na MainActor
-        if self.wasMutedBeforeRecording {
-            print("[MediaControlService] performUnmute: user muted before us, skipping unmute.")
-            return
-        }
+        let shouldUnmute = didMuteAudio && !wasAudioMutedBeforeRecording
+        let myGeneration = muteGeneration
         
-        print("[MediaControlService] performUnmute: scheduling unmute with delay \(delay)s")
-        
-        unmuteWorkItem?.cancel()
-        let item = DispatchWorkItem { [weak self] in
-            guard let self = self else { return }
+        let task = Task.detached(priority: .userInitiated) { [weak self] in
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
             
-            Thread.sleep(forTimeInterval: 0.5)
+            guard !Task.isCancelled else { return }
             
-            for _ in 1...5 {
-                if self.activeAudioBehavior != nil {
-                    return
-                }
-                
-                self.setSystemMuteAppleScript(false)
-                Thread.sleep(forTimeInterval: 0.2)
+            let isSameGeneration = await MainActor.run { self?.muteGeneration == myGeneration }
+            guard isSameGeneration else { return }
+            
+            if shouldUnmute {
+                _ = self?.setSystemMuted(false)
+            }
+            
+            await MainActor.run {
+                self?.didMuteAudio = false
             }
         }
-        unmuteWorkItem = item
-        DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay, execute: item)
+        
+        unmuteTask = task
     }
     
     // MARK: - Pausing Logic (MediaRemoteAdapter)
@@ -239,7 +270,7 @@ class MediaControlService {
             controller.play()
             
             // Opcjonalny fallback, gdyby adapter nagle zawiódł
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + 0.3) {
                 if self?.isMediaCurrentlyPlaying == false {
                     print("[MediaControlService] Media still not playing, using HID fallback...")
                     HIDMediaKey.sendPlayPause()
@@ -250,29 +281,55 @@ class MediaControlService {
         DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + delay, execute: item)
     }
     
-    // MARK: - AppleScript Helpers
+    // MARK: - CoreAudio Helpers
     
-    /// Uses AppleScript to check the system's global mute status.
-    /// This is more reliable than CoreAudio for Bluetooth devices, external DACs, and modern Macs.
-    nonisolated private func getSystemMute() -> Bool {
-        let scriptStr = "output muted of (get volume settings) or output volume of (get volume settings) = 0"
-        var error: NSDictionary?
-        if let script = NSAppleScript(source: scriptStr) {
-            let result = script.executeAndReturnError(&error)
-            if error == nil {
-                return result.booleanValue
-            }
-        }
-        return false
+    nonisolated private func getDefaultOutputDevice() -> AudioDeviceID? {
+        var deviceID = AudioDeviceID(0)
+        var propertySize = UInt32(MemoryLayout<AudioDeviceID>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultOutputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let status = AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &propertySize, &deviceID)
+        return status == noErr ? deviceID : nil
     }
-    
-    /// Executes a small AppleScript to securely and globally mute/unmute the system volume.
-    /// This is often more reliable than attempting to modify CoreAudio properties directly.
-    nonisolated private func setSystemMuteAppleScript(_ mute: Bool) {
-        let scriptStr = mute ? "set volume with output muted" : "set volume without output muted"
-        var error: NSDictionary?
-        if let script = NSAppleScript(source: scriptStr) {
-            script.executeAndReturnError(&error)
+
+    nonisolated private func isSystemAudioMuted() -> Bool {
+        guard let deviceID = getDefaultOutputDevice() else { return false }
+        var muted: UInt32 = 0
+        var propertySize = UInt32(MemoryLayout<UInt32>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyMute,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        if !AudioObjectHasProperty(deviceID, &address) {
+            address.mElement = 0
+            if !AudioObjectHasProperty(deviceID, &address) { return false }
         }
+        let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &propertySize, &muted)
+        return status == noErr && muted != 0
+    }
+
+    nonisolated private func setSystemMuted(_ muted: Bool) -> Bool {
+        guard let deviceID = getDefaultOutputDevice() else { return false }
+        var muteValue: UInt32 = muted ? 1 : 0
+        let propertySize = UInt32(MemoryLayout<UInt32>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyMute,
+            mScope: kAudioDevicePropertyScopeOutput,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        if !AudioObjectHasProperty(deviceID, &address) {
+            address.mElement = 0
+            if !AudioObjectHasProperty(deviceID, &address) { return false }
+        }
+        var isSettable: DarwinBoolean = false
+        var status = AudioObjectIsPropertySettable(deviceID, &address, &isSettable)
+        if status != noErr || !isSettable.boolValue { return false }
+        
+        status = AudioObjectSetPropertyData(deviceID, &address, 0, nil, propertySize, &muteValue)
+        return status == noErr
     }
 }

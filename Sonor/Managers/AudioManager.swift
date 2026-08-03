@@ -104,12 +104,18 @@ class AudioManager: ObservableObject {
     /// - Returns: An array of processed, 16kHz float samples ready for transcription.
     func stopRecording() -> [Float] {
         NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: audioEngine)
-        if isTapInstalled {
-            audioEngine?.inputNode.removeTap(onBus: 0)
-            isTapInstalled = false
-        }
-        audioEngine?.stop()
+        
+        let engineToStop = audioEngine
+        let wasTapInstalled = isTapInstalled
         audioEngine = nil
+        isTapInstalled = false
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            if wasTapInstalled {
+                engineToStop?.inputNode.removeTap(onBus: 0)
+            }
+            engineToStop?.stop()
+        }
         DispatchQueue.main.async {
             self.isRecording = false
             self.audioLevel = 0.0
@@ -125,12 +131,18 @@ class AudioManager: ObservableObject {
         guard !isPaused else { return }
         isPaused = true
         NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: audioEngine)
-        if isTapInstalled {
-            audioEngine?.inputNode.removeTap(onBus: 0)
-            isTapInstalled = false
-        }
-        audioEngine?.stop()
+        
+        let engineToStop = audioEngine
+        let wasTapInstalled = isTapInstalled
         audioEngine = nil
+        isTapInstalled = false
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            if wasTapInstalled {
+                engineToStop?.inputNode.removeTap(onBus: 0)
+            }
+            engineToStop?.stop()
+        }
         DispatchQueue.main.async {
             self.audioLevel = 0.0
         }

@@ -5,6 +5,7 @@ enum AudioBehavior: String, Codable, CaseIterable {
     case keep
     case mute
     case pause
+    case muteAndPause
 }
 
 

@@ -1512,6 +1512,17 @@ public class LocalizationManager: ObservableObject {
             "Silenciar o sistema durante a gravação",
             "录音时静音系统"
         ],
+        "Pause media during recording": [
+            "Pause media during recording",
+            "Pauzuj multimedia podczas nagrywania",
+            "Medien während der Aufnahme pausieren",
+            "Pausar medios durante la grabación",
+            "Mettre les médias en pause pendant l'enregistrement",
+            "Metti in pausa i contenuti multimediali durante la registrazione",
+            "録音中はメディアを一時停止する",
+            "Pausar mídia durante a gravação",
+            "录音时暂停媒体"
+        ],
         "Select Language": [
             "Select Language",
             "Wybierz język",

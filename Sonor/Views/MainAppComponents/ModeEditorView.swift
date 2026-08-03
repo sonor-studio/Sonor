@@ -494,9 +494,17 @@ struct ModeEditorView: View {
                         }
                         HStack {
                             Toggle(t("Mute system during recording"), isOn: Binding(
-                                get: { (modeBinding.wrappedValue.audioBehavior ?? .keep) == .mute },
+                                get: { 
+                                    let b = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                    return b == .mute || b == .muteAndPause 
+                                },
                                 set: { newValue in
-                                    modeBinding.wrappedValue.audioBehavior = newValue ? .mute : .keep
+                                    let current = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                    if newValue {
+                                        modeBinding.wrappedValue.audioBehavior = (current == .pause || current == .muteAndPause) ? .muteAndPause : .mute
+                                    } else {
+                                        modeBinding.wrappedValue.audioBehavior = (current == .muteAndPause) ? .pause : .keep
+                                    }
                                     saveModes()
                                 }
                             ))
@@ -520,9 +528,17 @@ struct ModeEditorView: View {
                         }
                         HStack {
                             Toggle(t("Pause media during recording"), isOn: Binding(
-                                get: { (modeBinding.wrappedValue.audioBehavior ?? .keep) == .pause },
+                                get: { 
+                                    let b = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                    return b == .pause || b == .muteAndPause 
+                                },
                                 set: { newValue in
-                                    modeBinding.wrappedValue.audioBehavior = newValue ? .pause : .keep
+                                    let current = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                    if newValue {
+                                        modeBinding.wrappedValue.audioBehavior = (current == .mute || current == .muteAndPause) ? .muteAndPause : .pause
+                                    } else {
+                                        modeBinding.wrappedValue.audioBehavior = (current == .muteAndPause) ? .mute : .keep
+                                    }
                                     saveModes()
                                 }
                             ))

@@ -18,6 +18,10 @@ struct SonorApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var controller = AppController()
     init() {
+        // Zmuszamy MediaControlService do wcześniejszej inicjalizacji, 
+        // aby adapter MediaRemote zdążył się połączyć i pobrać stan zanim użyjemy nagrywania pierwszy raz
+        _ = MediaControlService.shared
+        
         if CommandLine.arguments.contains("--worker-mode") {
             WorkerProcess.run()
             // Should not reach here because WorkerProcess calls exit()
