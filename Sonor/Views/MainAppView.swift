@@ -228,6 +228,7 @@ enum RecordingHotkeyType: String {
     case cancel = "cancel"
     case pause = "pause"
     case assistant = "assistant"
+    case paste = "paste"
 }
 
 

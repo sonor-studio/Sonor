@@ -182,7 +182,16 @@ class PasteManager {
             Thread.sleep(forTimeInterval: 0.05)
         }
         let source = CGEventSource(stateID: .combinedSessionState)
+        
+        // Force key-up on common modifiers so immediate typing isn't blocked by physically pressed keys from hotkeys
+        for virtualKey in [54, 55, 56, 58, 59, 60, 61, 62] {
+            if let upEvent = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(virtualKey), keyDown: false) {
+                upEvent.post(tap: .cghidEventTap)
+            }
+        }
+        
         let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true)
+        event?.flags = []
         let utf16Chars = Array(text.utf16)
         utf16Chars.withUnsafeBufferPointer { buffer in
             if let ptr = buffer.baseAddress {

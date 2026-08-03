@@ -14,6 +14,8 @@ public class TranscriptionManager: ObservableObject {
     
     @Published public private(set) var activeEngine: TranscriptionEngine?
     @Published public var currentEngineType: EngineType = .whisper
+    @Published public var isLoaded: Bool = false
+    private var unloadTimer: Timer?
     
     public var activeModelName: String {
         switch currentEngineType {
@@ -44,6 +46,26 @@ public class TranscriptionManager: ObservableObject {
         // Stop current operations and free resources
         activeEngine?.unload()
         activeEngine = nil
+        isLoaded = false
+        unloadTimer?.invalidate()
+        unloadTimer = nil
+    }
+    
+    public func cancelUnloadTimer() {
+        unloadTimer?.invalidate()
+        unloadTimer = nil
+    }
+    
+    public func resetUnloadTimer() {
+        unloadTimer?.invalidate()
+        let timeout = UserDefaults.standard.integer(forKey: "transcriptionUnloadTimeout")
+        guard timeout > 0 else { return }
+        
+        unloadTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(timeout * 60), repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.resetEngine()
+            }
+        }
     }
     
     public func ensureEngineReady() async throws {
@@ -74,6 +96,8 @@ public class TranscriptionManager: ObservableObject {
             try await engine.prepare()
             self.activeEngine = engine
         }
+        
+        self.isLoaded = true
     }
     
     public func transcribe(audioSamples: [Float], language: String, initialPrompt: String?) async throws -> String {

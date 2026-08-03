@@ -134,6 +134,20 @@ class AppController: NSObject, ObservableObject {
         HotkeyManager.shared.onAssistantKeyDown = { [weak self] in
             self?.selectNextMode()
         }
+        HotkeyManager.shared.onPasteKeyDown = { [weak self] in
+            guard let self = self, let text = self.lastTranscription, !text.isEmpty else { return }
+            
+            DispatchQueue.global(qos: .userInitiated).async {
+                DispatchQueue.main.async {
+                    if let frontApp = NSWorkspace.shared.frontmostApplication {
+                        let pid = frontApp.processIdentifier
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            PasteManager.shared.typeTextDirectly(text: text, targetPID: pid, forceFocusElement: nil)
+                        }
+                    }
+                }
+            }
+        }
 
         HotkeyManager.shared.startListening()
     }
@@ -411,10 +425,19 @@ class AppController: NSObject, ObservableObject {
         withAnimation {
             self.audioLevels = Array(repeating: 0.01, count: 40)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        let modeStr = UserDefaults.standard.string(forKey: "hudPositionMode") ?? "free"
+        let isNotchMode = (modeStr == "notch")
+        
+        if isNotchMode {
+            WindowManager.shared.hideHUD()
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + (isNotchMode ? 0.0 : 1.0)) {
             if !self.isRecording && self.statusText == "Cancelled" {
                 self.statusText = "Ready"
-                WindowManager.shared.hideHUD()
+                if !isNotchMode {
+                    WindowManager.shared.hideHUD()
+                }
             }
         }
     }

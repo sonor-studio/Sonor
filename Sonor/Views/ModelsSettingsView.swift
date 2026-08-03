@@ -111,8 +111,9 @@ struct ModelsSettingsView: View {
         case gemma
     }
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            HStack {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 20) {
+                HStack {
                 Image(systemName: "shippingbox.fill")
                     .font(.system(size: 24))
                     .foregroundColor(.primary)
@@ -284,7 +285,11 @@ struct ModelsSettingsView: View {
                         }
                     )
                 }
+                
+
             }
+            .padding(.bottom, 20)
+        }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(

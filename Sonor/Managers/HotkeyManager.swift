@@ -15,18 +15,21 @@ class HotkeyManager {
     var onCancelKeyDown: (() -> Void)?
     var onPauseKeyDown: (() -> Void)?
     var onAssistantKeyDown: (() -> Void)?
+    var onPasteKeyDown: (() -> Void)?
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var isKeyDown = false
     private var isCancelKeyDown = false
     private var isPauseKeyDown = false
     private var isAssistantKeyDown = false
+    private var isPasteKeyDown = false
     private var activeIsHoldMode = false
     private var modifierOnlyHotkeyAborted = false
     private var cachedMainHotkey: HotkeyDef?
     private var cachedCancelHotkey: HotkeyDef?
     private var cachedPauseHotkey: HotkeyDef?
     private var cachedAssistantHotkey: HotkeyDef?
+    private var cachedPasteHotkey: HotkeyDef?
     private var cachedHotkeyModeString: String = "Click"
     private var capturedKeys: Set<Int> = []
     private var tapThread: Thread?
@@ -99,6 +102,7 @@ class HotkeyManager {
         self.cachedCancelHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_cancel", modifiersKey: "hotkeyModifiers_cancel", stringKey: "hotkeyString_cancel", defaultCode: 6, defaultModifiers: 0x1800)
         self.cachedPauseHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_pause", modifiersKey: "hotkeyModifiers_pause", stringKey: "hotkeyString_pause", defaultCode: 7, defaultModifiers: 0x1800)
         self.cachedAssistantHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_assistant", modifiersKey: "hotkeyModifiers_assistant", stringKey: "hotkeyString_assistant", defaultCode: 8, defaultModifiers: 0x1800)
+        self.cachedPasteHotkey = HotkeyDef(keyCodeKey: "hotkeyCode_paste", modifiersKey: "hotkeyModifiers_paste", stringKey: "hotkeyString_paste", defaultCode: -1, defaultModifiers: 0)
         self.cachedHotkeyModeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
         
         let eventMask = CGEventMask((1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue) | (1 << CGEventType.flagsChanged.rawValue))
@@ -196,7 +200,8 @@ class HotkeyManager {
         guard let mainHotkey = self.cachedMainHotkey,
               let cancelHotkey = self.cachedCancelHotkey,
               let pauseHotkey = self.cachedPauseHotkey,
-              let assistantHotkey = self.cachedAssistantHotkey else {
+              let assistantHotkey = self.cachedAssistantHotkey,
+              let pasteHotkey = self.cachedPasteHotkey else {
             return passthrough
         }
 
@@ -392,6 +397,41 @@ class HotkeyManager {
                     }
                 }
             }
+
+            // Paste Hotkey
+            if pasteHotkey.isOnlyModifier {
+                var pasteTriggerFlag = NSEvent.ModifierFlags()
+                switch pasteHotkey.code {
+                case 54, 55: pasteTriggerFlag = .command
+                case 56, 60: pasteTriggerFlag = .shift
+                case 58, 61: pasteTriggerFlag = .option
+                case 59, 62: pasteTriggerFlag = .control
+                default: break
+                }
+                
+                if self.isPasteKeyDown && isPressed && code != pasteHotkey.code && (changedFlag == nil || !pasteHotkey.targetModifiers.contains(changedFlag!)) {
+                    self.modifierOnlyHotkeyAborted = true
+                }
+                
+                if code == pasteHotkey.code && isPressed {
+                    let activeOthers = modifiers.subtracting(pasteTriggerFlag)
+                    if modifiersMatch(pasteHotkey.targetModifiers, current: activeOthers) {
+                        if !self.isPasteKeyDown {
+                            self.isPasteKeyDown = true
+                            self.modifierOnlyHotkeyAborted = false
+                        }
+                    }
+                } else if !isPressed && self.isPasteKeyDown {
+                    let releasedTrigger = (code == pasteHotkey.code)
+                    let releasedOtherRequired = (changedFlag != nil && pasteHotkey.targetModifiers.contains(changedFlag!))
+                    if releasedTrigger || releasedOtherRequired {
+                        self.isPasteKeyDown = false
+                        if !self.modifierOnlyHotkeyAborted {
+                            DispatchQueue.main.async { self.onPasteKeyDown?() }
+                        }
+                    }
+                }
+            }
             
             return passthrough
         }
@@ -409,6 +449,9 @@ class HotkeyManager {
                 self.modifierOnlyHotkeyAborted = true
             }
             if self.isAssistantKeyDown && assistantHotkey.isOnlyModifier {
+                self.modifierOnlyHotkeyAborted = true
+            }
+            if self.isPasteKeyDown && pasteHotkey.isOnlyModifier {
                 self.modifierOnlyHotkeyAborted = true
             }
             
@@ -434,6 +477,11 @@ class HotkeyManager {
             }
             if !assistantHotkey.isOnlyModifier && code == assistantHotkey.code && modifiersMatch(assistantHotkey.targetModifiers, current: modifiers) {
                 DispatchQueue.main.async { self.onAssistantKeyDown?() }
+                capturedKeys.insert(code)
+                return nil
+            }
+            if !pasteHotkey.isOnlyModifier && code == pasteHotkey.code && modifiersMatch(pasteHotkey.targetModifiers, current: modifiers) {
+                DispatchQueue.main.async { self.onPasteKeyDown?() }
                 capturedKeys.insert(code)
                 return nil
             }
