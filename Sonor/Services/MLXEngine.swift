@@ -12,15 +12,15 @@ final class MLXEngine: TranscriptionEngine {
     // We store the model as Any because different models might have different types,
     // though they might all conform to a common protocol in MLXAudioSTT.
     // For now, we will handle them specifically.
-    private var senseVoiceModel: SenseVoiceModel?
-    private var moonshineModel: MoonshineModel?
-    private var parakeetModel: ParakeetModel?
-    private var qwen3ASRModel: Qwen3ASRModel?
-    private var canaryModel: CanaryModel?
-    private var nemotronModel: NemotronASRModel?
-    private var graniteModel: GraniteSpeechModel?
-    private var fireRedModel: FireRedASR2Model?
-    private var cohereModel: CohereTranscribeModel?
+    private nonisolated(unsafe) var senseVoiceModel: SenseVoiceModel?
+    private nonisolated(unsafe) var moonshineModel: MoonshineModel?
+    private nonisolated(unsafe) var parakeetModel: ParakeetModel?
+    private nonisolated(unsafe) var qwen3ASRModel: Qwen3ASRModel?
+    private nonisolated(unsafe) var canaryModel: CanaryModel?
+    private nonisolated(unsafe) var nemotronModel: NemotronASRModel?
+    private nonisolated(unsafe) var graniteModel: GraniteSpeechModel?
+    private nonisolated(unsafe) var fireRedModel: FireRedASR2Model?
+    private nonisolated(unsafe) var cohereModel: CohereTranscribeModel?
     
     private let modelId: String
     private let repoId: String
@@ -30,23 +30,7 @@ final class MLXEngine: TranscriptionEngine {
         self.repoId = repoId
     }
     
-    private func getFreeMemoryGB() -> Double {
-        var stats = vm_statistics64()
-        var count = mach_msg_type_number_t(MemoryLayout<vm_statistics64_data_t>.stride / MemoryLayout<integer_t>.stride)
-        
-        let result = withUnsafeMutablePointer(to: &stats) {
-            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
-                host_statistics64(mach_host_self(), HOST_VM_INFO64, $0, &count)
-            }
-        }
-        
-        if result == KERN_SUCCESS {
-            let freeMemory = Double(stats.free_count) * Double(vm_kernel_page_size)
-            let inactiveMemory = Double(stats.inactive_count) * Double(vm_kernel_page_size)
-            return (freeMemory + inactiveMemory) / 1073741824.0
-        }
-        return 8.0 // Fallback
-    }
+
     
     func prepare() async throws {
         if isReady { return }
@@ -58,7 +42,7 @@ final class MLXEngine: TranscriptionEngine {
         // Instantiate the correct model based on the family or id
         // Usually fromPretrained takes a String for the HF repo id or local path. 
         // We will pass the local path.
-        let path = modelDir.path
+
         
         if repoId.lowercased().contains("sensevoice") {
             self.senseVoiceModel = try SenseVoiceModel.fromDirectory(modelDir)
@@ -164,39 +148,39 @@ final class MLXEngine: TranscriptionEngine {
         // MLXAudioSTT models usually have a generate function taking audio data. 
         // Some also take language or prompts depending on the model struct.
         
-        return try await Task.detached {
+        return await Task.detached {
             defer {
-                MLX.GPU.clearCache()
+                MLX.Memory.clearCache()
             }
             let mlxAudio = MLXArray(audioSamples)
             eval(mlxAudio)
             
             if let model = self.senseVoiceModel {
-                let output = try model.generate(audio: mlxAudio)
+                let output = model.generate(audio: mlxAudio)
                 return output.text
             } else if let model = self.moonshineModel {
-                let output = try model.generate(audio: mlxAudio)
+                let output = model.generate(audio: mlxAudio)
                 return output.text
             } else if let model = self.parakeetModel {
-                let output = try model.generate(audio: mlxAudio)
+                let output = model.generate(audio: mlxAudio)
                 return output.text
             } else if let model = self.qwen3ASRModel {
-                let output = try model.generate(audio: mlxAudio, language: language)
+                let output = model.generate(audio: mlxAudio, language: language)
                 return output.text
             } else if let model = self.canaryModel {
-                let output = try model.generate(audio: mlxAudio)
+                let output = model.generate(audio: mlxAudio)
                 return output.text
             } else if let model = self.nemotronModel {
-                let output = try model.generate(audio: mlxAudio)
+                let output = model.generate(audio: mlxAudio)
                 return output.text
             } else if let model = self.graniteModel {
-                let output = try model.generate(audio: mlxAudio)
+                let output = model.generate(audio: mlxAudio)
                 return output.text
             } else if let model = self.fireRedModel {
-                let output = try model.generate(audio: mlxAudio)
+                let output = model.generate(audio: mlxAudio)
                 return output.text
             } else if let model = self.cohereModel {
-                let output = try model.generate(audio: mlxAudio)
+                let output = model.generate(audio: mlxAudio)
                 return output.text
             }
             
@@ -216,6 +200,6 @@ final class MLXEngine: TranscriptionEngine {
         self.cohereModel = nil
         self.isReady = false
         // Force garbage collection of MLX memory
-        MLX.GPU.clearCache()
+        MLX.Memory.clearCache()
     }
 }

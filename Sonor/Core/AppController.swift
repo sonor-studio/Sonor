@@ -69,7 +69,6 @@ class AppController: NSObject, ObservableObject {
     
     /// Accessibility Element reference to the specific text field the user had focused.
     private var targetAXElement: AXUIElement? = nil
-    private var targetAppBundleID: String? = nil
     private var wasTextFieldFocusedAtStart: Bool = false
     
     // Task management for cancelling active recordings or processing
@@ -293,15 +292,14 @@ class AppController: NSObject, ObservableObject {
                frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
                 let pid = frontApp.processIdentifier
                 targetAppPID = pid
-                targetAppBundleID = frontApp.bundleIdentifier
                 targetAXElement = nil
                 wasTextFieldFocusedAtStart = false
                 
                 Task.detached {
                     // Delay AX queries to prevent ViewBridge race condition with orderFront
                     try? await Task.sleep(nanoseconds: 200_000_000) 
-                    let axElement = PasteManager.shared.getFocusedAXElement(pid: pid)
-                    let isTextField = PasteManager.shared.isElementTextField(axElement)
+                    let axElement = await PasteManager.shared.getFocusedAXElement(pid: pid)
+                    let isTextField = await PasteManager.shared.isElementTextField(axElement)
                     await MainActor.run { [weak self] in
                         self?.targetAXElement = axElement
                         self?.wasTextFieldFocusedAtStart = isTextField
@@ -352,10 +350,6 @@ class AppController: NSObject, ObservableObject {
     }
     private func performStartRecording(sessionID: UUID) {
         self.isPaused = false
-        let modeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
-        if modeString == "Hold" { self.activeHotkeyMode = .hold }
-        else if modeString == "Automatic" { self.activeHotkeyMode = .automatic }
-        else { self.activeHotkeyMode = .click }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             do {

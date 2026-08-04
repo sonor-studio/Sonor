@@ -339,7 +339,7 @@ final class ModelManager: ObservableObject {
     
     private var activeMLXDownloaders: [String: MLXModelDownloader] = [:]
     @Published var activeMLXDownloadTexts: [String: String] = [:]
-    private var gemmaProgressObservation: NSKeyValueObservation?
+
     
     var whisperModelURL: URL {
         return urlForWhisperModel(id: selectedWhisperModelId) ?? urlForWhisperModel(id: "large-v3-turbo")!
@@ -715,8 +715,7 @@ final class ModelManager: ObservableObject {
         self.activeWhisperDownloader = downloader
         self.activeWhisperModelId = modelId
         let whisperDownloadURL = URL(string: "https://huggingface.co/\(model.repoId)/resolve/main/\(model.filename)")!
-        var lastEmittedProgress: Double = initialWhisperProgress
-        var lastEmissionTime = Date()
+
         downloader.start(from: whisperDownloadURL) { [weak self, weak downloader] fraction, downloaded, total in
             Task { @MainActor in
                 guard let self = self, self.activeWhisperDownloader === downloader else { return }
@@ -752,7 +751,7 @@ final class ModelManager: ObservableObject {
                 case .failure(let error):
                     let nsError = error as NSError
                     if !(nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled) {
-                        var finalProgress = lastEmittedProgress >= 0 ? lastEmittedProgress : 0.0
+                        var finalProgress = 0.0
                         if finalProgress == 0.0 {
                             let incompleteURL = modelURL.deletingLastPathComponent().appendingPathComponent(modelURL.lastPathComponent + ".incomplete")
                             if let attrs = try? FileManager.default.attributesOfItem(atPath: incompleteURL.path),
@@ -813,7 +812,7 @@ final class ModelManager: ObservableObject {
     func uninstallWhisper(modelId: String) {
         cancelWhisperDownload(modelId: modelId)
         
-        guard let model = availableWhisperModels.first(where: { $0.id == modelId }),
+        guard let _ = availableWhisperModels.first(where: { $0.id == modelId }),
               let modelURL = urlForWhisperModel(id: modelId) else { return }
               
         if selectedWhisperModelId == modelId {
@@ -1006,6 +1005,7 @@ final class ModelManager: ObservableObject {
     }
 
     func formatBytes(_ bytes: Int64) -> String {
+        if bytes <= 0 { return "0 MB" }
         let formatter = ByteCountFormatter()
         formatter.allowedUnits = [.useMB, .useGB]
         formatter.countStyle = .file

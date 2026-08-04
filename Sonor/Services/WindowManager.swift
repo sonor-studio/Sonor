@@ -36,8 +36,8 @@ class WindowManager {
             if let screen = NSScreen.main {
                 let defaultX = (screen.frame.width - 350) / 2
                 let defaultY: CGFloat = 100
-                var savedX = UserDefaults.standard.object(forKey: "hudWindowX") as? CGFloat ?? defaultX
-                var savedY = UserDefaults.standard.object(forKey: "hudWindowY") as? CGFloat ?? defaultY
+                let savedX = UserDefaults.standard.object(forKey: "hudWindowX") as? CGFloat ?? defaultX
+                let savedY = UserDefaults.standard.object(forKey: "hudWindowY") as? CGFloat ?? defaultY
                 let screenFrame = screen.visibleFrame
                 let modeStr = UserDefaults.standard.string(forKey: "hudPositionMode") ?? "free"
                 let mode = HUDPositionMode(rawValue: modeStr) ?? .free

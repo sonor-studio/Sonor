@@ -24,7 +24,7 @@ struct ModelsRequiredExplanationView: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(t("Download necessary"))
                             .font(.system(size: 12, weight: .bold))
-                        Text(t("In order to use Sonor and Whisper transcription, you must download the required AI models first in the Models tab."))
+                        Text(t("In order to use Sonor AI transcription, you must download the required AI models first in the Models tab."))
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .lineSpacing(2)

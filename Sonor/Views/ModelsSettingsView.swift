@@ -769,7 +769,7 @@ struct RichModelCard: View {
                                 HStack(spacing: 4) {
                                     Image(systemName: "cpu")
                                         .foregroundColor(.secondary)
-                                    Text(params)
+                                    Text(t(params))
                                         .foregroundColor(.secondary)
                                 }
                                 .font(.system(size: 12, weight: .medium))
@@ -815,7 +815,7 @@ struct RichModelCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
-        .onChange(of: isActive) { newValue in
+        .onChange(of: isActive) { _, newValue in
             if isExpandable, let act = newValue, act == true {
                 withAnimation(.spring(response: 0.4, dampingFraction: 0.7)) {
                     isExpanded = true
@@ -866,7 +866,7 @@ struct ModelSelectorView: View {
                     
                     // Available Models Grouped
                     VStack(alignment: .leading, spacing: 16) {
-                        Text("Available Models")
+                        Text(t("Available Models"))
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundColor(.secondary)
                         
@@ -1157,6 +1157,7 @@ struct ActiveDownloadCard: View {
     }
     
     private func formatBytes(_ bytes: Int64) -> String {
+        if bytes <= 0 { return "0 KB" }
         let formatter = ByteCountFormatter()
         formatter.allowedUnits = [.useKB, .useMB, .useGB]
         formatter.countStyle = .file

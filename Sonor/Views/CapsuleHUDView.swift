@@ -504,7 +504,7 @@ struct CapsuleHUDView: View {
                 recordingDuration += 1
             }
         }
-        .onChange(of: hudPositionMode) { newMode in
+        .onChange(of: hudPositionMode) { _, newMode in
             WindowManager.shared.updateHUDPosition(for: newMode)
         }
     }

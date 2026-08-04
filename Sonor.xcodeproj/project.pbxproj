@@ -630,7 +630,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 6F78X5RA6P;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -674,7 +674,7 @@
 				);
 				MACH_O_TYPE = mh_execute;
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 0.9.2;
+				MARKETING_VERSION = 0.9.3;
 				MTL_HEADER_SEARCH_PATHS = "$(inherited) /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src/ggml-metal";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
@@ -708,7 +708,7 @@
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 3;
+				CURRENT_PROJECT_VERSION = 4;
 				DEVELOPMENT_TEAM = 6F78X5RA6P;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
@@ -752,7 +752,7 @@
 				);
 				MACH_O_TYPE = mh_execute;
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
-				MARKETING_VERSION = 0.9.2;
+				MARKETING_VERSION = 0.9.3;
 				MTL_HEADER_SEARCH_PATHS = "$(inherited) /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/include /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src /Users/macbook/Desktop/Dev/Sonor/sonor.cpp/ggml/src/ggml-metal";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
