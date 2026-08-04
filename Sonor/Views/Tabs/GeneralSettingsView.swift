@@ -61,8 +61,8 @@ struct GeneralSettingsView: View {
         .onAppear {
             setupEventMonitor()
             DispatchQueue.global(qos: .userInitiated).async {
-                let devices = AudioManager().getAudioInputDevices()
-                let outDevices = AudioManager().getAudioOutputDevices()
+                let devices = AudioManager.shared.getAudioInputDevices()
+                let outDevices = AudioManager.shared.getAudioOutputDevices()
                 DispatchQueue.main.async {
                     self.audioDevices = devices
                     self.audioOutputDevices = outDevices

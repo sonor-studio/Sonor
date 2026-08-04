@@ -13,8 +13,12 @@ struct AudioDevice: Identifiable, Hashable {
 /// Manages the capture of system audio or microphone input, converting it into
 /// 16kHz Float32 PCM samples suitable for Whisper model processing.
 class AudioManager: ObservableObject {
+    static let shared = AudioManager()
+    
     private var audioEngine: AVAudioEngine?
     private var audioConverter: AVAudioConverter? // Converts raw audio to our target format (16kHz)
+    /// Serial queue that serializes ALL engine operations to prevent race conditions.
+    private let engineQueue = DispatchQueue(label: "com.sonor.engine", qos: .userInitiated)
     
     @Published var isRecording = false
     @Published var audioLevel: Float = 0.0 // RMS audio level for UI visualizations
@@ -23,23 +27,101 @@ class AudioManager: ObservableObject {
     private var isTapInstalled = false
     var isPaused = false
     private let targetFormat: AVAudioFormat?
-    init() {
+    
+    private init() {
         self.targetFormat = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16000, channels: 1, interleaved: false)
         if targetFormat == nil {
         }
+        registerDeviceChangeListener()
     }
     
-
+    deinit {
+        unregisterDeviceChangeListener()
+    }
     
-    /// Initializes the audio engine and begins capturing samples.
-    /// - Parameter clearSamples: If true, previously recorded samples are discarded before starting.
-    func startRecording(clearSamples: Bool = true) throws {
-        if clearSamples {
-            accumulatedSamples.removeAll()
+    // MARK: - Pre-warming
+    
+    /// Pre-warms the audio engine by creating it (if needed), configuring the input device,
+    /// and calling prepare(). Runs asynchronously on the engine queue.
+    func prepareEngine() {
+        engineQueue.async { [weak self] in
+            guard let self = self else { return }
+            
+            if self.audioEngine != nil {
+                // Engine already exists — just make sure it's prepared
+                self.audioEngine?.prepare()
+                return
+            }
+            
+            // Create new engine
+            let engine = AVAudioEngine()
+            self.configureDevice(on: engine.inputNode)
+            engine.prepare()
+            try? engine.start()
+            engine.stop()
+            self.audioEngine = engine
         }
-        let engine = AVAudioEngine()
-        self.audioEngine = engine
-        let inputNode = engine.inputNode
+    }
+    
+    // MARK: - Device Change Listener
+    
+    private static let deviceChangeProc: AudioObjectPropertyListenerProc = { _, _, _, clientData in
+        guard let clientData = clientData else { return noErr }
+        let manager = Unmanaged<AudioManager>.fromOpaque(clientData).takeUnretainedValue()
+        if !manager.isRecording {
+            // Device changed while not recording — rebuild engine with new device
+            manager.engineQueue.async {
+                if let engine = manager.audioEngine {
+                    if manager.isTapInstalled {
+                        engine.inputNode.removeTap(onBus: 0)
+                        manager.isTapInstalled = false
+                    }
+                    engine.stop()
+                }
+                manager.audioEngine = nil
+                
+                let newEngine = AVAudioEngine()
+                manager.configureDevice(on: newEngine.inputNode)
+                newEngine.prepare()
+                manager.audioEngine = newEngine
+            }
+        }
+        return noErr
+    }
+    
+    private func registerDeviceChangeListener() {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        AudioObjectAddPropertyListener(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            AudioManager.deviceChangeProc,
+            selfPtr
+        )
+    }
+    
+    private func unregisterDeviceChangeListener() {
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDevices,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let selfPtr = Unmanaged.passUnretained(self).toOpaque()
+        AudioObjectRemovePropertyListener(
+            AudioObjectID(kAudioObjectSystemObject),
+            &address,
+            AudioManager.deviceChangeProc,
+            selfPtr
+        )
+    }
+
+    // MARK: - Device Configuration
+    
+    private func configureDevice(on inputNode: AVAudioInputNode) {
         if let savedDeviceUID = UserDefaults.standard.string(forKey: "selectedAudioDeviceUID"), !savedDeviceUID.isEmpty {
             let devices = getAudioInputDevices()
             if let targetDevice = devices.first(where: { $0.uid == savedDeviceUID }),
@@ -57,92 +139,163 @@ class AudioManager: ObservableObject {
                 }
             }
         }
-        let inputFormat = inputNode.inputFormat(forBus: 0)
-        guard let targetFormat = targetFormat else {
-            return
+    }
+
+    // MARK: - Recording
+    
+    /// Initializes the audio engine and begins capturing samples.
+    /// If the engine was pre-warmed via prepareEngine(), start is nearly instantaneous.
+    /// - Parameter clearSamples: If true, previously recorded samples are discarded before starting.
+    func startRecording(clearSamples: Bool = true) throws {
+        if clearSamples {
+            accumulatedSamples.removeAll()
         }
-        audioConverter = AVAudioConverter(from: inputFormat, to: targetFormat)
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] (buffer, time) in
-            self?.processAudio(buffer: buffer)
+        
+        // All engine work serialized on engineQueue to prevent races
+        try engineQueue.sync { [self] in
+            // Create engine if none exists (first time or after pause destroyed it)
+            if audioEngine == nil {
+                let engine = AVAudioEngine()
+                configureDevice(on: engine.inputNode)
+                audioEngine = engine
+            }
+            
+            guard let engine = audioEngine else { return }
+            
+            if self.isTapInstalled {
+                engine.inputNode.removeTap(onBus: 0)
+                self.isTapInstalled = false
+            }
+            
+            let inputNode = engine.inputNode
+            let inputFormat = inputNode.inputFormat(forBus: 0)
+            guard let targetFormat = targetFormat else {
+                return
+            }
+            audioConverter = AVAudioConverter(from: inputFormat, to: targetFormat)
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] (buffer, time) in
+                self?.processAudio(buffer: buffer)
+            }
+            self.isTapInstalled = true
+            engine.prepare()
+            if !engine.isRunning {
+                do {
+                    try engine.start()
+                } catch {
+                    print("Engine start failed, recovering with new engine: \(error)")
+                    // Hardware state likely corrupted by rapid toggling.
+                    // Destroy corrupted engine and create a fresh one.
+                    if self.isTapInstalled {
+                        engine.inputNode.removeTap(onBus: 0)
+                        self.isTapInstalled = false
+                    }
+                    self.audioEngine = nil
+                    
+                    let newEngine = AVAudioEngine()
+                    configureDevice(on: newEngine.inputNode)
+                    self.audioEngine = newEngine
+                    
+                    let newInputNode = newEngine.inputNode
+                    let newInputFormat = newInputNode.inputFormat(forBus: 0)
+                    self.audioConverter = AVAudioConverter(from: newInputFormat, to: targetFormat)
+                    newInputNode.installTap(onBus: 0, bufferSize: 1024, format: newInputFormat) { [weak self] (buffer, time) in
+                        self?.processAudio(buffer: buffer)
+                    }
+                    self.isTapInstalled = true
+                    newEngine.prepare()
+                    try newEngine.start()
+                }
+            }
+            NotificationCenter.default.addObserver(self, selector: #selector(handleConfigurationChange), name: .AVAudioEngineConfigurationChange, object: self.audioEngine)
         }
-        isTapInstalled = true
-        engine.prepare()
-        try engine.start()
-        NotificationCenter.default.addObserver(self, selector: #selector(handleConfigurationChange), name: .AVAudioEngineConfigurationChange, object: engine)
+        
         DispatchQueue.main.async {
             self.isRecording = true
         }
     }
+    
     @objc private func handleConfigurationChange(notification: Notification) {
-        guard let engine = audioEngine else { return }
-        
-        if isTapInstalled {
-            engine.inputNode.removeTap(onBus: 0)
-            isTapInstalled = false
-        }
-        
-        engine.stop()
-        
-        let inputFormat = engine.inputNode.inputFormat(forBus: 0)
-        if let target = targetFormat {
-            audioConverter = AVAudioConverter(from: inputFormat, to: target)
-            engine.inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] (buffer, time) in
-                self?.processAudio(buffer: buffer)
-            }
-            isTapInstalled = true
+        engineQueue.async { [weak self] in
+            guard let self = self, let engine = self.audioEngine else { return }
             
-            engine.prepare()
-            do {
-                try engine.start()
-            } catch {
-                print("Failed to restart engine after config change: \(error)")
+            let wasTapInstalled = self.isTapInstalled
+            if wasTapInstalled {
+                engine.inputNode.removeTap(onBus: 0)
+                self.isTapInstalled = false
+            }
+            
+            engine.stop()
+            
+            if wasTapInstalled {
+                let inputFormat = engine.inputNode.inputFormat(forBus: 0)
+                if let target = self.targetFormat {
+                    self.audioConverter = AVAudioConverter(from: inputFormat, to: target)
+                    engine.inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] (buffer, time) in
+                        self?.processAudio(buffer: buffer)
+                    }
+                    self.isTapInstalled = true
+                    
+                    engine.prepare()
+                    do {
+                        try engine.start()
+                    } catch {
+                        print("Failed to restart engine after config change: \(error)")
+                    }
+                }
+            } else {
+                // If we weren't recording, just re-prepare the engine for the new device
+                engine.prepare()
             }
         }
     }
-    /// Stops the audio engine and returns the accumulated audio samples.
-    /// Also trims any trailing silence (defined by `silenceThreshold`) from the end of the recording.
-    /// - Returns: An array of processed, 16kHz float samples ready for transcription.
-    func stopRecording() -> [Float] {
-        NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: audioEngine)
-        
-        let engineToStop = audioEngine
-        let wasTapInstalled = isTapInstalled
-        audioEngine = nil
-        isTapInstalled = false
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            if wasTapInstalled {
-                engineToStop?.inputNode.removeTap(onBus: 0)
+
+    
+    func stopRecordingAsync() async -> [Float] {
+        await withCheckedContinuation { continuation in
+            engineQueue.async { [weak self] in
+                guard let self = self else {
+                    continuation.resume(returning: [])
+                    return
+                }
+                
+                NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: self.audioEngine)
+                
+                if self.isTapInstalled {
+                    self.audioEngine?.inputNode.removeTap(onBus: 0)
+                    self.isTapInstalled = false
+                }
+                self.audioEngine?.stop()
+                
+                DispatchQueue.main.async {
+                    self.isRecording = false
+                    self.audioLevel = 0.0
+                }
+                
+                let samples = self.samplesQueue.sync {
+                    let s = self.accumulatedSamples
+                    self.accumulatedSamples = []
+                    return s
+                }
+                
+                continuation.resume(returning: samples)
             }
-            engineToStop?.stop()
-        }
-        DispatchQueue.main.async {
-            self.isRecording = false
-            self.audioLevel = 0.0
-        }
-        return samplesQueue.sync {
-            let samples = accumulatedSamples
-            accumulatedSamples = []
-            return samples
         }
     }
     /// Physically stops the audio engine to release the microphone lock and remove the yellow privacy dot.
     func pauseRecording() {
         guard !isPaused else { return }
         isPaused = true
-        NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: audioEngine)
         
-        let engineToStop = audioEngine
-        let wasTapInstalled = isTapInstalled
-        audioEngine = nil
-        isTapInstalled = false
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            if wasTapInstalled {
-                engineToStop?.inputNode.removeTap(onBus: 0)
+        engineQueue.sync { [self] in
+            NotificationCenter.default.removeObserver(self, name: .AVAudioEngineConfigurationChange, object: audioEngine)
+            if isTapInstalled {
+                audioEngine?.inputNode.removeTap(onBus: 0)
+                isTapInstalled = false
             }
-            engineToStop?.stop()
+            audioEngine?.stop()
+            audioEngine = nil // Destroy to release mic (removes yellow privacy dot)
         }
+        
         DispatchQueue.main.async {
             self.audioLevel = 0.0
         }

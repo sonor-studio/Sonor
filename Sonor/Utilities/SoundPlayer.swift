@@ -31,6 +31,7 @@ class SoundPlayer: NSObject {
             }
         }
     }
+    private let playbackQueue = DispatchQueue(label: "com.sonor.soundPlayback")
     
     func playSound(named name: String) async {
         let defaults = UserDefaults.standard
@@ -43,58 +44,56 @@ class SoundPlayer: NSObject {
         let appVolume = defaults.object(forKey: "appVolume") == nil ? 1.0 : defaults.double(forKey: "appVolume")
         let outputDeviceUID = defaults.string(forKey: "selectedAudioOutputDeviceUID") ?? ""
         
-        // Odtwarzanie asynchronicznie, tak jak thread::spawn w Rust
-        await Task.detached(priority: .userInitiated) {
-            let engine = AVAudioEngine()
-            let playerNode = AVAudioPlayerNode()
-            
-            engine.attach(playerNode)
-            
-            // Konfiguracja sprzętu
-            if !outputDeviceUID.isEmpty && outputDeviceUID != "Default" {
-                if let dev = AudioManager().getAudioOutputDevices().first(where: { $0.uid == outputDeviceUID }) {
-                    if let audioUnit = engine.outputNode.audioUnit {
-                        var devId = dev.id
-                        AudioUnitSetProperty(
-                            audioUnit,
-                            kAudioOutputUnitProperty_CurrentDevice,
-                            kAudioUnitScope_Global,
-                            0,
-                            &devId,
-                            UInt32(MemoryLayout<AudioDeviceID>.size)
-                        )
+        await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+            playbackQueue.async {
+                let engine = AVAudioEngine()
+                let playerNode = AVAudioPlayerNode()
+                
+                engine.attach(playerNode)
+                
+                // Konfiguracja sprzętu
+                if !outputDeviceUID.isEmpty && outputDeviceUID != "Default" {
+                    if let dev = AudioManager.shared.getAudioOutputDevices().first(where: { $0.uid == outputDeviceUID }) {
+                        if let audioUnit = engine.outputNode.audioUnit {
+                            var devId = dev.id
+                            AudioUnitSetProperty(
+                                audioUnit,
+                                kAudioOutputUnitProperty_CurrentDevice,
+                                kAudioUnitScope_Global,
+                                0,
+                                &devId,
+                                UInt32(MemoryLayout<AudioDeviceID>.size)
+                            )
+                        }
                     }
                 }
-            }
-            
-            engine.connect(playerNode, to: engine.mainMixerNode, format: buffer.format)
-            
-            playerNode.volume = Float(appVolume)
-            
-            do {
-                try engine.start()
                 
-                let semaphore = DispatchSemaphore(value: 0)
+                engine.connect(playerNode, to: engine.mainMixerNode, format: buffer.format)
                 
-                playerNode.scheduleBuffer(buffer, at: nil, options: []) {
-                    semaphore.signal()
+                playerNode.volume = Float(appVolume)
+                
+                do {
+                    try engine.start()
+                    
+                    let semaphore = DispatchSemaphore(value: 0)
+                    
+                    playerNode.scheduleBuffer(buffer, at: nil, options: []) {
+                        semaphore.signal()
+                    }
+                    
+                    playerNode.play()
+                    
+                    semaphore.wait()
+                    usleep(50_000)
+                    
+                    playerNode.stop()
+                    engine.stop()
+                } catch {
+                    print("Error playing sound '\(name)': \(error)")
                 }
                 
-                playerNode.play()
-                
-                // Blokujące oczekiwanie na zakończenie strumienia (sink.sleep_until_end)
-                semaphore.wait()
-                
-                // Opóźnienie na zrzut bufora do hardware'u żeby nie ucięło ogona
-                usleep(50_000)
-                
-                playerNode.stop()
-                engine.stop()
-            } catch {
-                print("Error playing sound '\(name)': \(error)")
+                continuation.resume()
             }
-        }.value
+        }
     }
 }
-
-

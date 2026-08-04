@@ -22,6 +22,15 @@ struct SonorApp: App {
         // aby adapter MediaRemote zdążył się połączyć i pobrać stan zanim użyjemy nagrywania pierwszy raz
         _ = MediaControlService.shared
         
+        // Pre-warm audio engine — initializes hardware ahead of time
+        // so first recording starts nearly instantly (especially with Bluetooth headphones)
+        AudioManager.shared.prepareEngine()
+        
+        // Pre-warm transcription engine to avoid CPU spike on first use
+        Task {
+            try? await TranscriptionManager.shared.ensureEngineReady()
+        }
+        
         if CommandLine.arguments.contains("--worker-mode") {
             WorkerProcess.run()
             // Should not reach here because WorkerProcess calls exit()

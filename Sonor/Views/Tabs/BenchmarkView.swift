@@ -3,7 +3,7 @@ import SwiftUI
 struct BenchmarkView: View {
     @Environment(\.dismiss) var dismiss
     @Environment(\.colorScheme) var colorScheme
-    @StateObject private var audioManager = AudioManager()
+    @ObservedObject private var audioManager = AudioManager.shared
     @ObservedObject private var localizer = LocalizationManager.shared
     @State private var step: Int = 0 
     @State private var currentText: String = ""
@@ -171,7 +171,7 @@ struct BenchmarkView: View {
         writingTimer = nil
         speakingTimer?.invalidate()
         speakingTimer = nil
-        _ = audioManager.stopRecording()
+        Task { _ = await audioManager.stopRecordingAsync() }
     }
     private var introContentView: some View {
         VStack(alignment: .leading, spacing: 20) {
@@ -652,7 +652,7 @@ struct BenchmarkView: View {
         speakingTimer?.invalidate()
         speakingTimer = nil
         isSpeakingFinished = true
-        _ = audioManager.stopRecording()
+        Task { _ = await audioManager.stopRecordingAsync() }
     }
     private func resetTest() {
         stopAllTimers()

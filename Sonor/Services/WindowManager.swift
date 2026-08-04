@@ -15,6 +15,9 @@ class WindowManager {
     private init() {}
     
     func showHUD(controller: AppController) {
+        hideHUDWorkItem?.cancel()
+        hideHUDWorkItem = nil
+        
         if hudWindow == nil {
             let panel = SonorHUDPanel(
                 contentRect: NSRect(x: 0, y: 0, width: 350, height: 600),
@@ -46,8 +49,8 @@ class WindowManager {
                 let visibleHeight: CGFloat = 88
                 let minXBound = screenFrame.minX - leftMargin
                 let maxXBound = screenFrame.maxX - rightMargin
-                let minYBound = screenFrame.minY
-                let maxYBound = screenFrame.maxY - visibleHeight
+                let minYBound = screenFrame.minY - 8
+                let maxYBound = screenFrame.maxY - visibleHeight - 8
                 
                 var startX = savedX
                 var startY = savedY
@@ -109,12 +112,18 @@ class WindowManager {
         }
     }
     
+    private var hideHUDWorkItem: DispatchWorkItem?
+    
     func hideHUD() {
         if hudWindow?.isVisible == true {
             NotificationCenter.default.post(name: NSNotification.Name("HUDWindowWillHide"), object: nil)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                self.hudWindow?.orderOut(nil)
+            
+            hideHUDWorkItem?.cancel()
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.hudWindow?.orderOut(nil)
             }
+            hideHUDWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
         }
         LLMManager.shared.resetUnloadTimer()
         TranscriptionManager.shared.resetUnloadTimer()

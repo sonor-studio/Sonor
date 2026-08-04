@@ -24,6 +24,7 @@ class AppController: NSObject, ObservableObject {
     @Published var canRetryTranscription: Bool = false
     
     private var currentRecordingSessionID: UUID? = nil
+    private var lastRecordingStopTime: Date = Date.distantPast
     var isCurrentlyProcessing: Bool {
         let nonProcessingStatuses: Set<String> = ["Ready", "Cancelled", "No microphone permission", "Microphone error", "No text recognized.", "Error: Missing model", "Done!"]
         return !isRecording && !nonProcessingStatuses.contains(statusText) && !statusText.hasPrefix("Mode:")
@@ -45,17 +46,22 @@ class AppController: NSObject, ObservableObject {
     @Published var isPaused = false {
         didSet {
             if isPaused {
-                audioManager.pauseRecording()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    self.audioManager.pauseRecording()
+                }
             } else {
-                do {
-                    try audioManager.resumeRecording()
-                } catch {
+                DispatchQueue.global(qos: .userInitiated).async {
+                    do {
+                        try self.audioManager.resumeRecording()
+                    } catch {
+                        print("Failed to resume recording: \(error)")
+                    }
                 }
             }
         }
     }
     
-    private let audioManager = AudioManager()
+    private let audioManager = AudioManager.shared
     
     /// The process ID of the external application the user was focusing before recording started.
     private var targetAppPID: pid_t = 0  
@@ -96,7 +102,7 @@ class AppController: NSObject, ObservableObject {
             }
         }
         NotificationCenter.default.addObserver(forName: NSNotification.Name("AppWillTerminate"), object: nil, queue: .main) { _ in
-            _ = self.audioManager.stopRecording()
+        Task { _ = await self.audioManager.stopRecordingAsync() }
         }
         NotificationCenter.default.addObserver(forName: Notification.Name("RetryHistoryTranscription"), object: nil, queue: .main) { [weak self] notification in
             guard let self = self, let id = notification.object as? UUID else { return }
@@ -210,6 +216,10 @@ class AppController: NSObject, ObservableObject {
         if isRecording {
             stopRecordingAndTranscribe()
         } else {
+            if Date().timeIntervalSince(lastRecordingStopTime) < 0.5 {
+                return
+            }
+            
             let isTrusted = AXIsProcessTrusted()
             let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
             
@@ -269,22 +279,20 @@ class AppController: NSObject, ObservableObject {
             let sessionID = UUID()
             self.currentRecordingSessionID = sessionID
             
-            self.statusText = "Initializing"
+            self.statusText = "Listening..."
             WindowManager.shared.showHUD(controller: self)
             
+            // Start recording process immediately (no waiting for engine)
+            self.startRecordingProcess(selectedMode: selectedMode, sessionID: sessionID)
+            
+            // Load transcription engine in background — only needed when
+            // transcription starts (after recording stops), not for capturing audio
             Task {
                 do {
                     try await TranscriptionManager.shared.ensureEngineReady()
-                    await MainActor.run {
-                        guard self.currentRecordingSessionID == sessionID else { return }
-                        self.statusText = "Listening..."
-                        self.startRecordingProcess(selectedMode: selectedMode, sessionID: sessionID)
-                    }
                 } catch {
                     await MainActor.run {
                         print("Engine Error: \(error)")
-                        self.statusText = "Err: \(error.localizedDescription)"
-                        self.hideHUDAfterDelay()
                     }
                 }
             }
@@ -292,41 +300,19 @@ class AppController: NSObject, ObservableObject {
     }
     private func startRecordingProcess(selectedMode: VoiceMode, sessionID: UUID) {
         startRecordingTask?.cancel()
-        startRecordingTask = Task.detached {
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            if Task.isCancelled { return }
-            
-            let isStillRecording = await MainActor.run { 
-                return self.isRecording && self.currentRecordingSessionID == sessionID
-            }
-            guard isStillRecording else { return }
+        startRecordingTask = Task {
+            guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
             let behavior = selectedMode.audioBehavior ?? .keep
             
-            await MainActor.run {
-                if Task.isCancelled { return }
-                guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
-                
-                Task {
-                    if Task.isCancelled { return }
-                    guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
-                    
-                    if behavior != .keep {
-                        MediaControlService.shared.pauseMultimedia(behavior: behavior)
-                    }
-                    
-                    Task {
-                        await SoundPlayer.shared.playSound(named: "Start")
-                    }
-                    
-                    try? await Task.sleep(nanoseconds: 150_000_000)
-                    
-                    await MainActor.run {
-                        if Task.isCancelled { return }
-                        guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
-                        self.startRecording(sessionID: sessionID)
-                    }
-                }
+            if behavior != .keep {
+                MediaControlService.shared.pauseMultimedia(behavior: behavior)
             }
+            
+            Task {
+                await SoundPlayer.shared.playSound(named: "Start")
+            }
+            
+            self.startRecording(sessionID: sessionID)
         }
     }
     private func startRecording(sessionID: UUID) {
@@ -350,7 +336,7 @@ class AppController: NSObject, ObservableObject {
                 try self.audioManager.startRecording()
                 DispatchQueue.main.async {
                     guard self.currentRecordingSessionID == sessionID else {
-                        _ = self.audioManager.stopRecording()
+                        Task { _ = await self.audioManager.stopRecordingAsync() }
                         return
                     }
                     self.isRecording = true
@@ -405,12 +391,10 @@ class AppController: NSObject, ObservableObject {
     }
     func cancelRecording() {
         guard isRecording || isCurrentlyProcessing else { return }
-        if statusText == "Initializing" {
-            return
-        }
         isRecording = false
         self.isPaused = false
         self.currentRecordingSessionID = nil
+        self.lastRecordingStopTime = Date()
         statusText = "Cancelled"
         let taskToCancel = currentTask
         currentTask = nil
@@ -419,7 +403,9 @@ class AppController: NSObject, ObservableObject {
         startRecordingTask?.cancel()
         startRecordingTask = nil
         
-        _ = self.audioManager.stopRecording()
+        Task {
+            _ = await self.audioManager.stopRecordingAsync()
+        }
         
         MediaControlService.shared.resumeMultimedia()
         withAnimation {
@@ -461,6 +447,7 @@ class AppController: NSObject, ObservableObject {
         self.isPaused = false
         isRecording = false
         self.currentRecordingSessionID = nil
+        self.lastRecordingStopTime = Date()
         statusText = "Processing"
         if !wasPopoverOpenBeforeRecording {
             isPopoverOpen = false
@@ -469,10 +456,12 @@ class AppController: NSObject, ObservableObject {
         startRecordingTask?.cancel()
         startRecordingTask = nil
 
-        let samples = audioManager.stopRecording()
-        MediaControlService.shared.resumeMultimedia()
         currentTask = Task {
-            guard samples.count >= 8000 else {
+            let samples = await audioManager.stopRecordingAsync()
+            await MainActor.run {
+                MediaControlService.shared.resumeMultimedia()
+            }
+            guard samples.count >= 2000 else {
                 await MainActor.run { 
                     self.statusText = "Cancelled" 
                 }
@@ -624,7 +613,7 @@ class AppController: NSObject, ObservableObject {
 
     func quitApp() {
         self.cancelRecording()
-        _ = self.audioManager.stopRecording()
+        Task { _ = await self.audioManager.stopRecordingAsync() }
         NotificationCenter.default.post(name: NSNotification.Name("AppWillTerminate"), object: nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             Darwin._exit(0)

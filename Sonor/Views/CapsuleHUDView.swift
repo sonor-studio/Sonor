@@ -22,7 +22,7 @@ struct CapsuleHUDView: View {
     }
     private var isFinalState: Bool {
         let text = controller.statusText
-        return text == "Cancelled" || text == "Done!" || text == "No text recognized." || text == "Error: Missing model" || text == "No microphone permission" || text == "Microphone error"
+        return text == "Cancelled" || text == "Done!" || text == "No text recognized." || text == "Error: Missing model" || text == "No microphone permission" || text == "Microphone error" || text == "Ready"
     }
     private var targetWidth: CGFloat {
         if isInitializing || isFinalState {
@@ -447,6 +447,16 @@ struct CapsuleHUDView: View {
                 opacity = 1.0
             }
         }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HUDWindowDidShow"))) { _ in
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                opacity = 1.0
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HUDWindowWillHide"))) { _ in
+            withAnimation(.easeInOut(duration: 0.2)) {
+                opacity = 0.0
+            }
+        }
         .onChange(of: controller.isRecording) {
             if !controller.isRecording {
                 withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
@@ -550,8 +560,8 @@ struct CapsuleHUDView: View {
                     let minXBound = screenFrame.minX - leftMargin
                     let maxXBound = screenFrame.maxX - rightMargin
                     let visibleHeight = showList ? CGFloat(296) : CGFloat(88)
-                    let minYBound = screenFrame.minY
-                    let maxYBound = screenFrame.maxY - visibleHeight
+                    let minYBound = screenFrame.minY - 8
+                    let maxYBound = screenFrame.maxY - visibleHeight - 8
                     newX = max(minXBound, min(newX, maxXBound))
                     newY = max(minYBound, min(newY, maxYBound))
                 }
