@@ -16,13 +16,26 @@ public class TranscriptionManager: ObservableObject {
     @Published public var currentEngineType: EngineType = .whisper
     @Published public var isLoaded: Bool = false
     private var unloadTimer: Timer?
+    public var modelOverrideId: String? = nil
     
     public var activeModelName: String {
+        if let override = modelOverrideId, override != "default" {
+            if let w = ModelManager.shared.availableWhisperModels.first(where: { $0.id == override }) {
+                return w.name
+            } else if let m = ModelManager.shared.availableMLXModels.first(where: { $0.id == override }) {
+                return m.name
+            } else if override == "appleSpeech" {
+                return "Apple Speech"
+            }
+        }
+        
         switch currentEngineType {
         case .whisper:
-            return ModelManager.shared.selectedWhisperModelId
+            let id = ModelManager.shared.selectedWhisperModelId
+            return ModelManager.shared.availableWhisperModels.first(where: { $0.id == id })?.name ?? id
         case .mlx:
-            return ModelManager.shared.selectedMLXModelId ?? "MLX Model"
+            let id = ModelManager.shared.selectedMLXModelId
+            return ModelManager.shared.availableMLXModels.first(where: { $0.id == id })?.name ?? id ?? "MLX Model"
         case .appleSpeech:
             return "Apple Speech"
         }
@@ -40,6 +53,13 @@ public class TranscriptionManager: ObservableObject {
         self.currentEngineType = type
         UserDefaults.standard.set(type.rawValue, forKey: "selectedEngineType")
         resetEngine() // Force unload the old engine to free memory
+    }
+    
+    public func applyModelOverride(_ overrideId: String?) {
+        if self.modelOverrideId != overrideId {
+            self.modelOverrideId = overrideId
+            resetEngine()
+        }
     }
     
     public func resetEngine() {
@@ -73,22 +93,46 @@ public class TranscriptionManager: ObservableObject {
             return
         }
         
-        switch currentEngineType {
+        let targetEngineType: EngineType
+        var targetModelId: String? = nil
+        
+        if let override = modelOverrideId, override != "default" {
+            if ModelManager.shared.availableWhisperModels.contains(where: { $0.id == override }) {
+                targetEngineType = .whisper
+                targetModelId = override
+            } else if ModelManager.shared.availableMLXModels.contains(where: { $0.id == override }) {
+                targetEngineType = .mlx
+                targetModelId = override
+            } else if override == "appleSpeech" {
+                targetEngineType = .appleSpeech
+                targetModelId = nil
+            } else {
+                targetEngineType = currentEngineType
+            }
+        } else {
+            targetEngineType = currentEngineType
+        }
+        
+        switch targetEngineType {
         case .whisper:
-            let modelPath = ModelManager.shared.whisperModelURL.path
+            let selectedId = targetModelId ?? ModelManager.shared.selectedWhisperModelId
+            guard let modelURL = ModelManager.shared.urlForWhisperModel(id: selectedId) else {
+                throw NSError(domain: "TranscriptionManager", code: 10, userInfo: [NSLocalizedDescriptionKey: "Whisper model URL not found."])
+            }
+            let modelPath = modelURL.path
             if FileManager.default.fileExists(atPath: modelPath) {
                 let engine = WhisperEngine(modelPath: modelPath)
                 try await engine.prepare()
                 self.activeEngine = engine
             } else {
-                throw NSError(domain: "TranscriptionManager", code: 10, userInfo: [NSLocalizedDescriptionKey: "Whisper model file not found."])
+                throw NSError(domain: "TranscriptionManager", code: 10, userInfo: [NSLocalizedDescriptionKey: "Whisper model file not found at path: \(modelPath)"])
             }
         case .appleSpeech:
             let engine = AppleSpeechEngine()
             try await engine.prepare()
             self.activeEngine = engine
         case .mlx:
-            let selectedMLXId = ModelManager.shared.selectedMLXModelId ?? "sensevoice-small"
+            let selectedMLXId = targetModelId ?? ModelManager.shared.selectedMLXModelId ?? "sensevoice-small"
             guard let config = ModelManager.shared.availableMLXModels.first(where: { $0.id == selectedMLXId }) else {
                 throw NSError(domain: "TranscriptionManager", code: 12, userInfo: [NSLocalizedDescriptionKey: "Selected MLX model not found in config."])
             }

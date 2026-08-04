@@ -17,6 +17,23 @@ struct ModeEditorView: View {
     @State private var showRenameSheet = false
     @State private var newAssistantName = ""
     @State private var showPasteTimingInfo = false
+    @ObservedObject private var modelManager = ModelManager.shared
+    
+    var downloadedModels: [(id: String, name: String)] {
+        var list: [(id: String, name: String)] = []
+        list.append((id: "appleSpeech", name: t("Apple Speech (System)")))
+        for model in modelManager.availableWhisperModels {
+            if modelManager.whisperStates[model.id] == .downloaded {
+                list.append((id: model.id, name: model.name))
+            }
+        }
+        for model in modelManager.availableMLXModels {
+            if modelManager.mlxStates[model.id] == .downloaded {
+                list.append((id: model.id, name: model.name))
+            }
+        }
+        return list
+    }
     
     var body: some View {
         if let index = modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) {
@@ -370,6 +387,35 @@ struct ModeEditorView: View {
                                 .tint(.black)
                             }
                         }
+                        
+                        HStack {
+                            Text(t("Model"))
+                                .font(.system(size: 12))
+                            Spacer()
+                            Picker("", selection: Binding(
+                                get: { modeBinding.wrappedValue.modelOverride ?? "default" },
+                                set: { 
+                                    let newVal = $0 == "default" ? nil : $0
+                                    modeBinding.wrappedValue.modelOverride = newVal
+                                    saveModes()
+                                    TranscriptionManager.shared.applyModelOverride(newVal)
+                                    if modeBinding.wrappedValue.id.uuidString == UserDefaults.standard.string(forKey: "activeModeID") {
+                                        Task {
+                                            try? await TranscriptionManager.shared.ensureEngineReady()
+                                        }
+                                    }
+                                }
+                            )) {
+                                Text(t("Default")).tag("default")
+                                ForEach(downloadedModels, id: \.id) { m in
+                                    Text(m.name).tag(m.id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 150)
+                            .accentColor(.black)
+                            .tint(.black)
+                        }
                         VStack(alignment: .leading, spacing: 8) {
                             if modeBinding.wrappedValue.isBuiltInMode {
                                 Text(t("Built-in Assistant Description"))
@@ -599,6 +645,41 @@ struct ModeEditorView: View {
                             .buttonStyle(.plain)
                             .help(t("Learn more about Paste target"))
                         }
+                        
+                        HStack {
+                            Picker(t("Post-paste action"), selection: Binding(
+                                get: { modeBinding.wrappedValue.postPasteAction ?? "none" },
+                                set: { 
+                                    modeBinding.wrappedValue.postPasteAction = $0
+                                    saveModes()
+                                }
+                            )) {
+                                Text(t("None")).tag("none")
+                                Text(t("Return")).tag("return")
+                                Text(t("Shift + Return")).tag("shiftReturn")
+                                Text(t("Command + Return")).tag("commandReturn")
+                                Text(t("Option + Return")).tag("optionReturn")
+                            }
+                            .pickerStyle(MenuPickerStyle())
+                            .font(.system(size: 12))
+                            
+                            Button(action: {
+                                let newVal = modeBinding.wrappedValue.postPasteAction ?? "none"
+                                for i in modes.indices {
+                                    modes[i].postPasteAction = newVal
+                                }
+                                saveModes()
+                            }) {
+                                Image(systemName: "rectangle.stack")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .padding(4)
+                                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.1)))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .help(t("Apply to all assistants"))
+                        }
+
                         HStack {
                             Toggle(t("Copy to clipboard if no text field is detected"), isOn: Binding(
                                 get: { modeBinding.wrappedValue.fallbackToClipboard ?? false },

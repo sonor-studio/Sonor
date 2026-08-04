@@ -37,7 +37,7 @@ struct CapsuleHUDView: View {
     @State private var width: CGFloat = 180
     @State private var height: CGFloat = 40
     @State private var isProcessing = false
-    @State private var opacity: Double = 0
+    @State private var hasAppeared = false
     @State private var showList = false
     @State private var hoveredModeID: UUID? = nil
     @State private var dragTracker = WindowDragTracker()
@@ -437,24 +437,18 @@ struct CapsuleHUDView: View {
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: controller.activeCopyNotification != nil)
         }
         .frame(width: 350, height: 600, alignment: .bottom)
-        .opacity(opacity)
+        .opacity((isFinalState || !hasAppeared) && controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil ? 0.0 : 1.0)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isFinalState)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: hasAppeared)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: controller.activeDictionaryNotification != nil)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: controller.activeCopyNotification != nil)
         .colorScheme(effectiveColorScheme)
         .onAppear {
             controller.reloadModes()
             showPauseButton = controller.isRecording
             width = targetWidth
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                opacity = 1.0
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HUDWindowDidShow"))) { _ in
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                opacity = 1.0
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("HUDWindowWillHide"))) { _ in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                opacity = 0.0
+                hasAppeared = true
             }
         }
         .onChange(of: controller.isRecording) {
@@ -487,29 +481,14 @@ struct CapsuleHUDView: View {
                 isProcessing = controller.statusText != "Listening..." && controller.statusText != "Paused"
             }
             if isFinalState {
-                if controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil {
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                        opacity = 0.0
-                    }
-                }
                 showList = false
             } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 1.0
-                }
                 showList = false
             }
         }
         .onChange(of: controller.activeDictionaryNotification) {
             if controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil && !controller.isRecording {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 0.0
-                }
                 showList = false
-            } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 1.0
-                }
             }
         }
         .onChange(of: controller.activeCopyNotification) {
@@ -517,14 +496,7 @@ struct CapsuleHUDView: View {
                 isCopied = false
             }
             if controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil && !controller.isRecording {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 0.0
-                }
                 showList = false
-            } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 1.0
-                }
             }
         }
         .onReceive(recordingTimer) { _ in

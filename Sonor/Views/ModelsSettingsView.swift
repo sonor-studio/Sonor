@@ -338,7 +338,7 @@ struct ModelCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(title)
+                    Text(t(title))
                         .font(.system(size: 16, weight: .semibold))
                     Text(t(description))
                         .font(.system(size: 13))

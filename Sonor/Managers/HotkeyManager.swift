@@ -10,8 +10,8 @@ func eventTapCallback(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent,
 
 class HotkeyManager {
     static let shared = HotkeyManager()
-    var onHotkeyDown: (() -> Void)?
-    var onHotkeyUp: (() -> Void)?
+    var onHotkeyDown: ((Date) -> Void)?
+    var onHotkeyUp: ((Date) -> Void)?
     var onCancelKeyDown: (() -> Void)?
     var onPauseKeyDown: (() -> Void)?
     var onAssistantKeyDown: (() -> Void)?
@@ -273,7 +273,8 @@ class HotkeyManager {
                             self.isKeyDown = true
                             self.modifierOnlyHotkeyAborted = false
                             if isHoldMode {
-                                DispatchQueue.main.async { self.onHotkeyDown?() }
+                                let eventTime = Date()
+                                DispatchQueue.main.async { self.onHotkeyDown?(eventTime) }
                             }
                         }
                     }
@@ -282,11 +283,12 @@ class HotkeyManager {
                     let releasedOtherRequired = (changedFlag != nil && mainHotkey.targetModifiers.contains(changedFlag!))
                     if releasedTrigger || releasedOtherRequired {
                         self.isKeyDown = false
+                        let eventTime = Date()
                         if isHoldMode {
-                            DispatchQueue.main.async { self.onHotkeyUp?() }
+                            DispatchQueue.main.async { self.onHotkeyUp?(eventTime) }
                         } else {
                             if !self.modifierOnlyHotkeyAborted {
-                                DispatchQueue.main.async { self.onHotkeyDown?() }
+                                DispatchQueue.main.async { self.onHotkeyDown?(eventTime) }
                             }
                         }
                     }
@@ -459,7 +461,8 @@ class HotkeyManager {
             if !mainHotkey.isOnlyModifier && code == mainHotkey.code && modifiers == mainHotkey.targetModifiers {
                 if !isKeyDown {
                     isKeyDown = true
-                    DispatchQueue.main.async { self.onHotkeyDown?() }
+                    let eventTime = Date()
+                    DispatchQueue.main.async { self.onHotkeyDown?(eventTime) }
                 }
                 capturedKeys.insert(code)
                 return nil
@@ -494,7 +497,8 @@ class HotkeyManager {
                     if isKeyDown {
                         isKeyDown = false
                         if isHoldMode {
-                            DispatchQueue.main.async { self.onHotkeyUp?() }
+                            let eventTime = Date()
+                            DispatchQueue.main.async { self.onHotkeyUp?(eventTime) }
                         }
                     }
                 }

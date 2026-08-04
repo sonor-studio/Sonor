@@ -33,10 +33,14 @@ struct GeneralSettingsView: View {
     @AppStorage("selectedAudioOutputDeviceUID") private var selectedOutputDeviceUID = ""
     @AppStorage("appVolume") private var appVolume: Double = 1.0
     @AppStorage("historySavesAudio") private var historySavesAudio = true
+    @AppStorage("historySaveLimit") private var historySaveLimit: Int = 0
     @AppStorage("saveStatsEnabled") private var saveStatsEnabled = true
     @AppStorage("transcriptionUnloadTimeout") private var transcriptionUnloadTimeout: Int = 0
     @AppStorage("llmUnloadTimeout") private var llmUnloadTimeout: Int = 0
     @State private var isShowingDeleteStatsAlert = false
+    @State private var isShowingTrimHistoryAlert = false
+    @State private var pendingHistoryLimit: Int? = nil
+    @State private var limitSliderIndex: Double = 4.0
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
             HStack {
@@ -68,6 +72,29 @@ struct GeneralSettingsView: View {
                     self.audioOutputDevices = outDevices
                 }
             }
+            let limits = [5, 10, 50, 100, 0]
+            if let idx = limits.firstIndex(of: historySaveLimit) {
+                limitSliderIndex = Double(idx)
+            } else {
+                limitSliderIndex = 4.0
+            }
+        }
+        .onChange(of: limitSliderIndex) {
+            let newIndex = limitSliderIndex
+            let rounded = round(newIndex)
+            if rounded != newIndex { limitSliderIndex = rounded; return }
+            let limits = [5, 10, 50, 100, 0]
+            let newLimit = limits[Int(rounded)]
+            if newLimit == historySaveLimit { return }
+            
+            let currentCount = MessageMemoryManager.shared.messages.count
+            if newLimit != 0 && currentCount > newLimit {
+                pendingHistoryLimit = newLimit
+                isShowingTrimHistoryAlert = true
+            } else {
+                historySaveLimit = newLimit
+                MessageMemoryManager.shared.trimHistoryIfNeeded()
+            }
         }
         .onDisappear {
             removeEventMonitor()
@@ -82,6 +109,24 @@ struct GeneralSettingsView: View {
             }
         } message: {
             Text(t("Switching to RAM-only means your persistent history file will be deleted and your current history will disappear forever once you close the application. Are you sure you want to continue?"))
+        }
+        .alert(t("Trim History"), isPresented: $isShowingTrimHistoryAlert) {
+            Button(t("Proceed"), role: .destructive) {
+                if let limit = pendingHistoryLimit {
+                    historySaveLimit = limit
+                    MessageMemoryManager.shared.trimHistoryIfNeeded()
+                    pendingHistoryLimit = nil
+                }
+            }
+            Button(t("Cancel"), role: .cancel) {
+                let limits = [5, 10, 50, 100, 0]
+                if let idx = limits.firstIndex(of: historySaveLimit) {
+                    limitSliderIndex = Double(idx)
+                }
+                pendingHistoryLimit = nil
+            }
+        } message: {
+            Text(t("Reducing the history limit will permanently delete older records that exceed this new limit. Are you sure you want to continue?"))
         }
         .alert(t("Delete Audio History"), isPresented: $isShowingDeleteAudioAlert) {
             Button(t("Delete Audio"), role: .destructive) {
@@ -178,6 +223,21 @@ struct GeneralSettingsView: View {
                 
             Divider()
                 .padding(.vertical, 5)
+                
+            HStack {
+                Text(t("Number of saved records"))
+                    .font(.system(size: 14, weight: .medium))
+                Spacer()
+                Slider(value: $limitSliderIndex, in: 0...4, step: 1)
+                    .accentColor(appColorScheme == .dark ? .white : .black)
+                    .frame(width: 150)
+                let limits = [5, 10, 50, 100, 0]
+                let currentVal = limits[Int(round(limitSliderIndex))]
+                Text(currentVal == 0 ? t("All") : "\(currentVal)")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(minWidth: 70, alignment: .trailing)
+            }
+            .padding(.vertical, 2)
                 
             Toggle(t("Save Audio with History"), isOn: Binding(
                 get: { historySavesAudio },
@@ -350,8 +410,9 @@ struct GeneralSettingsView: View {
                 }) {
                     let isDark = appColorScheme == .dark
                     let isRecording = activeRecordingType == type
+                    let displayStr = hotkeyStringVal == "None" ? t("None") : hotkeyStringVal
                     HStack {
-                        Text(isRecording ? t("Press keys...") : hotkeyStringVal)
+                        Text(isRecording ? t("Press keys...") : displayStr)
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(isRecording ? (isDark ? .black : .white) : .primary)
                         Spacer()
@@ -452,9 +513,9 @@ struct GeneralSettingsView: View {
                     Image(systemName: "speaker.fill")
                         .foregroundColor(.secondary)
                         .font(.system(size: 12))
-                    Slider(value: $appVolume, in: 0...1)
-                        .frame(width: 150)
+                    Slider(value: $appVolume, in: 0...1, step: 0.1)
                         .accentColor(appColorScheme == .dark ? .white : .black)
+                        .frame(width: 150)
                     Image(systemName: "speaker.wave.3.fill")
                         .foregroundColor(.secondary)
                         .font(.system(size: 12))

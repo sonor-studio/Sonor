@@ -125,6 +125,105 @@ public class LocalizationManager: ObservableObject {
             "Nenhum",
             "无"
         ],
+        "Default": [
+            "Default",
+            "Domyślny",
+            "Standard",
+            "Predeterminado",
+            "Défaut",
+            "Predefinito",
+            "デフォルト",
+            "Padrão",
+            "默认"
+        ],
+        "All": [
+            "All",
+            "Wszystkie",
+            "Alle",
+            "Todos",
+            "Tout",
+            "Tutti",
+            "すべて",
+            "Todos",
+            "所有"
+        ],
+        "Number of saved records": [
+            "Number of saved records",
+            "Liczba zapisywanych rekordów",
+            "Anzahl der gespeicherten Datensätze",
+            "Número de registros guardados",
+            "Nombre d'enregistrements sauvegardés",
+            "Numero di record salvati",
+            "保存されたレコードの数",
+            "Número de registros salvos",
+            "保存的记录数"
+        ],
+        "Reducing the history limit will permanently delete older records that exceed this new limit. Are you sure you want to continue?": [
+            "Reducing the history limit will permanently delete older records that exceed this new limit. Are you sure you want to continue?",
+            "Zmniejszenie limitu historii trwale usunie starsze rekordy, które przekraczają ten nowy limit. Czy na pewno chcesz kontynuować?",
+            "Eine Verringerung des Verlaufs-Limits löscht dauerhaft ältere Datensätze, die das neue Limit überschreiten. Möchten Sie wirklich fortfahren?",
+            "Reducir el límite de historial eliminará permanentemente los registros más antiguos que superen este nuevo límite. ¿Estás seguro de que quieres continuar?",
+            "La réduction de la limite d'historique supprimera définitivement les anciens enregistrements qui dépassent cette nouvelle limite. Voulez-vous vraiment continuer ?",
+            "La riduzione del limite della cronologia eliminerà in modo permanente i record più vecchi che superano questo nuovo limite. Sei sicuro di voler continuare?",
+            "履歴の制限を減らすと、この新しい制限を超える古いレコードが完全に削除されます。続行してもよろしいですか？",
+            "Reduzir o limite do histórico excluirá permanentemente os registros mais antigos que excedem esse novo limite. Tem certeza de que deseja continuar?",
+            "减少历史记录限制将永久删除超过此新限制的较旧记录。您确定要继续吗？"
+        ],
+        "Trim History": [
+            "Trim History",
+            "Przycięcie historii",
+            "Verlauf kürzen",
+            "Recortar historial",
+            "Réduire l'historique",
+            "Taglia cronologia",
+            "履歴をトリミング",
+            "Aparar histórico",
+            "修剪历史记录"
+        ],
+        "Proceed": [
+            "Proceed",
+            "Kontynuuj",
+            "Fortfahren",
+            "Proceder",
+            "Procéder",
+            "Procedi",
+            "続行",
+            "Prosseguir",
+            "继续"
+        ],
+        "Model": [
+            "Model",
+            "Model",
+            "Modell",
+            "Modelo",
+            "Modèle",
+            "Modello",
+            "モデル",
+            "Modelo",
+            "模型"
+        ],
+        "Apple Speech (System)": [
+            "Apple Speech (System)",
+            "Apple Speech (System)",
+            "Apple Speech (System)",
+            "Apple Speech (Sistema)",
+            "Apple Speech (Système)",
+            "Apple Speech (Sistema)",
+            "Apple Speech (システム)",
+            "Apple Speech (Sistema)",
+            "Apple Speech (系统)"
+        ],
+        "Native speech recognition provided by macOS. Requires microphone permission. Does not require downloading model files.": [
+            "Native speech recognition provided by macOS. Requires microphone permission. Does not require downloading model files.",
+            "Natywne rozpoznawanie mowy dostarczane przez system macOS. Wymaga uprawnień do mikrofonu. Nie wymaga pobierania plików modeli.",
+            "Native Spracherkennung von macOS. Benötigt Mikrofonberechtigung. Erfordert keinen Download von Modelldateien.",
+            "Reconocimiento de voz nativo proporcionado por macOS. Requiere permiso de micrófono. No requiere descargar archivos de modelo.",
+            "Reconnaissance vocale native fournie par macOS. Nécessite l'autorisation du microphone. Ne nécessite pas le téléchargement de fichiers de modèle.",
+            "Riconoscimento vocale nativo fornito da macOS. Richiede l'autorizzazione per il microfono. Non richiede il download di file modello.",
+            "macOSが提供するネイティブの音声認識。マイクの許可が必要です。モデルファイルのダウンロードは不要です。",
+            "Reconhecimento de fala nativo fornecido pelo macOS. Requer permissão de microfone. Não requer o download de arquivos de modelo.",
+            "由 macOS 提供的原生语音识别。需要麦克风权限。无需下载模型文件。"
+        ],
         "MLX Models": [
             "MLX Models",
             "Modele MLX",
@@ -5680,6 +5779,61 @@ public class LocalizationManager: ObservableObject {
             "OOM Warning: この録音にはRAMが不足しています。他のプログラムを閉じるか、より軽いモデルを使用してください。",
             "OOM Warning: RAM insuficiente para esta gravação. Feche outros programas ou use um modelo mais leve.",
             "OOM Warning: 此录音的RAM不足。请关闭其他程序或使用更轻量级的模型。"
+        ],
+        "Post-paste action": [
+            "Post-paste action",
+            "Akcja po wklejeniu",
+            "Aktion nach dem Einfügen",
+            "Acción después de pegar",
+            "Action après collage",
+            "Azione post-incolla",
+            "貼り付け後のアクション",
+            "Ação pós-colagem",
+            "粘贴后操作"
+        ],
+        "Return": [
+            "Return",
+            "Return (Enter)",
+            "Return (Eingabe)",
+            "Return (Intro)",
+            "Return (Entrée)",
+            "Return (Invio)",
+            "Return（エンター）",
+            "Return (Enter)",
+            "Return (回车)"
+        ],
+        "Shift + Return": [
+            "Shift + Return",
+            "Shift + Return",
+            "Shift + Return",
+            "Shift + Return",
+            "Shift + Return",
+            "Shift + Return",
+            "Shift + Return",
+            "Shift + Return",
+            "Shift + Return"
+        ],
+        "Command + Return": [
+            "Command + Return",
+            "Command + Return",
+            "Command + Return",
+            "Command + Return",
+            "Command + Return",
+            "Command + Return",
+            "Command + Return",
+            "Command + Return",
+            "Command + Return"
+        ],
+        "Option + Return": [
+            "Option + Return",
+            "Option + Return",
+            "Option + Return",
+            "Option + Return",
+            "Option + Return",
+            "Option + Return",
+            "Option + Return",
+            "Option + Return",
+            "Option + Return"
         ]
     ]
 

@@ -88,7 +88,7 @@ struct SonorApp: App {
 }
 
 struct MenuContentView: View {
-    let controller: AppController
+    @ObservedObject var controller: AppController
     @ObservedObject var transcriptionManager = TranscriptionManager.shared
     @ObservedObject var llmManager = LLMManager.shared
     @State private var isCopyDisabled: Bool
@@ -166,11 +166,13 @@ struct MenuContentView: View {
             Button(t("Unload Transcription Model")) {
                 transcriptionManager.resetEngine()
             }
+            .disabled(controller.isRecording || controller.isCurrentlyProcessing)
         }
         if llmManager.isLoaded {
             Button(t("Unload LLM Model")) {
                 llmManager.releaseModel()
             }
+            .disabled(controller.isRecording || controller.isCurrentlyProcessing)
         }
         if transcriptionManager.isLoaded || llmManager.isLoaded {
             Divider()

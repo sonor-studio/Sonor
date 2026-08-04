@@ -71,6 +71,7 @@ class MessageMemoryManager: ObservableObject {
             let data = try Data(contentsOf: url)
             let decoded = try JSONDecoder().decode([MemoryMessage].self, from: data)
             self.messages = decoded
+            trimHistoryIfNeeded()
         } catch {
             self.messages = []
         }
@@ -147,6 +148,8 @@ class MessageMemoryManager: ObservableObject {
             }
         }
         
+        trimHistoryIfNeeded()
+        
         if historyStorageType == "File" {
             saveToDisk()
         }
@@ -183,6 +186,31 @@ class MessageMemoryManager: ObservableObject {
         ramAudioSamples.removeAll()
         if historyStorageType == "File" {
             deleteDiskFile()
+        }
+    }
+    
+    func trimHistoryIfNeeded() {
+        let limit = UserDefaults.standard.integer(forKey: "historySaveLimit")
+        guard limit > 0, messages.count > limit else { return }
+        
+        let toRemove = messages.count - limit
+        let removedMessages = Array(messages.prefix(toRemove))
+        messages.removeFirst(toRemove)
+        
+        var deletedFile = false
+        for msg in removedMessages {
+            ramAudioSamples.removeValue(forKey: msg.id)
+            if historyStorageType == "File" {
+                let url = historyAudioURL(for: msg.id)
+                if FileManager.default.fileExists(atPath: url.path) {
+                    try? FileManager.default.removeItem(at: url)
+                    deletedFile = true
+                }
+            }
+        }
+        
+        if historyStorageType == "File" {
+            saveToDisk()
         }
     }
     

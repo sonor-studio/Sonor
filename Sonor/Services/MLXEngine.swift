@@ -16,6 +16,11 @@ final class MLXEngine: TranscriptionEngine {
     private var moonshineModel: MoonshineModel?
     private var parakeetModel: ParakeetModel?
     private var qwen3ASRModel: Qwen3ASRModel?
+    private var canaryModel: CanaryModel?
+    private var nemotronModel: NemotronASRModel?
+    private var graniteModel: GraniteSpeechModel?
+    private var fireRedModel: FireRedASR2Model?
+    private var cohereModel: CohereTranscribeModel?
     
     private let modelId: String
     private let repoId: String
@@ -56,13 +61,23 @@ final class MLXEngine: TranscriptionEngine {
         let path = modelDir.path
         
         if repoId.lowercased().contains("sensevoice") {
-            self.senseVoiceModel = try await Task.detached { try SenseVoiceModel.fromDirectory(modelDir) }.value
+            self.senseVoiceModel = try SenseVoiceModel.fromDirectory(modelDir)
         } else if repoId.lowercased().contains("moonshine") {
-            self.moonshineModel = try await Task.detached { try await MoonshineModel.fromModelDirectory(modelDir) }.value
+            self.moonshineModel = try await MoonshineModel.fromModelDirectory(modelDir)
         } else if repoId.lowercased().contains("parakeet") {
-            self.parakeetModel = try await Task.detached { try ParakeetModel.fromDirectory(modelDir) }.value
+            self.parakeetModel = try ParakeetModel.fromDirectory(modelDir)
         } else if repoId.lowercased().contains("qwen3") {
-            self.qwen3ASRModel = try await Task.detached { try await Qwen3ASRModel.fromModelDirectory(modelDir) }.value
+            self.qwen3ASRModel = try await Qwen3ASRModel.fromModelDirectory(modelDir)
+        } else if repoId.lowercased().contains("canary") {
+            self.canaryModel = try await CanaryModel.fromModelDirectory(modelDir)
+        } else if repoId.lowercased().contains("nemotron") {
+            self.nemotronModel = try NemotronASRModel.fromDirectory(modelDir)
+        } else if repoId.lowercased().contains("granite") {
+            self.graniteModel = try await GraniteSpeechModel.fromModelDirectory(modelDir)
+        } else if repoId.lowercased().contains("firered") {
+            self.fireRedModel = try FireRedASR2Model.fromDirectory(modelDir)
+        } else if repoId.lowercased().contains("cohere") {
+            self.cohereModel = try CohereTranscribeModel.fromDirectory(modelDir)
         } else {
             throw NSError(domain: "MLXEngine", code: 1, userInfo: [NSLocalizedDescriptionKey: "Unsupported MLX model type: \(repoId)"])
         }
@@ -168,6 +183,21 @@ final class MLXEngine: TranscriptionEngine {
             } else if let model = self.qwen3ASRModel {
                 let output = try model.generate(audio: mlxAudio, language: language)
                 return output.text
+            } else if let model = self.canaryModel {
+                let output = try model.generate(audio: mlxAudio)
+                return output.text
+            } else if let model = self.nemotronModel {
+                let output = try model.generate(audio: mlxAudio)
+                return output.text
+            } else if let model = self.graniteModel {
+                let output = try model.generate(audio: mlxAudio)
+                return output.text
+            } else if let model = self.fireRedModel {
+                let output = try model.generate(audio: mlxAudio)
+                return output.text
+            } else if let model = self.cohereModel {
+                let output = try model.generate(audio: mlxAudio)
+                return output.text
             }
             
             return ""
@@ -179,6 +209,11 @@ final class MLXEngine: TranscriptionEngine {
         self.moonshineModel = nil
         self.parakeetModel = nil
         self.qwen3ASRModel = nil
+        self.canaryModel = nil
+        self.nemotronModel = nil
+        self.graniteModel = nil
+        self.fireRedModel = nil
+        self.cohereModel = nil
         self.isReady = false
         // Force garbage collection of MLX memory
         MLX.GPU.clearCache()

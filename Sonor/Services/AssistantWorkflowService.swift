@@ -59,6 +59,9 @@ class AssistantWorkflowService {
             if willPaste {
                 DispatchQueue.global(qos: .userInteractive).async {
                     PasteManager.shared.typeTextDirectly(text: correctedText, targetPID: pid, forceFocusElement: nil)
+                    if let action = selectedMode.postPasteAction, action != "none" {
+                        PasteManager.shared.simulatePostPasteAction(action: action, targetPID: pid)
+                    }
                     Task { @MainActor in
                         onAutoLearnTrigger(pid, correctedText)
                     }
@@ -221,6 +224,15 @@ class AssistantWorkflowService {
                 if !textToPaste.isEmpty {
                     DispatchQueue.global(qos: .userInteractive).async {
                         PasteManager.shared.typeTextDirectly(text: textToPaste, targetPID: finalPID, forceFocusElement: nil)
+                        if let action = selectedMode.postPasteAction, action != "none" {
+                            PasteManager.shared.simulatePostPasteAction(action: action, targetPID: finalPID)
+                        }
+                    }
+                }
+            } else if willPaste && !isBackgroundRetry {
+                DispatchQueue.global(qos: .userInteractive).async {
+                    if let action = selectedMode.postPasteAction, action != "none" {
+                        PasteManager.shared.simulatePostPasteAction(action: action, targetPID: finalPID)
                     }
                 }
             } else if !finalFocused && !willPaste && !isBackgroundRetry {

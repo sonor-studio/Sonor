@@ -25,6 +25,7 @@ class AppController: NSObject, ObservableObject {
     
     private var currentRecordingSessionID: UUID? = nil
     private var lastRecordingStopTime: Date = Date.distantPast
+    private var lastRecordingStartTime: Date = Date.distantPast
     var isCurrentlyProcessing: Bool {
         let nonProcessingStatuses: Set<String> = ["Ready", "Cancelled", "No microphone permission", "Microphone error", "No text recognized.", "Error: Missing model", "Done!"]
         return !isRecording && !nonProcessingStatuses.contains(statusText) && !statusText.hasPrefix("Mode:")
@@ -81,6 +82,9 @@ class AppController: NSObject, ObservableObject {
         self.availableModes = modes
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
         self.currentMode = modes.first(where: { $0.id.uuidString == activeModeID }) ?? modes.first
+        if let current = self.currentMode {
+            TranscriptionManager.shared.applyModelOverride(current.modelOverride)
+        }
 
         setupHotkey()
         NotificationCenter.default.addObserver(forName: Notification.Name("VoiceModesUpdated"), object: nil, queue: .main) { [weak self] _ in
@@ -114,17 +118,21 @@ class AppController: NSObject, ObservableObject {
     private var hotkeyDownTime: Date = Date()
     
     private func setupHotkey() {
-        HotkeyManager.shared.onHotkeyDown = { [weak self] in
-            self?.hotkeyDownTime = Date()
-            self?.toggleRecording()
+        HotkeyManager.shared.onHotkeyDown = { [weak self] eventTime in
+            self?.hotkeyDownTime = eventTime
+            self?.toggleRecording(eventTime: eventTime)
         }
-        HotkeyManager.shared.onHotkeyUp = { [weak self] in
+        
+        HotkeyManager.shared.onHotkeyUp = { [weak self] eventTime in
             guard let self = self else { return }
             if self.isRecording {
+                if eventTime.timeIntervalSince(self.lastRecordingStartTime) < 0.2 {
+                    return
+                }
                 if self.activeHotkeyMode == .hold {
                     self.stopRecordingAndTranscribe()
                 } else if self.activeHotkeyMode == .automatic {
-                    let duration = Date().timeIntervalSince(self.hotkeyDownTime)
+                    let duration = eventTime.timeIntervalSince(self.hotkeyDownTime)
                     if duration > 0.4 {
                         self.stopRecordingAndTranscribe()
                     }
@@ -205,20 +213,27 @@ class AppController: NSObject, ObservableObject {
         self.availableModes = modes
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
         self.currentMode = modes.first(where: { $0.id.uuidString == activeModeID }) ?? modes.first
+        if let current = self.currentMode {
+            TranscriptionManager.shared.applyModelOverride(current.modelOverride)
+        }
     }
 
     /// Toggles the recording state. 
     /// Handles accessibility permissions, microphone permissions, and model checking before proceeding.
-    func toggleRecording() {
+    func toggleRecording(eventTime: Date = Date()) {
         if isCurrentlyProcessing {
             return
         }
         if isRecording {
-            stopRecordingAndTranscribe()
-        } else {
-            if Date().timeIntervalSince(lastRecordingStopTime) < 0.5 {
+            if eventTime.timeIntervalSince(lastRecordingStartTime) < 0.2 {
                 return
             }
+            stopRecordingAndTranscribe()
+        } else {
+            if eventTime.timeIntervalSince(lastRecordingStopTime) < 0.5 {
+                return
+            }
+            lastRecordingStartTime = eventTime
             
             let isTrusted = AXIsProcessTrusted()
             let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
@@ -256,16 +271,7 @@ class AppController: NSObject, ObservableObject {
                 }
                 return
             }
-            wasPopoverOpenBeforeRecording = isPopoverOpen
-            if let frontApp = NSWorkspace.shared.frontmostApplication,
-               frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
-                targetAppPID = frontApp.processIdentifier
-                targetAppBundleID = frontApp.bundleIdentifier
-                targetAXElement = PasteManager.shared.getFocusedAXElement(pid: targetAppPID)
-                wasTextFieldFocusedAtStart = PasteManager.shared.isElementTextField(targetAXElement)
-            }
-            let selectedMode: VoiceMode
-            selectedMode = currentMode ?? availableModes.first ?? VoiceMode.defaults.first!
+            let selectedMode = currentMode ?? availableModes.first ?? VoiceMode.defaults.first!
             if self.currentMode?.id != selectedMode.id {
                 self.selectMode(selectedMode)
             }
@@ -282,7 +288,27 @@ class AppController: NSObject, ObservableObject {
             self.statusText = "Listening..."
             WindowManager.shared.showHUD(controller: self)
             
-            // Start recording process immediately (no waiting for engine)
+            wasPopoverOpenBeforeRecording = isPopoverOpen
+            if let frontApp = NSWorkspace.shared.frontmostApplication,
+               frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
+                let pid = frontApp.processIdentifier
+                targetAppPID = pid
+                targetAppBundleID = frontApp.bundleIdentifier
+                targetAXElement = nil
+                wasTextFieldFocusedAtStart = false
+                
+                Task.detached {
+                    // Delay AX queries to prevent ViewBridge race condition with orderFront
+                    try? await Task.sleep(nanoseconds: 200_000_000) 
+                    let axElement = PasteManager.shared.getFocusedAXElement(pid: pid)
+                    let isTextField = PasteManager.shared.isElementTextField(axElement)
+                    await MainActor.run { [weak self] in
+                        self?.targetAXElement = axElement
+                        self?.wasTextFieldFocusedAtStart = isTextField
+                    }
+                }
+            }
+            
             self.startRecordingProcess(selectedMode: selectedMode, sessionID: sessionID)
             
             // Load transcription engine in background — only needed when
@@ -388,8 +414,14 @@ class AppController: NSObject, ObservableObject {
     func selectMode(_ mode: VoiceMode) {
         self.currentMode = mode
         UserDefaults.standard.set(mode.id.uuidString, forKey: "activeModeID")
+        
+        TranscriptionManager.shared.applyModelOverride(mode.modelOverride)
+        Task {
+            try? await TranscriptionManager.shared.ensureEngineReady()
+        }
     }
     func cancelRecording() {
+        if statusText == "Initializing" { return }
         guard isRecording || isCurrentlyProcessing else { return }
         isRecording = false
         self.isPaused = false

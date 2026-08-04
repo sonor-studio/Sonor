@@ -25,6 +25,7 @@ class WindowManager {
                 backing: .buffered,
                 defer: false
             )
+            panel.isReleasedWhenClosed = false
             panel.contentView = NSHostingView(rootView: CapsuleHUDView(controller: controller))
             panel.isFloatingPanel = true
             panel.level = .statusBar

@@ -77,7 +77,12 @@ final class ModelManager: ObservableObject {
         "SenseVoice": String(localized: "Ultra-fast multilingual model with excellent accent recognition from Alibaba."),
         "Moonshine": String(localized: "Tiny, highly optimized models for resource-constrained environments from UsefulSensors."),
         "Parakeet": String(localized: "High accuracy ASR models built on the NeMo framework from NVIDIA."),
-        "Qwen3": String(localized: "Large, powerful multilingual models with high reasoning capability from Alibaba.")
+        "Qwen3": String(localized: "Large, powerful multilingual models with high reasoning capability from Alibaba."),
+        "Canary": String(localized: "High precision end-to-end model from NVIDIA, specializing in punctuation and formatting."),
+        "Nemotron": String(localized: "Extremely fast and accurate transcription model from NVIDIA."),
+        "Granite": String(localized: "Enterprise-grade speech model from IBM, highly reliable for clear speech."),
+        "FireRed": String(localized: "Next-gen highly efficient STT system offering high accuracy across diverse languages."),
+        "Cohere": String(localized: "Business-oriented model designed for high accuracy with specialized vocabulary.")
     ]
 
     struct WhisperModel: Identifiable, Equatable, ModelMetadata {
@@ -248,6 +253,72 @@ final class ModelManager: ObservableObject {
             speed: 0.5,
             company: "Alibaba",
             parameters: "1.7B"
+        ),
+
+        MLXModel(
+            id: "canary-1b",
+            family: "Canary",
+            name: "Canary 1B",
+            repoId: "qfuxa/canary-mlx",
+            description: String(localized: "High precision end-to-end model from NVIDIA. Natural formatting and punctuation."),
+            weight: "~3.92 GB",
+            languages: String(localized: "Multilingual (EN, DE, ES, FR)"),
+            accuracy: 0.96,
+            speed: 0.7,
+            company: "NVIDIA",
+            parameters: "1.0B"
+        ),
+        MLXModel(
+            id: "nemotron-asr",
+            family: "Nemotron",
+            name: "Nemotron ASR",
+            repoId: "mlx-community/nemotron-3.5-asr-streaming-0.6b",
+            description: String(localized: "Fast and highly accurate transcription model from NVIDIA."),
+            weight: "~1.2 GB",
+            languages: String(localized: "Multilingual"),
+            accuracy: 0.92,
+            speed: 0.9,
+            company: "NVIDIA",
+            parameters: "0.6B"
+        ),
+        MLXModel(
+            id: "granite-speech",
+            family: "Granite",
+            name: "Granite Speech",
+            repoId: "mlx-community/granite-speech-4.1-2b-nar-mlx",
+            description: String(localized: "Enterprise-focused speech model. Reliable and clear transcriptions."),
+            weight: "~4.5 GB",
+            languages: String(localized: "English"),
+            accuracy: 0.88,
+            speed: 0.85,
+            company: "IBM",
+            parameters: "2B"
+        ),
+        MLXModel(
+            id: "firered-asr2",
+            family: "FireRed",
+            name: "FireRed ASR2",
+            repoId: "FireRedTeam/FireRedASR-AED-L",
+            description: String(localized: "High-performance ASR system capable of accurately transcribing diverse speech patterns."),
+            weight: "~4.6 GB",
+            languages: String(localized: "Multilingual"),
+            accuracy: 0.90,
+            speed: 0.8,
+            company: "FireRedTeam",
+            parameters: "Unknown"
+        ),
+        MLXModel(
+            id: "cohere-transcribe",
+            family: "Cohere",
+            name: "Cohere Transcribe",
+            repoId: "aufklarer/Cohere-Transcribe-2B-MLX-5bit",
+            description: String(localized: "Business-oriented model designed to handle specialized terminology and complex phrasing."),
+            weight: "~1.8 GB",
+            languages: String(localized: "Multilingual"),
+            accuracy: 0.93,
+            speed: 0.75,
+            company: "Cohere",
+            parameters: "2B"
         )
     ]
 
@@ -489,6 +560,7 @@ final class ModelManager: ObservableObject {
         downloader.start { [weak self] fraction, downloaded, total in
             Task { @MainActor in
                 guard let self = self else { return }
+                guard self.activeMLXDownloaders[modelId] != nil else { return }
                 
                 UserDefaults.standard.set(total, forKey: "MLXTotalExpectedBytes_\(modelId)")
                 
@@ -514,21 +586,32 @@ final class ModelManager: ObservableObject {
         } completion: { [weak self] result in
             Task { @MainActor in
                 guard let self = self else { return }
+                let wasCancelled = self.activeMLXDownloaders[modelId] == nil
+                let intendedState = self.mlxStates[modelId]
+                
                 self.activeMLXDownloaders[modelId] = nil
                 self.activeMLXDownloadTexts[modelId] = nil
+                
+                if wasCancelled {
+                    if case .notDownloaded = intendedState {
+                        let repo = Hub.Repo(id: model.repoId)
+                        let api = HubApi(downloadBase: self.modelsDirectory, cache: nil, useBackgroundSession: false)
+                        let dir = api.localRepoLocation(repo)
+                        try? FileManager.default.removeItem(at: dir)
+                    }
+                    return
+                }
+                
                 switch result {
                 case .success:
                     self.mlxStates[modelId] = .downloaded
                 case .failure(let error):
-                    let nsError = error as NSError
-                    if !(nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled) {
-                        self.downloadError = error.localizedDescription
-                        self.showDownloadErrorModal = true
-                        if case .downloading(let p) = self.mlxStates[modelId] {
-                            self.mlxStates[modelId] = .paused(progress: p)
-                        } else {
-                            self.checkMLXInitialStates()
-                        }
+                    self.downloadError = error.localizedDescription
+                    self.showDownloadErrorModal = true
+                    if case .downloading(let p) = self.mlxStates[modelId] {
+                        self.mlxStates[modelId] = .paused(progress: p)
+                    } else {
+                        self.checkMLXInitialStates()
                     }
                 }
             }

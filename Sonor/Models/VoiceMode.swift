@@ -22,7 +22,9 @@ struct VoiceMode: Identifiable, Codable, Equatable {
     var isBuiltIn: Bool? 
     var pasteTiming: String? 
     var fallbackToClipboard: Bool?
-    init(id: UUID = UUID(), name: String, prompt: String, boundAppBundleIDs: [String] = [], audioBehavior: AudioBehavior? = .keep, assistantType: String? = "dictation", passAppName: Bool? = true, passCopiedText: Bool? = true, language: String? = "auto", isBuiltIn: Bool? = false, pasteTiming: String? = "end", fallbackToClipboard: Bool? = false) {
+    var postPasteAction: String?
+    var modelOverride: String?
+    init(id: UUID = UUID(), name: String, prompt: String, boundAppBundleIDs: [String] = [], audioBehavior: AudioBehavior? = .keep, assistantType: String? = "dictation", passAppName: Bool? = true, passCopiedText: Bool? = true, language: String? = "auto", isBuiltIn: Bool? = false, pasteTiming: String? = "end", fallbackToClipboard: Bool? = false, postPasteAction: String? = "none", modelOverride: String? = nil) {
         self.id = id
         self.name = name
         self.prompt = prompt
@@ -35,6 +37,8 @@ struct VoiceMode: Identifiable, Codable, Equatable {
         self.isBuiltIn = isBuiltIn
         self.pasteTiming = pasteTiming
         self.fallbackToClipboard = fallbackToClipboard
+        self.postPasteAction = postPasteAction
+        self.modelOverride = modelOverride
     }
     var isBuiltInMode: Bool {
         if isBuiltIn == true {
@@ -70,6 +74,7 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                 var passCopiedText: Bool?
                 var language: String?
                 var isBuiltIn: Bool?
+                var modelOverride: String?
             }
             if let oldModes = try? JSONDecoder().decode([OldVoiceMode].self, from: voiceModesData) {
                 modes = oldModes.map { old in
@@ -85,7 +90,9 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                         language: old.language,
                         isBuiltIn: old.isBuiltIn,
                         pasteTiming: "end",
-                        fallbackToClipboard: false
+                        fallbackToClipboard: false,
+                        postPasteAction: "none",
+                        modelOverride: old.modelOverride
                     )
                 }
             } else {

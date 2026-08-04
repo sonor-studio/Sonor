@@ -237,4 +237,34 @@ class PasteManager {
             }
         }
     }
+
+    func simulatePostPasteAction(action: String, targetPID: pid_t) {
+        guard AXIsProcessTrusted(), targetPID > 0 else { return }
+        let source = CGEventSource(stateID: .combinedSessionState)
+        
+        let virtualKey: CGKeyCode = 0x24 // Return
+        
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: virtualKey, keyDown: true)
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: virtualKey, keyDown: false)
+        
+        switch action {
+        case "return":
+            break
+        case "shiftReturn":
+            keyDown?.flags = .maskShift
+            keyUp?.flags = .maskShift
+        case "commandReturn":
+            keyDown?.flags = .maskCommand
+            keyUp?.flags = .maskCommand
+        case "optionReturn":
+            keyDown?.flags = .maskAlternate
+            keyUp?.flags = .maskAlternate
+        default:
+            return
+        }
+        
+        keyDown?.post(tap: .cghidEventTap)
+        Thread.sleep(forTimeInterval: 0.02)
+        keyUp?.post(tap: .cghidEventTap)
+    }
 }
