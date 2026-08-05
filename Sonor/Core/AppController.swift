@@ -267,7 +267,7 @@ class AppController: NSObject, ObservableObject {
             
             let behavior = selectedMode.audioBehavior ?? .keep
             if self.sonorContext == nil {
-                self.statusText = "Initializing"
+                self.statusText = "Initializing Speech Model..."
             } else {
                 self.statusText = "Listening..."
             }
@@ -412,7 +412,7 @@ class AppController: NSObject, ObservableObject {
     }
     func cancelRecording() {
         guard isRecording || isCurrentlyProcessing else { return }
-        if statusText == "Initializing" {
+        if statusText.hasPrefix("Initializing") {
             return
         }
         isRecording = false
@@ -432,6 +432,11 @@ class AppController: NSObject, ObservableObject {
         withAnimation {
             self.audioLevels = Array(repeating: 0.01, count: 40)
         }
+        
+        if ModelManager.shared.isWhisperLoaded {
+            self.startWhisperIdleTimer()
+        }
+        
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
             if !self.isRecording && self.statusText == "Cancelled" {
                 self.statusText = "Ready"
@@ -472,6 +477,14 @@ class AppController: NSObject, ObservableObject {
         let samples = audioManager.stopRecording()
         MediaControlService.shared.resumeMultimedia()
         currentTask = Task {
+            defer {
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    if ModelManager.shared.isWhisperLoaded {
+                        self.startWhisperIdleTimer()
+                    }
+                }
+            }
             guard let context = sonorContext else {
                 await MainActor.run { 
                     self.statusText = "Error: Missing model" 
