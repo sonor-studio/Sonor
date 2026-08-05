@@ -184,10 +184,10 @@ struct FeedbackView: View {
         }
         .padding(40)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-        .onChange(of: feedbackText, perform: { _ in resetMessages() })
-        .onChange(of: customCategory, perform: { _ in resetMessages() })
-        .onChange(of: feedbackType, perform: { _ in resetMessages() })
-        .onChange(of: emailAddress, perform: { _ in resetMessages() })
+        .onChange(of: feedbackText) { resetMessages() }
+        .onChange(of: customCategory) { resetMessages() }
+        .onChange(of: feedbackType) { resetMessages() }
+        .onChange(of: emailAddress) { resetMessages() }
     }
     
     private func resetMessages() {

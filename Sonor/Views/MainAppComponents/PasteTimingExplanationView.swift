@@ -22,6 +22,12 @@ struct PasteTimingExplanationView: View {
             VStack(alignment: .leading, spacing: 16) {
 
                 explanationRow(
+                    title: t("Automatic"),
+                    icon: "wand.and.stars",
+                    description: t("Combines both methods: it immediately starts typing into the initial text field if one is available. If no field was focused at the start, it waits for generation to finish and pastes into whatever field is active at the end.")
+                )
+                
+                explanationRow(
                     title: t("Field focused at start"),
                     icon: "arrow.right.to.line.compact",
                     description: t("Saves the exact text field you clicked before launching the assistant. When generating finishes, it forces the text strictly into that specific field, ignoring whatever field is active at the end.")
@@ -54,7 +60,7 @@ struct PasteTimingExplanationView: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
         }
-        .frame(width: 440, height: 440)
+        .frame(width: 440, height: 520)
         .background(colorScheme == .dark ? Color.black : Color.white)
     }
     
@@ -72,6 +78,7 @@ struct PasteTimingExplanationView: View {
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
                     .lineSpacing(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

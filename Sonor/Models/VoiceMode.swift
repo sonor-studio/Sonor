@@ -21,10 +21,11 @@ struct VoiceMode: Identifiable, Codable, Equatable {
     var language: String? 
     var isBuiltIn: Bool? 
     var pasteTiming: String? 
-    var fallbackToClipboard: Bool?
+    var fallbackToClipboard: Bool? // Deprecated
+    var fallbackBehavior: String? // "none", "overlay", "clipboard"
     var postPasteAction: String?
     var modelOverride: String?
-    init(id: UUID = UUID(), name: String, prompt: String, boundAppBundleIDs: [String] = [], audioBehavior: AudioBehavior? = .keep, assistantType: String? = "dictation", passAppName: Bool? = true, passCopiedText: Bool? = true, language: String? = "auto", isBuiltIn: Bool? = false, pasteTiming: String? = "end", fallbackToClipboard: Bool? = false, postPasteAction: String? = "none", modelOverride: String? = nil) {
+    init(id: UUID = UUID(), name: String, prompt: String, boundAppBundleIDs: [String] = [], audioBehavior: AudioBehavior? = .keep, assistantType: String? = "dictation", passAppName: Bool? = true, passCopiedText: Bool? = true, language: String? = "auto", isBuiltIn: Bool? = false, pasteTiming: String? = "auto", fallbackBehavior: String? = "overlay", postPasteAction: String? = "none", modelOverride: String? = nil, fallbackToClipboard: Bool? = nil) {
         self.id = id
         self.name = name
         self.prompt = prompt
@@ -36,9 +37,10 @@ struct VoiceMode: Identifiable, Codable, Equatable {
         self.language = language
         self.isBuiltIn = isBuiltIn
         self.pasteTiming = pasteTiming
-        self.fallbackToClipboard = fallbackToClipboard
+        self.fallbackBehavior = fallbackBehavior
         self.postPasteAction = postPasteAction
         self.modelOverride = modelOverride
+        self.fallbackToClipboard = fallbackToClipboard
     }
     var isBuiltInMode: Bool {
         if isBuiltIn == true {
@@ -89,8 +91,8 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                         passCopiedText: old.passCopiedText,
                         language: old.language,
                         isBuiltIn: old.isBuiltIn,
-                        pasteTiming: "end",
-                        fallbackToClipboard: false,
+                        pasteTiming: "auto",
+                        fallbackBehavior: "overlay",
                         postPasteAction: "none",
                         modelOverride: old.modelOverride
                     )
@@ -98,6 +100,16 @@ struct VoiceMode: Identifiable, Codable, Equatable {
             } else {
                 save(defaults)
                 return defaults
+            }
+        }
+        
+        for i in 0..<modes.count {
+            if modes[i].fallbackBehavior == nil {
+                if modes[i].fallbackToClipboard == true {
+                    modes[i].fallbackBehavior = "clipboard"
+                } else {
+                    modes[i].fallbackBehavior = "overlay"
+                }
             }
         }
         let deprecatedNames = ["Poprawianie", "Formalny", "Strukturyzowana notatka", "Structured Note", "Notatka markdown", "Notatka Markdown", "Markdown Note"]

@@ -1,5 +1,5 @@
 import Foundation
-import AVFoundation
+@preconcurrency import AVFoundation
 
 class SoundPlayer: NSObject {
     static let shared = SoundPlayer()

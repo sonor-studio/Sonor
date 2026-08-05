@@ -383,8 +383,6 @@ struct ModeEditorView: View {
                                 }
                                 .pickerStyle(.menu)
                                 .frame(width: 150)
-                                .accentColor(.black)
-                                .tint(.black)
                             }
                         }
                         
@@ -413,8 +411,6 @@ struct ModeEditorView: View {
                             }
                             .pickerStyle(.menu)
                             .frame(width: 150)
-                            .accentColor(.black)
-                            .tint(.black)
                         }
                         VStack(alignment: .leading, spacing: 8) {
                             if modeBinding.wrappedValue.isBuiltInMode {
@@ -609,12 +605,13 @@ struct ModeEditorView: View {
 
                         HStack {
                             Picker(t("Paste target"), selection: Binding(
-                                get: { modeBinding.wrappedValue.pasteTiming ?? "end" },
+                                get: { modeBinding.wrappedValue.pasteTiming ?? "auto" },
                                 set: { 
                                     modeBinding.wrappedValue.pasteTiming = $0
                                     saveModes()
                                 }
                             )) {
+                                Text(t("Automatic")).tag("auto")
                                 Text(t("Field focused at end")).tag("end")
                                 Text(t("Field focused at start")).tag("start")
                             }
@@ -681,20 +678,24 @@ struct ModeEditorView: View {
                         }
 
                         HStack {
-                            Toggle(t("Copy to clipboard if no text field is detected"), isOn: Binding(
-                                get: { modeBinding.wrappedValue.fallbackToClipboard ?? false },
+                            Picker(t("Behavior if no field detected"), selection: Binding(
+                                get: { modeBinding.wrappedValue.fallbackBehavior ?? "overlay" },
                                 set: { 
-                                    modeBinding.wrappedValue.fallbackToClipboard = $0
+                                    modeBinding.wrappedValue.fallbackBehavior = $0
                                     saveModes()
                                 }
-                            ))
-                            .toggleStyle(CustomToggleStyle())
+                            )) {
+                                Text(t("Do nothing")).tag("none")
+                                Text(t("Show overlay")).tag("overlay")
+                                Text(t("Copy to clipboard")).tag("clipboard")
+                            }
+                            .pickerStyle(MenuPickerStyle())
                             .font(.system(size: 12))
-                            Spacer()
+                            
                             Button(action: {
-                                let newVal = modeBinding.wrappedValue.fallbackToClipboard ?? false
+                                let newVal = modeBinding.wrappedValue.fallbackBehavior ?? "overlay"
                                 for i in modes.indices {
-                                    modes[i].fallbackToClipboard = newVal
+                                    modes[i].fallbackBehavior = newVal
                                 }
                                 saveModes()
                             }) {

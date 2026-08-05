@@ -197,14 +197,12 @@ class MessageMemoryManager: ObservableObject {
         let removedMessages = Array(messages.prefix(toRemove))
         messages.removeFirst(toRemove)
         
-        var deletedFile = false
         for msg in removedMessages {
             ramAudioSamples.removeValue(forKey: msg.id)
             if historyStorageType == "File" {
                 let url = historyAudioURL(for: msg.id)
                 if FileManager.default.fileExists(atPath: url.path) {
                     try? FileManager.default.removeItem(at: url)
-                    deletedFile = true
                 }
             }
         }

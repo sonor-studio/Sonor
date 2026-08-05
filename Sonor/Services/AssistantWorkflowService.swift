@@ -28,54 +28,94 @@ class AssistantWorkflowService {
         let pid = initialPID
         
         // Detect whether a text field is actually focused initially
-        let isTextFieldDetected: Bool
-        if selectedMode.pasteTiming == "end" {
-            // For 'end', we bypass the strict start requirement since the user might change windows during speech
-            isTextFieldDetected = true
-        } else {
-            isTextFieldDetected = PasteManager.shared.isTextFieldFocused(pid: pid)
-        }
+        let isTextFieldDetected = wasTextFieldFocusedAtStart
         
-        // willPaste: only paste if a text field was actually found — same behavior regardless of fallbackToClipboard
-        var willPaste = isBackgroundRetry ? false : isTextFieldDetected
-        
-        // willFallbackToClipboard: copy text to clipboard when no field found, only if user enabled this option
-        let willFallbackToClipboard = isBackgroundRetry ? false : (!isTextFieldDetected && (selectedMode.fallbackToClipboard == true))
+        // willPaste: only paste if a text field was actually found at start — except for 'end' timing mode where we resolve at the end instead of start.
+        var willPaste = isBackgroundRetry ? false : (isTextFieldDetected && (selectedMode.pasteTiming == "start" || selectedMode.pasteTiming == "auto"))
         
         let shouldRunLLM = !selectedMode.prompt.isEmpty
         
         if !shouldRunLLM {
             // Skip LLM generation and paste directly.
+            var finalPID = pid
+            var finalFocused = false
+            
+            if selectedMode.pasteTiming == "end" {
+                var currentFrontPID = pid
+                if let frontApp = NSWorkspace.shared.frontmostApplication,
+                   frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
+                    currentFrontPID = frontApp.processIdentifier
+                }
+                finalPID = currentFrontPID
+                finalFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: finalPID)
+            } else if selectedMode.pasteTiming == "auto" {
+                var currentFrontPID = pid
+                if let frontApp = NSWorkspace.shared.frontmostApplication,
+                   frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
+                    currentFrontPID = frontApp.processIdentifier
+                }
+                let endFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: currentFrontPID)
+                if endFocused {
+                    finalPID = currentFrontPID
+                    finalFocused = true
+                } else if isTextFieldDetected && !isBackgroundRetry {
+                    finalPID = initialPID
+                    finalFocused = true
+                } else {
+                    finalPID = currentFrontPID
+                    finalFocused = false
+                }
+            } else {
+                finalFocused = isTextFieldDetected
+            }
+            
+            let actuallyPasted = finalFocused && !isBackgroundRetry
+            let fallbackBehavior = selectedMode.fallbackBehavior ?? "overlay"
+            let willFallback = !actuallyPasted && fallbackBehavior == "clipboard" && !isBackgroundRetry
+            let willShowOverlay = !actuallyPasted && fallbackBehavior == "overlay" && !isBackgroundRetry
+            
             if let historyMessageID = historyMessageID {
-                let appName: String? = isBackgroundRetry ? nil : (willPaste ? (NSRunningApplication(processIdentifier: initialPID)?.localizedName ?? "Unknown App") : (willFallbackToClipboard ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None")))
+                let appName: String? = isBackgroundRetry ? nil : (actuallyPasted ? (NSRunningApplication(processIdentifier: finalPID)?.localizedName ?? "Unknown App") : (willFallback ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None")))
                 let whisperModel = TranscriptionManager.shared.activeModelName
                 MessageMemoryManager.shared.updateMessage(id: historyMessageID, newText: correctedText, isError: false, appName: appName, transcriptionModel: whisperModel, llmModel: nil, modeName: selectedMode.name, updateMetadata: true)
             } else {
-                let appName = willPaste ? (NSRunningApplication(processIdentifier: initialPID)?.localizedName ?? "Unknown App") : (willFallbackToClipboard ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None"))
+                let appName = actuallyPasted ? (NSRunningApplication(processIdentifier: finalPID)?.localizedName ?? "Unknown App") : (willFallback ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None"))
                 let whisperModel = TranscriptionManager.shared.activeModelName
                 MessageMemoryManager.shared.saveMessage(correctedText, samples: audioSamples, appName: appName, transcriptionModel: whisperModel, modeName: selectedMode.name)
             }
             
-            if willPaste {
-                DispatchQueue.global(qos: .userInteractive).async {
-                    PasteManager.shared.typeTextDirectly(text: correctedText, targetPID: pid, forceFocusElement: nil)
-                    if let action = selectedMode.postPasteAction, action != "none" {
-                        PasteManager.shared.simulatePostPasteAction(action: action, targetPID: pid)
-                    }
-                    Task { @MainActor in
-                        onAutoLearnTrigger(pid, correctedText)
+            if actuallyPasted {
+                if let targetApp = NSRunningApplication(processIdentifier: finalPID), !targetApp.isActive {
+                    targetApp.activate(options: .activateAllWindows)
+                    var attempts = 0
+                    while !targetApp.isActive && attempts < 10 {
+                        try? await Task.sleep(nanoseconds: 50_000_000)
+                        attempts += 1
                     }
                 }
-            } else if willFallbackToClipboard {
+                let forceElement = (finalPID == initialPID) ? targetAXElement : nil
+                DispatchQueue.global(qos: .userInteractive).async {
+                    PasteManager.shared.typeTextDirectly(text: correctedText, targetPID: finalPID, forceFocusElement: forceElement)
+                    if let action = selectedMode.postPasteAction, action != "none" {
+                        PasteManager.shared.simulatePostPasteAction(action: action, targetPID: finalPID)
+                    }
+                    Task { @MainActor in
+                        onAutoLearnTrigger(finalPID, correctedText)
+                    }
+                }
+            } else if willFallback {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(correctedText, forType: .string)
-            } else if !isTextFieldDetected && !isBackgroundRetry {
+            } else if willShowOverlay {
                 await MainActor.run {
                     onCopyNotificationTrigger(correctedText)
                 }
             }
-            // Play Error sound if no text field was detected (regardless of fallbackToClipboard setting)
-            if !isTextFieldDetected && !isBackgroundRetry {
+            
+            // Play sound based on result
+            if actuallyPasted {
+                await SoundPlayer.shared.playSound(named: "End")
+            } else if !isBackgroundRetry {
                 await SoundPlayer.shared.playSound(named: "Error")
             }
             
@@ -201,6 +241,23 @@ class AssistantWorkflowService {
                 finalPID = currentFrontPID
                 finalFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: finalPID)
                 
+            } else if selectedMode.pasteTiming == "auto" {
+                var currentFrontPID = pid
+                if let frontApp = NSWorkspace.shared.frontmostApplication,
+                   frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
+                    currentFrontPID = frontApp.processIdentifier
+                }
+                let endFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: currentFrontPID)
+                if endFocused {
+                    finalPID = currentFrontPID
+                    finalFocused = true
+                } else if isTextFieldDetected && !isBackgroundRetry {
+                    finalPID = initialPID
+                    finalFocused = true
+                } else {
+                    finalPID = currentFrontPID
+                    finalFocused = false
+                }
             } else {
                 // start mode: "what is currently active"
                 var frontmostPID = initialPID
@@ -209,52 +266,70 @@ class AssistantWorkflowService {
                     frontmostPID = frontApp.processIdentifier
                 }
                 finalPID = frontmostPID
-                finalFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: finalPID)
+                finalFocused = isBackgroundRetry ? false : (isTextFieldDetected && PasteManager.shared.isTextFieldFocused(pid: finalPID))
             }
             
             let willDoFinalPaste = isBackgroundRetry ? false : (finalFocused && (!initialWillPaste || !willPaste))
+            let actuallyPasted = (initialWillPaste && willPaste) || willDoFinalPaste
+            let fallbackBehavior = selectedMode.fallbackBehavior ?? "overlay"
+            let willFallback = !actuallyPasted && fallbackBehavior == "clipboard" && !isBackgroundRetry
+            let willShowOverlay = !actuallyPasted && fallbackBehavior == "overlay" && !isBackgroundRetry
             
-            if willDoFinalPaste {
-                var textToPaste = fullGeneratedText
-                if initialWillPaste && !streamedText.isEmpty {
-                    if let currentFieldText = PasteManager.shared.readFocusedTextField(pid: finalPID), currentFieldText.contains(streamedText) {
-                        textToPaste = String(fullGeneratedText.dropFirst(streamedText.count))
+            if actuallyPasted {
+                if willDoFinalPaste {
+                    if let targetApp = NSRunningApplication(processIdentifier: finalPID), !targetApp.isActive {
+                        targetApp.activate(options: .activateAllWindows)
+                        var attempts = 0
+                        while !targetApp.isActive && attempts < 10 {
+                            try? await Task.sleep(nanoseconds: 50_000_000)
+                            attempts += 1
+                        }
                     }
-                }
-                if !textToPaste.isEmpty {
+                    var textToPaste = fullGeneratedText
+                    if initialWillPaste && !streamedText.isEmpty {
+                        if let currentFieldText = PasteManager.shared.readFocusedTextField(pid: finalPID), currentFieldText.contains(streamedText) {
+                            textToPaste = String(fullGeneratedText.dropFirst(streamedText.count))
+                        }
+                    }
+                    if !textToPaste.isEmpty {
+                        let forceElement = (finalPID == initialPID) ? targetAXElement : nil
+                        DispatchQueue.global(qos: .userInteractive).async {
+                            PasteManager.shared.typeTextDirectly(text: textToPaste, targetPID: finalPID, forceFocusElement: forceElement)
+                            if let action = selectedMode.postPasteAction, action != "none" {
+                                PasteManager.shared.simulatePostPasteAction(action: action, targetPID: finalPID)
+                            }
+                        }
+                    }
+                } else {
                     DispatchQueue.global(qos: .userInteractive).async {
-                        PasteManager.shared.typeTextDirectly(text: textToPaste, targetPID: finalPID, forceFocusElement: nil)
                         if let action = selectedMode.postPasteAction, action != "none" {
                             PasteManager.shared.simulatePostPasteAction(action: action, targetPID: finalPID)
                         }
                     }
                 }
-            } else if willPaste && !isBackgroundRetry {
-                DispatchQueue.global(qos: .userInteractive).async {
-                    if let action = selectedMode.postPasteAction, action != "none" {
-                        PasteManager.shared.simulatePostPasteAction(action: action, targetPID: finalPID)
-                    }
+            } else if willFallback {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(fullGeneratedText, forType: .string)
+            } else if willShowOverlay {
+                await MainActor.run {
+                    onCopyNotificationTrigger(fullGeneratedText)
                 }
-            } else if !finalFocused && !willPaste && !isBackgroundRetry {
-                // Play Error sound if no text field was detected at the end
-                if willFallbackToClipboard {
-                    NSPasteboard.general.clearContents()
-                    NSPasteboard.general.setString(fullGeneratedText, forType: .string)
-                } else {
-                    await MainActor.run {
-                        onCopyNotificationTrigger(fullGeneratedText)
-                    }
-                }
+            }
+            
+            // Play sound based on result
+            if actuallyPasted {
+                await SoundPlayer.shared.playSound(named: "End")
+            } else if !isBackgroundRetry {
                 await SoundPlayer.shared.playSound(named: "Error")
             }
             
             if let historyMessageID = historyMessageID {
-                let appName: String? = isBackgroundRetry ? nil : (willPaste ? (NSRunningApplication(processIdentifier: initialPID)?.localizedName ?? "Unknown App") : (willFallbackToClipboard ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None")))
+                let appName: String? = isBackgroundRetry ? nil : (actuallyPasted ? (NSRunningApplication(processIdentifier: finalPID)?.localizedName ?? "Unknown App") : (willFallback ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None")))
                 let whisperModel = TranscriptionManager.shared.activeModelName
                 let gemmaModel = "Gemma 3"
                 MessageMemoryManager.shared.updateMessage(id: historyMessageID, newText: fullGeneratedText, isError: false, appName: appName, transcriptionModel: whisperModel, llmModel: gemmaModel, modeName: selectedMode.name, updateMetadata: true)
             } else {
-                let appName = willPaste ? (NSRunningApplication(processIdentifier: initialPID)?.localizedName ?? "Unknown App") : (willFallbackToClipboard ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None"))
+                let appName = actuallyPasted ? (NSRunningApplication(processIdentifier: finalPID)?.localizedName ?? "Unknown App") : (willFallback ? LocalizationManager.shared.translate("Clipboard") : LocalizationManager.shared.translate("None"))
                 let whisperModel = TranscriptionManager.shared.activeModelName
                 let gemmaModel = "Gemma 3"
                 MessageMemoryManager.shared.saveMessage(fullGeneratedText, samples: audioSamples, appName: appName, transcriptionModel: whisperModel, llmModel: gemmaModel, modeName: selectedMode.name)
@@ -268,12 +343,6 @@ class AssistantWorkflowService {
         
         await MainActor.run {
             onStatusChange("Done!")
-        }
-        
-        let finalIsActiveForSound = NSRunningApplication(processIdentifier: pid)?.isActive ?? false
-        let finalFocusedForSound = finalIsActiveForSound && PasteManager.shared.isTextFieldFocused(pid: pid)
-        if finalFocusedForSound || willPaste {
-            await SoundPlayer.shared.playSound(named: "End")
         }
     }
     

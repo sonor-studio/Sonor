@@ -1,6 +1,7 @@
 import SwiftUI
 import Carbon
 import AppKit
+import ServiceManagement
 
 struct GeneralSettingsView: View {
     @Environment(\.colorScheme) var appColorScheme
@@ -41,6 +42,8 @@ struct GeneralSettingsView: View {
     @State private var isShowingTrimHistoryAlert = false
     @State private var pendingHistoryLimit: Int? = nil
     @State private var limitSliderIndex: Double = 4.0
+    @State private var launchAtStartup = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
             HStack {
@@ -60,6 +63,8 @@ struct GeneralSettingsView: View {
             appSoundsSection
             autoUpdateDictionarySection
             appDataDirectorySection
+            systemIntegrationSection
+            dataManagementSection
             footerSection
         }
         .onAppear {
@@ -78,6 +83,7 @@ struct GeneralSettingsView: View {
             } else {
                 limitSliderIndex = 4.0
             }
+            launchAtStartup = SMAppService.mainApp.status == .enabled
         }
         .onChange(of: limitSliderIndex) {
             let newIndex = limitSliderIndex
@@ -528,7 +534,6 @@ struct GeneralSettingsView: View {
             Toggle(t("Play sounds"), isOn: $playAnySound)
                 .toggleStyle(CustomToggleStyle())
                 .font(.system(size: 14, weight: .bold))
-                .fixedSize()
             if playAnySound {
                 Divider()
                     .background(Color.white.opacity(0.05))
@@ -536,15 +541,12 @@ struct GeneralSettingsView: View {
                     Toggle(t("Recording start"), isOn: $playSound_Start)
                         .toggleStyle(CustomToggleStyle())
                         .font(.system(size: 12))
-                        .fixedSize()
                     Toggle(t("Error / Not recognized / No text field"), isOn: $playSound_Error)
                         .toggleStyle(CustomToggleStyle())
                         .font(.system(size: 12))
-                        .fixedSize()
                     Toggle(t("End (Success)"), isOn: $playSound_End)
                         .toggleStyle(CustomToggleStyle())
                         .font(.system(size: 12))
-                        .fixedSize()
                 }
                 .padding(.leading, 5)
             }
@@ -1077,5 +1079,107 @@ struct GeneralSettingsView: View {
             }
         }
         return false
+    }
+
+    @ViewBuilder
+    private var systemIntegrationSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("System Integration"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            Toggle(isOn: Binding(
+                get: { launchAtStartup },
+                set: { newValue in
+                    launchAtStartup = newValue
+                    do {
+                        if newValue {
+                            try SMAppService.mainApp.register()
+                        } else {
+                            try SMAppService.mainApp.unregister()
+                        }
+                    } catch {
+                        print("Failed to update launch at startup status: \(error)")
+                        // Revert on failure
+                        launchAtStartup = SMAppService.mainApp.status == .enabled
+                    }
+                }
+            )) {
+                Text(t("Launch at system startup"))
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .toggleStyle(CustomToggleStyle())
+            
+            Text(t("Automatically start Sonor when you log in to your Mac."))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var dataManagementSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("Data Management"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            HStack(spacing: 15) {
+                Button(action: {
+                    DataExportImportService.shared.exportData()
+                }) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 13))
+                        Text(t("Export Data (JSON)"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(0.1))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: {
+                    DataExportImportService.shared.importData()
+                }) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 13))
+                        Text(t("Import Data (JSON)"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(0.1))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Text(t("Export or import all your app settings, custom assistants, dictionary, and history. Selected AI models are not exported."))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
     }
 }

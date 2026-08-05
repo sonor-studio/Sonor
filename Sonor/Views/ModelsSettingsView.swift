@@ -180,7 +180,7 @@ struct ModelsSettingsView: View {
                                 if state.isDownloading || state.isPaused {
                                     ActiveDownloadCard(
                                         title: model.name,
-                                        descriptionText: model.description,
+                                        descriptionText: t(model.description),
                                         state: state,
                                         stats: manager.mlxDownloadStats[model.id],
                                         onPause: { manager.pauseMLXDownload(modelId: model.id) },
@@ -190,7 +190,7 @@ struct ModelsSettingsView: View {
                                 } else {
                                     RichModelCard(
                                         title: model.name,
-                                        description: model.description,
+                                        description: t(model.description),
                                         weight: model.weight,
                                         languages: model.languages,
                                         accuracy: model.accuracy,
@@ -224,7 +224,7 @@ struct ModelsSettingsView: View {
                                 if state.isDownloading || state.isPaused {
                                     ActiveDownloadCard(
                                         title: model.name,
-                                        descriptionText: model.description,
+                                        descriptionText: t(model.description),
                                         state: state,
                                         stats: manager.whisperDownloadStats[model.id],
                                         onPause: { manager.pauseWhisperDownload(modelId: model.id) },
@@ -234,7 +234,7 @@ struct ModelsSettingsView: View {
                                 } else {
                                     RichModelCard(
                                         title: model.name,
-                                        description: model.description,
+                                        description: t(model.description),
                                         weight: model.weight,
                                         languages: model.languages,
                                         accuracy: model.accuracy,
@@ -873,14 +873,14 @@ struct ModelSelectorView: View {
                         ForEach(groupedMLXModels, id: \.family) { group in
                             CustomDisclosureGroup(
                                 title: group.family,
-                                description: ModelManager.shared.modelFamilyDescriptions[group.family],
+                                description: t(ModelManager.shared.modelFamilyDescriptions[group.family] ?? ""),
                                 modelsCount: group.models.count
                             ) {
                                 VStack(spacing: 12) {
                                     ForEach(group.models) { model in
                                         RichModelCard(
                                             title: model.name,
-                                            description: model.description,
+                                            description: t(model.description),
                                             weight: model.weight,
                                             languages: model.languages,
                                             accuracy: model.accuracy,
@@ -911,14 +911,14 @@ struct ModelSelectorView: View {
                         
                         CustomDisclosureGroup(
                             title: "Whisper",
-                            description: ModelManager.shared.modelFamilyDescriptions["Whisper"],
+                            description: t(ModelManager.shared.modelFamilyDescriptions["Whisper"] ?? ""),
                             modelsCount: manager.availableWhisperModels.count
                         ) {
                             VStack(spacing: 12) {
                                 ForEach(manager.availableWhisperModels) { model in
                                     RichModelCard(
                                         title: model.name,
-                                        description: model.description,
+                                        description: t(model.description),
                                         weight: model.weight,
                                         languages: model.languages,
                                         accuracy: model.accuracy,
