@@ -169,6 +169,10 @@ class AudioManager: ObservableObject {
             
             let inputNode = engine.inputNode
             let inputFormat = inputNode.inputFormat(forBus: 0)
+            guard inputFormat.channelCount > 0, inputFormat.sampleRate > 0 else {
+                print("Invalid input format, preventing crash.")
+                return
+            }
             guard let targetFormat = targetFormat else {
                 return
             }
@@ -248,8 +252,36 @@ class AudioManager: ObservableObject {
             }
         }
     }
-
     
+    func restartEngineForDeviceChange() {
+        Task {
+            let wasRecording = self.isRecording
+            let oldSamples = wasRecording ? await self.stopRecordingAsync() : []
+            
+            self.engineQueue.sync {
+                if let engine = self.audioEngine {
+                    if self.isTapInstalled {
+                        engine.inputNode.removeTap(onBus: 0)
+                        self.isTapInstalled = false
+                    }
+                    engine.stop()
+                }
+                self.audioEngine = nil
+            }
+            
+            if wasRecording {
+                do {
+                    try self.startRecording(clearSamples: false)
+                    self.samplesQueue.async {
+                        self.accumulatedSamples.insert(contentsOf: oldSamples, at: 0)
+                    }
+                } catch {
+                    print("Error restarting engine after device change: \(error)")
+                }
+            }
+        }
+    }
+
     func stopRecordingAsync() async -> [Float] {
         await withCheckedContinuation { continuation in
             engineQueue.async { [weak self] in

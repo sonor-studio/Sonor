@@ -4,6 +4,8 @@ struct SidebarView: View {
     @Environment(\.colorScheme) var colorScheme
     @Binding var selectedTab: SettingsTab
     @ObservedObject var localizer = LocalizationManager.shared
+    @ObservedObject var messageManager = AppMessageManager.shared
+    @State private var isShowingAppMessage = false
     
     var effectiveColorScheme: ColorScheme
     
@@ -51,13 +53,19 @@ struct SidebarView: View {
             
             Spacer()
             
+            MenuButton(title: t("Messages"), icon: "envelope.fill", isSelected: selectedTab == .messages) {
+                selectedTab = .messages
+            }
+            .padding(.horizontal, 10)
+            .padding(.bottom, 5)
+            
             MenuButton(title: t("Changelog"), icon: "newspaper.fill", isSelected: selectedTab == .changelog) {
                 selectedTab = .changelog
             }
             .padding(.horizontal, 10)
             .padding(.bottom, 5)
             
-            MenuButton(title: t("Feedback"), icon: "envelope.fill", isSelected: selectedTab == .feedback) {
+            MenuButton(title: t("Feedback"), icon: "bubble.left.and.exclamationmark.bubble.right.fill", isSelected: selectedTab == .feedback) {
                 selectedTab = .feedback
             }
             .padding(.horizontal, 10)

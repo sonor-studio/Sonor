@@ -33,6 +33,9 @@ public class ChangelogLocalization {
             ]),
             ChangelogSection(title: t_changelog("Quality of Life & Settings"), features: [
                 ChangelogFeature(icon: "gearshape.2", title: t_changelog("Extended App Configuration"), description: t_changelog("Enjoy a massive set of new settings: freeform overlay positioning, memory management with automatic model unloading, output audio device selection, and a global hotkey to paste your last transcription.")),
+                ChangelogFeature(icon: "text.cursor", title: t_changelog("Empty Field Behavior"), description: t_changelog("You can now configure what happens when there's no text field available for transcription: show the overlay, copy the text to clipboard, or do nothing.")),
+                ChangelogFeature(icon: "arrow.right.doc.on.clipboard", title: t_changelog("Intelligent Paste Target"), description: t_changelog("The paste target can now be set to Intelligent, letting the application intelligently determine the best destination for your transcriptions.")),
+                ChangelogFeature(icon: "envelope.fill", title: t_changelog("In-App Messages"), description: t_changelog("Check out the new Messages tab where you can read important updates and announcements directly from our team.")),
                 ChangelogFeature(icon: "exclamationmark.triangle.fill", title: t_changelog("Graceful Out-Of-Memory Handling"), description: t_changelog("No more crashes when you run out of RAM! The application now gracefully intercepts memory limits and provides a friendly interface in the overlay to let you retry the transcription.")),
                 ChangelogFeature(icon: "ladybug.fill", title: t_changelog("In-App Feedback & UI Organization"), description: t_changelog("Submit ideas, questions, and bug reports directly via the new 'Feedback' tab in the sidebar. We also moved this Changelog out of annoying popups and directly into a dedicated application tab."))
             ])

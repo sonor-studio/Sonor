@@ -15,9 +15,6 @@ class AssistantWorkflowService {
     func execute(
         correctedText: String,
         selectedMode: VoiceMode,
-        initialPID: pid_t,
-        targetAXElement: AXUIElement?,
-        wasTextFieldFocusedAtStart: Bool,
         audioSamples: [Float]? = nil,
         historyMessageID: UUID? = nil,
         isBackgroundRetry: Bool = false,
@@ -25,49 +22,24 @@ class AssistantWorkflowService {
         onAutoLearnTrigger: @escaping @MainActor (pid_t, String) -> Void,
         onCopyNotificationTrigger: @escaping @MainActor (String) -> Void
     ) async {
-        let pid = initialPID
         
-        // Detect whether a text field is actually focused initially
-        let isTextFieldDetected = wasTextFieldFocusedAtStart
+        var frontmostPID = NSRunningApplication.current.processIdentifier
+        if let frontApp = NSWorkspace.shared.frontmostApplication,
+           frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
+            frontmostPID = frontApp.processIdentifier
+        }
         
-        // willPaste: only paste if a text field was actually found at start — except for 'end' timing mode where we resolve at the end instead of start.
-        var willPaste = isBackgroundRetry ? false : (isTextFieldDetected && (selectedMode.pasteTiming == "start" || selectedMode.pasteTiming == "auto"))
+        let isTextFieldDetected = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: frontmostPID)
+        
+        // willPaste: only paste if a text field was actually found
+        var willPaste = isBackgroundRetry ? false : isTextFieldDetected
         
         let shouldRunLLM = !selectedMode.prompt.isEmpty
         
         if !shouldRunLLM {
             // Skip LLM generation and paste directly.
-            var finalPID = pid
-            var finalFocused = false
-            
-            if selectedMode.pasteTiming == "end" {
-                var currentFrontPID = pid
-                if let frontApp = NSWorkspace.shared.frontmostApplication,
-                   frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
-                    currentFrontPID = frontApp.processIdentifier
-                }
-                finalPID = currentFrontPID
-                finalFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: finalPID)
-            } else if selectedMode.pasteTiming == "auto" {
-                var currentFrontPID = pid
-                if let frontApp = NSWorkspace.shared.frontmostApplication,
-                   frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
-                    currentFrontPID = frontApp.processIdentifier
-                }
-                let endFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: currentFrontPID)
-                if endFocused {
-                    finalPID = currentFrontPID
-                    finalFocused = true
-                } else if isTextFieldDetected && !isBackgroundRetry {
-                    finalPID = initialPID
-                    finalFocused = true
-                } else {
-                    finalPID = currentFrontPID
-                    finalFocused = false
-                }
-            } else {
-                finalFocused = isTextFieldDetected
-            }
+            let finalPID = frontmostPID
+            let finalFocused = isTextFieldDetected
             
             let actuallyPasted = finalFocused && !isBackgroundRetry
             let fallbackBehavior = selectedMode.fallbackBehavior ?? "overlay"
@@ -86,22 +58,23 @@ class AssistantWorkflowService {
             
             if actuallyPasted {
                 if let targetApp = NSRunningApplication(processIdentifier: finalPID), !targetApp.isActive {
-                    targetApp.activate(options: .activateAllWindows)
+                    NSApp.deactivate()
+                    targetApp.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
                     var attempts = 0
-                    while !targetApp.isActive && attempts < 10 {
+                    while !targetApp.isActive && attempts < 40 {
                         try? await Task.sleep(nanoseconds: 50_000_000)
                         attempts += 1
                     }
                 }
-                let forceElement = (finalPID == initialPID) ? targetAXElement : nil
-                DispatchQueue.global(qos: .userInteractive).async {
-                    PasteManager.shared.typeTextDirectly(text: correctedText, targetPID: finalPID, forceFocusElement: forceElement)
+                
+                await Task.detached(priority: .userInitiated) {
+                    PasteManager.shared.typeTextDirectly(text: correctedText, targetPID: finalPID, forceFocusElement: nil)
                     if let action = selectedMode.postPasteAction, action != "none" {
                         PasteManager.shared.simulatePostPasteAction(action: action, targetPID: finalPID)
                     }
-                    Task { @MainActor in
-                        onAutoLearnTrigger(finalPID, correctedText)
-                    }
+                }.value
+                await MainActor.run {
+                    onAutoLearnTrigger(finalPID, correctedText)
                 }
             } else if willFallback {
                 NSPasteboard.general.clearContents()
@@ -168,17 +141,12 @@ class AssistantWorkflowService {
             if Task.isCancelled { return }
             
             if willPaste {
-                if let targetApp = NSRunningApplication(processIdentifier: pid) {
+                if let targetApp = NSRunningApplication(processIdentifier: frontmostPID) {
                     targetApp.activate(options: .activateAllWindows)
                     var attempts = 0
                     while !targetApp.isActive && attempts < 10 {
                         try? await Task.sleep(nanoseconds: 50_000_000)
                         attempts += 1
-                    }
-                }
-                if !PasteManager.shared.isTextFieldFocused(pid: pid) {
-                    if let element = targetAXElement {
-                        AXUIElementSetAttributeValue(element, kAXFocusedAttribute as CFString, true as CFTypeRef)
                     }
                 }
             }
@@ -201,8 +169,8 @@ class AssistantWorkflowService {
                     }
                 }
                 if willPaste {
-                    let isActive = NSRunningApplication(processIdentifier: pid)?.isActive ?? false
-                    let stillFocused = isActive && PasteManager.shared.isTextFieldFocused(pid: pid)
+                    let isActive = NSRunningApplication(processIdentifier: frontmostPID)?.isActive ?? false
+                    let stillFocused = isActive && PasteManager.shared.isTextFieldFocused(pid: frontmostPID)
                     
                     if !stillFocused {
                         willPaste = false
@@ -218,7 +186,7 @@ class AssistantWorkflowService {
                     } else {
                         streamedText += token
                         DispatchQueue.global(qos: .userInteractive).async {
-                            PasteManager.shared.typeTextToken(token: token, targetPID: pid)
+                            PasteManager.shared.typeTextToken(token: token, targetPID: frontmostPID)
                         }
                     }
                 }
@@ -227,47 +195,8 @@ class AssistantWorkflowService {
             isGenerating = false
             if Task.isCancelled { return }
             
-            var finalPID = initialPID
-            var finalFocused = false
-            
-            if selectedMode.pasteTiming == "end" {
-                // strict end-only resolution
-                var currentFrontPID = pid
-                if let frontApp = NSWorkspace.shared.frontmostApplication,
-                   frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
-                    currentFrontPID = frontApp.processIdentifier
-                }
-                
-                finalPID = currentFrontPID
-                finalFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: finalPID)
-                
-            } else if selectedMode.pasteTiming == "auto" {
-                var currentFrontPID = pid
-                if let frontApp = NSWorkspace.shared.frontmostApplication,
-                   frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
-                    currentFrontPID = frontApp.processIdentifier
-                }
-                let endFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: currentFrontPID)
-                if endFocused {
-                    finalPID = currentFrontPID
-                    finalFocused = true
-                } else if isTextFieldDetected && !isBackgroundRetry {
-                    finalPID = initialPID
-                    finalFocused = true
-                } else {
-                    finalPID = currentFrontPID
-                    finalFocused = false
-                }
-            } else {
-                // start mode: "what is currently active"
-                var frontmostPID = initialPID
-                if let frontApp = NSWorkspace.shared.frontmostApplication,
-                   frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
-                    frontmostPID = frontApp.processIdentifier
-                }
-                finalPID = frontmostPID
-                finalFocused = isBackgroundRetry ? false : (isTextFieldDetected && PasteManager.shared.isTextFieldFocused(pid: finalPID))
-            }
+            let finalPID = frontmostPID
+            let finalFocused = isBackgroundRetry ? false : PasteManager.shared.isTextFieldFocused(pid: finalPID)
             
             let willDoFinalPaste = isBackgroundRetry ? false : (finalFocused && (!initialWillPaste || !willPaste))
             let actuallyPasted = (initialWillPaste && willPaste) || willDoFinalPaste
@@ -278,7 +207,7 @@ class AssistantWorkflowService {
             if actuallyPasted {
                 if willDoFinalPaste {
                     if let targetApp = NSRunningApplication(processIdentifier: finalPID), !targetApp.isActive {
-                        targetApp.activate(options: .activateAllWindows)
+                        targetApp.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
                         var attempts = 0
                         while !targetApp.isActive && attempts < 10 {
                             try? await Task.sleep(nanoseconds: 50_000_000)
@@ -292,20 +221,19 @@ class AssistantWorkflowService {
                         }
                     }
                     if !textToPaste.isEmpty {
-                        let forceElement = (finalPID == initialPID) ? targetAXElement : nil
-                        DispatchQueue.global(qos: .userInteractive).async {
-                            PasteManager.shared.typeTextDirectly(text: textToPaste, targetPID: finalPID, forceFocusElement: forceElement)
+                        await Task.detached(priority: .userInitiated) {
+                            PasteManager.shared.typeTextDirectly(text: textToPaste, targetPID: finalPID, forceFocusElement: nil)
                             if let action = selectedMode.postPasteAction, action != "none" {
                                 PasteManager.shared.simulatePostPasteAction(action: action, targetPID: finalPID)
                             }
-                        }
+                        }.value
                     }
                 } else {
-                    DispatchQueue.global(qos: .userInteractive).async {
+                    await Task.detached(priority: .userInitiated) {
                         if let action = selectedMode.postPasteAction, action != "none" {
                             PasteManager.shared.simulatePostPasteAction(action: action, targetPID: finalPID)
                         }
-                    }
+                    }.value
                 }
             } else if willFallback {
                 NSPasteboard.general.clearContents()

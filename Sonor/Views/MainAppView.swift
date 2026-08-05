@@ -14,6 +14,7 @@ enum SettingsTab: String {
     case models = "Modele"
     case settings = "Ustawienia"
     case changelog = "Changelog"
+    case messages = "Wiadomości"
     case feedback = "Feedback"
 }
 
@@ -48,6 +49,7 @@ struct MainAppView: View {
     @State private var isShowingMilestoneSheet = false
     @State private var milestoneHoursForSheet = 10
     @ObservedObject private var modelManager = ModelManager.shared
+    @ObservedObject private var messageManager = AppMessageManager.shared
     var body: some View {
         mainContent
     }
@@ -86,6 +88,8 @@ struct MainAppView: View {
                                 GeneralSettingsView()
                             case .changelog:
                                 ChangelogView()
+                            case .messages:
+                                MessagesView()
                             case .feedback:
                                 FeedbackView()
                             }
@@ -156,6 +160,14 @@ struct MainAppView: View {
         }
         .onChange(of: appTheme) {
             updateWindowAppearance()
+        }
+        .sheet(item: $messageManager.autoShowMessage, onDismiss: {
+            if let msg = messageManager.autoShowMessage {
+                messageManager.markAsSeen(msg)
+            }
+        }) { message in
+            AppMessageView(message: message)
+                .preferredColorScheme(effectiveColorScheme)
         }
         .overlay(
             IncognitoAnimationOverlay()

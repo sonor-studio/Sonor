@@ -16,7 +16,6 @@ struct ModeEditorView: View {
     @State private var showAssistantTypeInfo = false
     @State private var showRenameSheet = false
     @State private var newAssistantName = ""
-    @State private var showPasteTimingInfo = false
     @ObservedObject private var modelManager = ModelManager.shared
     
     var downloadedModels: [(id: String, name: String)] {
@@ -98,10 +97,6 @@ struct ModeEditorView: View {
                 .transition(.move(edge: .trailing).combined(with: .opacity))
                 .sheet(isPresented: $showAssistantTypeInfo) {
                     AssistantTypeExplanationView()
-                        .preferredColorScheme(colorScheme)
-                }
-                .sheet(isPresented: $showPasteTimingInfo) {
-                    PasteTimingExplanationView()
                         .preferredColorScheme(colorScheme)
                 }
 
@@ -603,46 +598,6 @@ struct ModeEditorView: View {
                             .help(t("Apply to all assistants"))
                         }
 
-                        HStack {
-                            Picker(t("Paste target"), selection: Binding(
-                                get: { modeBinding.wrappedValue.pasteTiming ?? "auto" },
-                                set: { 
-                                    modeBinding.wrappedValue.pasteTiming = $0
-                                    saveModes()
-                                }
-                            )) {
-                                Text(t("Automatic")).tag("auto")
-                                Text(t("Field focused at end")).tag("end")
-                                Text(t("Field focused at start")).tag("start")
-                            }
-                            .pickerStyle(MenuPickerStyle())
-                            .font(.system(size: 12))
-                            Button(action: {
-                                let newVal = modeBinding.wrappedValue.pasteTiming ?? "end"
-                                for i in modes.indices {
-                                    modes[i].pasteTiming = newVal
-                                }
-                                saveModes()
-                            }) {
-                                Image(systemName: "rectangle.stack")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .padding(4)
-                                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.1)))
-                                    .contentShape(Rectangle())
-                            }
-                            .buttonStyle(.plain)
-                            .help(t("Apply to all assistants"))
-                            Button(action: {
-                                showPasteTimingInfo = true
-                            }) {
-                                Image(systemName: "info.circle")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                            .help(t("Learn more about Paste target"))
-                        }
-                        
                         HStack {
                             Picker(t("Post-paste action"), selection: Binding(
                                 get: { modeBinding.wrappedValue.postPasteAction ?? "none" },

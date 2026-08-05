@@ -20,12 +20,11 @@ struct VoiceMode: Identifiable, Codable, Equatable {
     var passCopiedText: Bool?
     var language: String? 
     var isBuiltIn: Bool? 
-    var pasteTiming: String? 
     var fallbackToClipboard: Bool? // Deprecated
     var fallbackBehavior: String? // "none", "overlay", "clipboard"
     var postPasteAction: String?
     var modelOverride: String?
-    init(id: UUID = UUID(), name: String, prompt: String, boundAppBundleIDs: [String] = [], audioBehavior: AudioBehavior? = .keep, assistantType: String? = "dictation", passAppName: Bool? = true, passCopiedText: Bool? = true, language: String? = "auto", isBuiltIn: Bool? = false, pasteTiming: String? = "auto", fallbackBehavior: String? = "overlay", postPasteAction: String? = "none", modelOverride: String? = nil, fallbackToClipboard: Bool? = nil) {
+    init(id: UUID = UUID(), name: String, prompt: String, boundAppBundleIDs: [String] = [], audioBehavior: AudioBehavior? = .keep, assistantType: String? = "dictation", passAppName: Bool? = true, passCopiedText: Bool? = true, language: String? = "auto", isBuiltIn: Bool? = false, fallbackBehavior: String? = "overlay", postPasteAction: String? = "none", modelOverride: String? = nil, fallbackToClipboard: Bool? = nil) {
         self.id = id
         self.name = name
         self.prompt = prompt
@@ -36,7 +35,6 @@ struct VoiceMode: Identifiable, Codable, Equatable {
         self.passCopiedText = passCopiedText
         self.language = language
         self.isBuiltIn = isBuiltIn
-        self.pasteTiming = pasteTiming
         self.fallbackBehavior = fallbackBehavior
         self.postPasteAction = postPasteAction
         self.modelOverride = modelOverride
@@ -91,7 +89,6 @@ struct VoiceMode: Identifiable, Codable, Equatable {
                         passCopiedText: old.passCopiedText,
                         language: old.language,
                         isBuiltIn: old.isBuiltIn,
-                        pasteTiming: "auto",
                         fallbackBehavior: "overlay",
                         postPasteAction: "none",
                         modelOverride: old.modelOverride

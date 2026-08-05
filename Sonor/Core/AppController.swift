@@ -64,12 +64,7 @@ class AppController: NSObject, ObservableObject {
     
     private let audioManager = AudioManager.shared
     
-    /// The process ID of the external application the user was focusing before recording started.
-    private var targetAppPID: pid_t = 0  
     
-    /// Accessibility Element reference to the specific text field the user had focused.
-    private var targetAXElement: AXUIElement? = nil
-    private var wasTextFieldFocusedAtStart: Bool = false
     
     // Task management for cancelling active recordings or processing
     private var currentTask: Task<Void, Never>?
@@ -284,28 +279,10 @@ class AppController: NSObject, ObservableObject {
             let sessionID = UUID()
             self.currentRecordingSessionID = sessionID
             
+            wasPopoverOpenBeforeRecording = isPopoverOpen
+            
             self.statusText = "Listening..."
             WindowManager.shared.showHUD(controller: self)
-            
-            wasPopoverOpenBeforeRecording = isPopoverOpen
-            if let frontApp = NSWorkspace.shared.frontmostApplication,
-               frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
-                let pid = frontApp.processIdentifier
-                targetAppPID = pid
-                targetAXElement = nil
-                wasTextFieldFocusedAtStart = false
-                
-                Task.detached {
-                    // Delay AX queries to prevent ViewBridge race condition with orderFront
-                    try? await Task.sleep(nanoseconds: 200_000_000) 
-                    let axElement = await PasteManager.shared.getFocusedAXElement(pid: pid)
-                    let isTextField = await PasteManager.shared.isElementTextField(axElement)
-                    await MainActor.run { [weak self] in
-                        self?.targetAXElement = axElement
-                        self?.wasTextFieldFocusedAtStart = isTextField
-                    }
-                }
-            }
             
             self.startRecordingProcess(selectedMode: selectedMode, sessionID: sessionID)
             
@@ -538,9 +515,6 @@ class AppController: NSObject, ObservableObject {
             await AssistantWorkflowService.shared.execute(
                 correctedText: correctedText,
                 selectedMode: selectedMode,
-                initialPID: self.targetAppPID,
-                targetAXElement: self.targetAXElement,
-                wasTextFieldFocusedAtStart: self.wasTextFieldFocusedAtStart,
                 audioSamples: samples,
                 historyMessageID: historyMessageID,
                 isBackgroundRetry: isInlineRetry,
@@ -567,7 +541,7 @@ class AppController: NSObject, ObservableObject {
             if isInlineRetry {
                 if let historyMessageID = historyMessageID {
                     await MainActor.run {
-                        let appName = NSRunningApplication(processIdentifier: self.targetAppPID)?.localizedName ?? "Unknown App"
+                        let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Unknown App"
                         let whisperModel = TranscriptionManager.shared.activeModelName
                         let gemmaModel = "Gemma 3"
                         let shouldRunLLM = !selectedMode.prompt.isEmpty
@@ -577,7 +551,7 @@ class AppController: NSObject, ObservableObject {
             } else {
                 if let historyMessageID = historyMessageID {
                     await MainActor.run {
-                        let appName = NSRunningApplication(processIdentifier: self.targetAppPID)?.localizedName ?? "Unknown App"
+                        let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Unknown App"
                         let whisperModel = TranscriptionManager.shared.activeModelName
                         let gemmaModel = "Gemma 3"
                         let shouldRunLLM = !selectedMode.prompt.isEmpty
@@ -597,7 +571,7 @@ class AppController: NSObject, ObservableObject {
                             self.failedSelectedMode = selectedMode
                             self.canRetryTranscription = true
                         }
-                        let appName = NSRunningApplication(processIdentifier: self.targetAppPID)?.localizedName ?? "Unknown App"
+                        let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Unknown App"
                         let whisperModel = TranscriptionManager.shared.activeModelName
                         let gemmaModel = "Gemma 3"
                         let shouldRunLLM = !selectedMode.prompt.isEmpty
@@ -695,8 +669,11 @@ class AppController: NSObject, ObservableObject {
         self.activeCopyNotification = text
         WindowManager.shared.showHUD(controller: self)
         
+        let duration = UserDefaults.standard.double(forKey: "overlayDuration")
+        let finalDuration = duration > 0 ? duration : 15.0
+        
         Task {
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            try? await Task.sleep(nanoseconds: UInt64(finalDuration * 1_000_000_000))
             await MainActor.run {
                 if self.activeCopyNotification == text {
                     self.hideCopyNotification()
@@ -724,6 +701,29 @@ class AppController: NSObject, ObservableObject {
             if delayHide {
                 Task {
                     try? await Task.sleep(nanoseconds: 1_200_000_000)
+                    await MainActor.run {
+                        if self.activeCopyNotification == text {
+                            self.hideCopyNotification()
+                        }
+                    }
+                }
+            } else {
+                self.hideCopyNotification()
+            }
+        }
+    }
+    
+    func pasteCopyNotificationText(delayHide: Bool = false) {
+        if let text = activeCopyNotification {
+            if let frontApp = NSWorkspace.shared.frontmostApplication {
+                let pid = frontApp.processIdentifier
+                DispatchQueue.global(qos: .userInitiated).async {
+                    PasteManager.shared.typeTextDirectly(text: text, targetPID: pid, forceFocusElement: nil)
+                }
+            }
+            if delayHide {
+                Task {
+                    try? await Task.sleep(nanoseconds: 600_000_000)
                     await MainActor.run {
                         if self.activeCopyNotification == text {
                             self.hideCopyNotification()

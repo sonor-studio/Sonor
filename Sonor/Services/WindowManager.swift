@@ -77,7 +77,7 @@ class WindowManager {
         hudWindow?.hasShadow = false
         
         if hudWindow?.isVisible == false {
-            hudWindow?.orderFront(nil)
+            hudWindow?.orderFrontRegardless()
         }
         NotificationCenter.default.post(name: NSNotification.Name("HUDWindowDidShow"), object: nil)
         
@@ -146,7 +146,6 @@ class WindowManager {
             window.styleMask.insert(.fullSizeContentView)
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
-            NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             if showSupportWindow && !hasShownSupportWindowThisSession {
@@ -182,7 +181,6 @@ class WindowManager {
                 self?.updateActivationPolicy()
             }
         }
-        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         if showSupportWindow && !hasShownSupportWindowThisSession {
@@ -194,7 +192,6 @@ class WindowManager {
     func openSupportWindow() {
         if let window = supportWindow {
             window.makeKeyAndOrderFront(nil)
-            NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: false)
             return
         }
@@ -224,7 +221,7 @@ class WindowManager {
                 self?.updateActivationPolicy()
             }
         }
-        NSApp.setActivationPolicy(.regular)
+        window.collectionBehavior = [.managed, .fullScreenPrimary, .participatesInCycle]
         NSApp.activate(ignoringOtherApps: false)
         window.makeKeyAndOrderFront(nil)
     }
@@ -240,7 +237,6 @@ class WindowManager {
         
         if let window = permissionsWindow {
             window.makeKeyAndOrderFront(nil)
-            NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
@@ -279,8 +275,7 @@ class WindowManager {
                 self?.openSettings()
             }
         }
-        
-        NSApp.setActivationPolicy(.regular)
+        window.collectionBehavior = [.managed, .fullScreenPrimary, .participatesInCycle]
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }
@@ -290,7 +285,7 @@ class WindowManager {
         let isSupportVisible = supportWindow?.isVisible == true
         let isPermissionsVisible = permissionsWindow?.isVisible == true
         if !isSettingsVisible && !isSupportVisible && !isPermissionsVisible {
-            NSApp.setActivationPolicy(.accessory)
+            NSApp.setActivationPolicy(.regular)
         }
     }
 }

@@ -43,6 +43,7 @@ struct GeneralSettingsView: View {
     @State private var pendingHistoryLimit: Int? = nil
     @State private var limitSliderIndex: Double = 4.0
     @State private var launchAtStartup = false
+    @AppStorage("overlayDuration") private var overlayDuration: Double = 15.0
 
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
@@ -54,6 +55,7 @@ struct GeneralSettingsView: View {
                     .font(.system(size: 28, weight: .bold))
             }
             appThemeSection
+            systemIntegrationSection
             hudAppearanceSection
             appLanguageSection
             memoryManagementSection
@@ -63,7 +65,6 @@ struct GeneralSettingsView: View {
             appSoundsSection
             autoUpdateDictionarySection
             appDataDirectorySection
-            systemIntegrationSection
             dataManagementSection
             footerSection
         }
@@ -101,6 +102,9 @@ struct GeneralSettingsView: View {
                 historySaveLimit = newLimit
                 MessageMemoryManager.shared.trimHistoryIfNeeded()
             }
+        }
+        .onChange(of: selectedDeviceUID) {
+            AudioManager.shared.restartEngineForDeviceChange()
         }
         .onDisappear {
             removeEventMonitor()
@@ -780,6 +784,25 @@ struct GeneralSettingsView: View {
                     .foregroundColor(.secondary)
             }
                 .fixedSize(horizontal: false, vertical: true)
+                
+            Divider()
+                .padding(.vertical, 5)
+            
+            HStack {
+                Text(t("Duration (when no field is detected)"))
+                    .font(.system(size: 13))
+                Spacer()
+                Slider(value: $overlayDuration, in: 2...30, step: 1.0)
+                    .tint(.primary)
+                    .frame(width: 200)
+                Text("\(Int(overlayDuration))s")
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05))
+                    .cornerRadius(6)
+            }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)

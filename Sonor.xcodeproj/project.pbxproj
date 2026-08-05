@@ -23,6 +23,7 @@
 		DA1A18BC76D9C0AAE959D6C7 /* Tokenizers in Frameworks */ = {isa = PBXBuildFile; productRef = 8B63F6402F23B2F22D0DAB23 /* Tokenizers */; };
 		FA2C6165302027EE00C5C5D0 /* MediaRemoteAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = FA2C6164302027EE00C5C5D0 /* MediaRemoteAdapter */; };
 		FACF56C1301D23D6005BF36E /* MLXAudioSTT in Frameworks */ = {isa = PBXBuildFile; productRef = FACF56C0301D23D6005BF36E /* MLXAudioSTT */; };
+		FAFB7A9A30235A4600F8B6BD /* MediaRemoteAdapter in Embed Libraries */ = {isa = PBXBuildFile; productRef = FA2C6164302027EE00C5C5D0 /* MediaRemoteAdapter */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -49,6 +50,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				FAFB7A9A30235A4600F8B6BD /* MediaRemoteAdapter in Embed Libraries */,
 			);
 			name = "Embed Libraries";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -631,7 +633,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 4;
-				DEVELOPMENT_TEAM = 6F78X5RA6P;
+				DEVELOPMENT_TEAM = B8R3X8NN3X;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
@@ -709,7 +711,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				COMBINE_HIDPI_IMAGES = YES;
 				CURRENT_PROJECT_VERSION = 4;
-				DEVELOPMENT_TEAM = 6F78X5RA6P;
+				DEVELOPMENT_TEAM = B8R3X8NN3X;
 				ENABLE_APP_SANDBOX = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;

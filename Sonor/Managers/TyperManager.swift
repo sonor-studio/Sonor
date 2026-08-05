@@ -42,26 +42,33 @@ class PasteManager {
         guard let element = axElement else { 
             return true 
         }
-        var isEditable: Bool? = nil
         
+        var roleRef: CFTypeRef?
+        if AXUIElementCopyAttributeValue(element, kAXRoleAttribute as CFString, &roleRef) == .success,
+           let role = roleRef as? String {
+            // Twarde odrzucenie niemodyfikowalnych ról UI
+            let invalidRoles = [
+                "AXButton", "AXImage", "AXStaticText", "AXMenu", "AXMenuItem", "AXMenuBar", "AXMenuBarItem",
+                "AXToolbar", "AXWindow", "AXPopUpButton", "AXCheckBox", "AXRadioButton", "AXSlider",
+                "AXTabGroup", "AXTable", "AXRow", "AXColumn", "AXCell", "AXList", "AXOutline", "AXBrowser",
+                "AXScrollArea", "AXScrollBar", "AXSplitGroup", "AXValueIndicator", "AXColorWell", "AXSortButton",
+                "AXLink", "AXHeading", "AXListMarker", "AXGroup"
+            ]
+            if invalidRoles.contains(role) {
+                return false
+            }
+        }
+        
+        var isEditable: Bool? = nil
         var settable: DarwinBoolean = false
         if AXUIElementIsAttributeSettable(element, kAXValueAttribute as CFString, &settable) == .success {
             isEditable = settable.boolValue
         }
-        var attributeNames: CFArray?
-        if AXUIElementCopyAttributeNames(element, &attributeNames) == .success,
-           let names = attributeNames as? [String] {
-            for attr in ["AXPlaceholderValue", "AXSelectedTextRange", "AXNumberOfCharacters", "AXEnabled"] {
-                if names.contains(attr) {
-                    var val: AnyObject?
-                    if AXUIElementCopyAttributeValue(element, attr as CFString, &val) == .success {
-                    }
-                }
-            }
-        }
+        
         if let editable = isEditable, editable == false {
             return false
         }
+        
         return true
     }
 
@@ -169,7 +176,7 @@ class PasteManager {
             return
         }
 
-        targetApp.activate(options: .activateAllWindows)
+        targetApp.activate(options: [.activateAllWindows, .activateIgnoringOtherApps])
 
         var attempts = 0
         while !targetApp.isActive && attempts < 30 {
@@ -182,13 +189,6 @@ class PasteManager {
             Thread.sleep(forTimeInterval: 0.05)
         }
         let source = CGEventSource(stateID: .combinedSessionState)
-        
-        // Force key-up on common modifiers so immediate typing isn't blocked by physically pressed keys from hotkeys
-        for virtualKey in [54, 55, 56, 58, 59, 60, 61, 62] {
-            if let upEvent = CGEvent(keyboardEventSource: source, virtualKey: CGKeyCode(virtualKey), keyDown: false) {
-                upEvent.post(tap: .cghidEventTap)
-            }
-        }
         
         let event = CGEvent(keyboardEventSource: source, virtualKey: 0, keyDown: true)
         event?.flags = []
@@ -266,5 +266,33 @@ class PasteManager {
         keyDown?.post(tap: .cghidEventTap)
         Thread.sleep(forTimeInterval: 0.02)
         keyUp?.post(tap: .cghidEventTap)
+    }
+
+    func printDiagnosticLog(phase: String, pid: pid_t, element: AXUIElement?) {
+        guard let app = NSRunningApplication(processIdentifier: pid) else {
+            print("[\(phase)] ❌ Błąd: Nie znaleziono aplikacji dla PID \(pid)")
+            return
+        }
+        let appName = app.localizedName ?? "Nieznana"
+        let isActive = app.isActive
+        
+        print("[\(phase)] =========================================")
+        print("[\(phase)] 📱 Aplikacja: \(appName) (PID: \(pid)) - Aktywna: \(isActive)")
+        
+        if let el = element {
+            var role: CFTypeRef?
+            AXUIElementCopyAttributeValue(el, kAXRoleAttribute as CFString, &role)
+            var description: CFTypeRef?
+            AXUIElementCopyAttributeValue(el, kAXRoleDescriptionAttribute as CFString, &description)
+            
+            let qualifiesAsTextField = isElementTextField(el)
+            let emoji = qualifiesAsTextField ? "✅" : "❌"
+            
+            print("[\(phase)] \(emoji) Kursor spoczywa na elemencie. Rola: \(role as? String ?? "Brak"), Opis: \(description as? String ?? "Brak")")
+            print("[\(phase)] Czy system sklasyfikował ten element jako POLE TEKSTOWE DO PISANIA? -> \(qualifiesAsTextField)")
+        } else {
+            print("[\(phase)] ⚠️ Element (Pole): NIE WYKRYTO (nil).")
+        }
+        print("[\(phase)] =========================================")
     }
 }

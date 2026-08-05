@@ -36,7 +36,7 @@ struct SonorApp: App {
             // Should not reach here because WorkerProcess calls exit()
         }
         
-        NSApplication.shared.setActivationPolicy(.accessory)
+        NSApplication.shared.setActivationPolicy(.regular)
         let mainMenu = NSMenu()
         let appMenuItem = NSMenuItem()
         mainMenu.addItem(appMenuItem)

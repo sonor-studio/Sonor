@@ -7,6 +7,7 @@ struct CapsuleHUDView: View {
     @ObservedObject var modelManager = ModelManager.shared
     @AppStorage("appTheme") private var appTheme = "system"
     @AppStorage("hudPositionMode") private var hudPositionMode: HUDPositionMode = .free
+    @AppStorage("overlayDuration") private var overlayDuration: Double = 15.0
     var effectiveColorScheme: ColorScheme {
         if appTheme == "dark" {
             return .dark
@@ -45,7 +46,9 @@ struct CapsuleHUDView: View {
     @State private var dictProgress: CGFloat = 1.0
     @State private var copyProgress: CGFloat = 1.0
     @State private var isCopied: Bool = false
+    @State private var isPasted: Bool = false
     @State private var isUndone: Bool = false
+    @State private var hoveredButton: String? = nil
     private let recordingTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
     private var assistantSelector: some View {
         Button(action: {
@@ -288,25 +291,89 @@ struct CapsuleHUDView: View {
                             controller.copyNotificationTextToClipboard(delayHide: true)
                         }
                     }) {
-                        ZStack {
+                        HStack(spacing: hoveredButton == "copy" && !isCopied ? 4 : 0) {
                             if isCopied {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 11, weight: .bold))
                                     .transition(.scale.combined(with: .opacity))
                             } else {
-                                Text(t("Copy"))
-                                    .font(.system(size: 11, weight: .bold))
-                                    .fixedSize()
-                                    .transition(.scale.combined(with: .opacity))
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 11, weight: .semibold))
+                                if hoveredButton == "copy" {
+                                    Text(t("Copy"))
+                                        .font(.system(size: 11, weight: .bold))
+                                        .fixedSize()
+                                        .transition(.scale.combined(with: .opacity))
+                                }
                             }
                         }
                         .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
-                        .padding(.horizontal, isCopied ? 0 : 10)
-                        .frame(width: isCopied ? 24 : nil, height: 24)
+                        .padding(.horizontal, (hoveredButton == "copy" && !isCopied) ? 10 : 0)
+                        .frame(width: (hoveredButton == "copy" && !isCopied) ? nil : 24, height: 24)
                         .background(effectiveColorScheme == .dark ? Color.white : Color.black)
                         .clipShape(Capsule())
                     }
-                                    .buttonStyle(NoAnimButtonStyle())
+                    .buttonStyle(NoAnimButtonStyle())
+                    .focusable(false)
+                    .onHover { isHovered in
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            if isHovered { hoveredButton = "copy" }
+                            else if hoveredButton == "copy" { hoveredButton = nil }
+                        }
+                    }
+                    
+                    Button(action: {
+                        if !dragTracker.isDragging {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                isPasted = true
+                            }
+                            controller.pasteCopyNotificationText(delayHide: true)
+                        }
+                    }) {
+                        HStack(spacing: hoveredButton == "paste" && !isPasted ? 4 : 0) {
+                            if isPasted {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .transition(.scale.combined(with: .opacity))
+                            } else {
+                                Image(systemName: "doc.on.clipboard")
+                                    .font(.system(size: 11, weight: .semibold))
+                                if hoveredButton == "paste" {
+                                    Text(t("Paste"))
+                                        .font(.system(size: 11, weight: .bold))
+                                        .fixedSize()
+                                        .transition(.scale.combined(with: .opacity))
+                                }
+                            }
+                        }
+                        .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
+                        .padding(.horizontal, (hoveredButton == "paste" && !isPasted) ? 10 : 0)
+                        .frame(width: (hoveredButton == "paste" && !isPasted) ? nil : 24, height: 24)
+                        .background(effectiveColorScheme == .dark ? Color.white : Color.black)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(NoAnimButtonStyle())
+                    .focusable(false)
+                    .onHover { isHovered in
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            if isHovered { hoveredButton = "paste" }
+                            else if hoveredButton == "paste" { hoveredButton = nil }
+                        }
+                    }
+                    
+                    Button(action: {
+                        if !dragTracker.isDragging {
+                            controller.hideCopyNotification()
+                        }
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
+                            .frame(width: 24, height: 24)
+                            .background(effectiveColorScheme == .dark ? Color.white : Color.black)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(NoAnimButtonStyle())
                     .focusable(false)
                     .padding(.trailing, 8)
                 }
@@ -315,7 +382,7 @@ struct CapsuleHUDView: View {
                 Capsule()
                     .fill(effectiveColorScheme == .dark ? Color.white : Color.black)
                     .frame(width: 284 * copyProgress, height: 4)
-                    .opacity(isCopied ? 0 : 1)
+                    .opacity(isCopied || isPasted ? 0 : 1)
             }
             .frame(width: 284, height: 40)
             .contentShape(RoundedRectangle(cornerRadius: 20))
@@ -323,8 +390,10 @@ struct CapsuleHUDView: View {
             .safeGlassEffect(cornerRadius: 20, isInteractive: true)
             .onAppear {
                 isCopied = false
+                isPasted = false
+                hoveredButton = nil
                 copyProgress = 1.0
-                withAnimation(.linear(duration: 5.0)) {
+                withAnimation(.linear(duration: overlayDuration > 0 ? overlayDuration : 15.0)) {
                     copyProgress = 0.0
                 }
             }
