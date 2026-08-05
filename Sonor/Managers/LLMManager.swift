@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import MLX
 import MLXLLM
 import MLXLMCommon
@@ -20,54 +21,23 @@ struct NativeHubDownloader: MLXLMCommon.Downloader {
 extension ChatSession: @unchecked @retroactive Sendable {}
 
 @MainActor
-final class LLMManager {
+final class LLMManager: ObservableObject {
     static let shared = LLMManager()
 
     private var modelContainer: ModelContainer?
     private(set) var isReady = false
+    @Published public var isLoaded: Bool = false
+    @Published public var lastUsedTime: Date? = nil
+    @Published public var initializeTime: TimeInterval? = nil
+    private var unloadTimer: Timer?
 
-    private init() {
-        NotificationCenter.default.addObserver(forName: Notification.Name("GemmaOffloadTimeoutChanged"), object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                if ModelManager.shared.isGemmaLoaded {
-                    self.startIdleTimer()
-                }
-            }
-        }
-    }
+    private init() {}
 
-    private var idleOffloadTimer: Timer?
 
-    private func startIdleTimer() {
-        idleOffloadTimer?.invalidate()
-        idleOffloadTimer = nil
-        let actualTimeout = UserDefaults.standard.integer(forKey: "gemmaOffloadTimeout")
-        // If 0 or missing (default 5 but let's check), though AppStorage default is 5.
-        // Actually AppStorage default is 5. Let's read from UserDefaults directly.
-        let actualTimeoutValue = UserDefaults.standard.object(forKey: "gemmaOffloadTimeout") as? Int ?? 5
-        guard actualTimeoutValue > 0 else { return }
-        
-        idleOffloadTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(actualTimeoutValue * 60), repeats: false) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.releaseModel()
-            }
-        }
-    }
-    
-    private func cancelIdleTimer() {
-        idleOffloadTimer?.invalidate()
-        idleOffloadTimer = nil
-    }
 
     func cleanStream(text: String, systemPrompt: String, onToken: @escaping (String) -> Bool) async -> String {
         guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return text }
         if systemPrompt.isEmpty { return text }
-
-        await MainActor.run {
-            cancelIdleTimer()
-            ModelManager.shared.lastGemmaUsageTime = Date()
-        }
 
         let prompt = "\(systemPrompt)\n\nTekst: \(text)"
         var fullText = ""
@@ -87,50 +57,49 @@ final class LLMManager {
             }
             await session.clear()
             MLX.Memory.clearCache()
-            await MainActor.run {
-                ModelManager.shared.lastGemmaUsageTime = Date()
-                self.startIdleTimer()
-            }
+            self.lastUsedTime = Date()
             return fullText
         } catch {
-            print("Error in cleanStream loading Gemma: \(error)")
-            await MainActor.run {
-                self.startIdleTimer()
-            }
             return text
         }
     }
 
     func ensureModelWarmed() async {
         if isReady { return }
-        await MainActor.run {
-            cancelIdleTimer()
-        }
         do {
             let session = try await getSession()
             await session.clear()
             let _ = try await session.respond(to: "Say \"hello\" and return {\"result\": \"ok\"}")
             isReady = true
-            await MainActor.run {
-                ModelManager.shared.isGemmaLoaded = true
-                ModelManager.shared.lastGemmaUsageTime = Date()
-                self.startIdleTimer()
-            }
+            self.lastUsedTime = Date()
         } catch {
-            print("Error in ensureModelWarmed loading Gemma: \(error)")
-            await MainActor.run {
-                self.startIdleTimer()
-            }
         }
     }
 
     func releaseModel() {
         self.modelContainer = nil
         self.isReady = false
-        ModelManager.shared.isGemmaLoaded = false
-        idleOffloadTimer?.invalidate()
-        idleOffloadTimer = nil
+        self.isLoaded = false
+        self.unloadTimer?.invalidate()
+        self.unloadTimer = nil
         MLX.Memory.clearCache()
+    }
+    
+    public func cancelUnloadTimer() {
+        unloadTimer?.invalidate()
+        unloadTimer = nil
+    }
+
+    public func resetUnloadTimer() {
+        unloadTimer?.invalidate()
+        let timeout = UserDefaults.standard.integer(forKey: "llmUnloadTimeout")
+        guard timeout > 0 else { return }
+        
+        unloadTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(timeout * 60), repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.releaseModel()
+            }
+        }
     }
 
     private var containerTask: Task<ModelContainer, Error>?
@@ -149,17 +118,15 @@ final class LLMManager {
             )
             let timeTaken = CFAbsoluteTimeGetCurrent() - startTime
             await MainActor.run {
-                ModelManager.shared.gemmaInitializeTime = timeTaken
+                self.initializeTime = timeTaken
             }
             return container
         }
         self.containerTask = task
         let container = try await task.value
         self.modelContainer = container
+        self.isLoaded = true
         self.containerTask = nil
-        await MainActor.run {
-            ModelManager.shared.isGemmaLoaded = true
-        }
         return container
     }
 

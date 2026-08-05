@@ -17,5 +17,9 @@
 	</array>
 	<key>Privacy - Accessibility Usage Description</key>
 	<string>Sonor requires accessibility permissions to detect your global dictation hotkeys and to seamlessly stream the transcribed text directly into your active text fields.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Sonor requires Speech Recognition permissions to transcribe your audio when using the Apple Speech engine.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Sonor requires microphone access to record your voice for transcription.</string>
 </dict>
 </plist>

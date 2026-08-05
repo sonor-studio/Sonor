@@ -15,6 +15,9 @@ class WindowManager {
     private init() {}
     
     func showHUD(controller: AppController) {
+        hideHUDWorkItem?.cancel()
+        hideHUDWorkItem = nil
+        
         if hudWindow == nil {
             let panel = SonorHUDPanel(
                 contentRect: NSRect(x: 0, y: 0, width: 350, height: 600),
@@ -22,28 +25,50 @@ class WindowManager {
                 backing: .buffered,
                 defer: false
             )
+            panel.isReleasedWhenClosed = false
             panel.contentView = NSHostingView(rootView: CapsuleHUDView(controller: controller))
             panel.isFloatingPanel = true
             panel.level = .statusBar
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             panel.hidesOnDeactivate = false
+            panel.animationBehavior = .none
             panel.appearance = NSAppearance(named: .darkAqua)
             if let screen = NSScreen.main {
                 let defaultX = (screen.frame.width - 350) / 2
                 let defaultY: CGFloat = 100
-                var savedX = UserDefaults.standard.object(forKey: "hudWindowX") as? CGFloat ?? defaultX
-                var savedY = UserDefaults.standard.object(forKey: "hudWindowY") as? CGFloat ?? defaultY
+                let savedX = UserDefaults.standard.object(forKey: "hudWindowX") as? CGFloat ?? defaultX
+                let savedY = UserDefaults.standard.object(forKey: "hudWindowY") as? CGFloat ?? defaultY
                 let screenFrame = screen.visibleFrame
+                let modeStr = UserDefaults.standard.string(forKey: "hudPositionMode") ?? "free"
+                let mode = HUDPositionMode(rawValue: modeStr) ?? .free
+                
+                let currentPanelWidth: CGFloat = 350
+                panel.setContentSize(NSSize(width: currentPanelWidth, height: 600))
+                
                 let leftMargin: CGFloat = 33
-                let rightMargin: CGFloat = 350 - leftMargin
+                let rightMargin: CGFloat = currentPanelWidth - leftMargin
                 let visibleHeight: CGFloat = 88
                 let minXBound = screenFrame.minX - leftMargin
                 let maxXBound = screenFrame.maxX - rightMargin
-                let minYBound = screenFrame.minY
-                let maxYBound = screenFrame.maxY - visibleHeight
-                savedX = max(minXBound, min(savedX, maxXBound))
-                savedY = max(minYBound, min(savedY, maxYBound))
-                panel.setFrameOrigin(NSPoint(x: savedX, y: savedY))
+                let minYBound = screenFrame.minY - 8
+                let maxYBound = screenFrame.maxY - visibleHeight - 8
+                
+                var startX = savedX
+                var startY = savedY
+                
+                switch mode {
+                case .top:
+                    startX = screenFrame.minX + (screenFrame.width - currentPanelWidth) / 2
+                    startY = screenFrame.maxY - visibleHeight - 20
+                case .bottom:
+                    startX = screenFrame.minX + (screenFrame.width - currentPanelWidth) / 2
+                    startY = screenFrame.minY + 20
+                case .free:
+                    startX = max(minXBound, min(savedX, maxXBound))
+                    startY = max(minYBound, min(savedY, maxYBound))
+                }
+                
+                panel.setFrameOrigin(NSPoint(x: startX, y: startY))
             }
             self.hudWindow = panel
         }
@@ -54,12 +79,55 @@ class WindowManager {
         if hudWindow?.isVisible == false {
             hudWindow?.orderFrontRegardless()
         }
+        NotificationCenter.default.post(name: NSNotification.Name("HUDWindowDidShow"), object: nil)
+        
+        LLMManager.shared.cancelUnloadTimer()
+        TranscriptionManager.shared.cancelUnloadTimer()
     }
+    
+    func updateHUDPosition(for mode: HUDPositionMode) {
+        guard let panel = self.hudWindow, let screen = panel.screen ?? NSScreen.main else { return }
+        
+        let screenFrame = screen.visibleFrame
+        let panelWidth: CGFloat = 350
+        panel.setContentSize(NSSize(width: panelWidth, height: 600))
+        let visibleHeight: CGFloat = 88 // estimated height for positioning
+        
+        let centerX = screenFrame.minX + (screenFrame.width - panelWidth) / 2
+        
+        let topMargin: CGFloat = 20
+        let bottomMargin: CGFloat = 20
+        
+        switch mode {
+        case .top:
+            let y = screenFrame.maxY - visibleHeight - topMargin
+            panel.setFrameOrigin(NSPoint(x: centerX, y: y))
+            
+        case .bottom:
+            let y = screenFrame.minY + bottomMargin
+            panel.setFrameOrigin(NSPoint(x: centerX, y: y))
+            
+        case .free:
+            // Do not force move when switching to free
+            break
+        }
+    }
+    
+    private var hideHUDWorkItem: DispatchWorkItem?
     
     func hideHUD() {
         if hudWindow?.isVisible == true {
-            hudWindow?.orderOut(nil)
+            NotificationCenter.default.post(name: NSNotification.Name("HUDWindowWillHide"), object: nil)
+            
+            hideHUDWorkItem?.cancel()
+            let workItem = DispatchWorkItem { [weak self] in
+                self?.hudWindow?.orderOut(nil)
+            }
+            hideHUDWorkItem = workItem
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: workItem)
         }
+        LLMManager.shared.resetUnloadTimer()
+        TranscriptionManager.shared.resetUnloadTimer()
     }
     
 
@@ -78,7 +146,6 @@ class WindowManager {
             window.styleMask.insert(.fullSizeContentView)
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
-            NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
             window.makeKeyAndOrderFront(nil)
             if showSupportWindow && !hasShownSupportWindowThisSession {
@@ -114,7 +181,6 @@ class WindowManager {
                 self?.updateActivationPolicy()
             }
         }
-        NSApp.setActivationPolicy(.regular)
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
         if showSupportWindow && !hasShownSupportWindowThisSession {
@@ -126,7 +192,6 @@ class WindowManager {
     func openSupportWindow() {
         if let window = supportWindow {
             window.makeKeyAndOrderFront(nil)
-            NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: false)
             return
         }
@@ -156,7 +221,7 @@ class WindowManager {
                 self?.updateActivationPolicy()
             }
         }
-        NSApp.setActivationPolicy(.regular)
+        window.collectionBehavior = [.managed, .fullScreenPrimary, .participatesInCycle]
         NSApp.activate(ignoringOtherApps: false)
         window.makeKeyAndOrderFront(nil)
     }
@@ -172,7 +237,6 @@ class WindowManager {
         
         if let window = permissionsWindow {
             window.makeKeyAndOrderFront(nil)
-            NSApp.setActivationPolicy(.regular)
             NSApp.activate(ignoringOtherApps: true)
             return
         }
@@ -211,8 +275,7 @@ class WindowManager {
                 self?.openSettings()
             }
         }
-        
-        NSApp.setActivationPolicy(.regular)
+        window.collectionBehavior = [.managed, .fullScreenPrimary, .participatesInCycle]
         NSApp.activate(ignoringOtherApps: true)
         window.makeKeyAndOrderFront(nil)
     }
@@ -222,7 +285,7 @@ class WindowManager {
         let isSupportVisible = supportWindow?.isVisible == true
         let isPermissionsVisible = permissionsWindow?.isVisible == true
         if !isSettingsVisible && !isSupportVisible && !isPermissionsVisible {
-            NSApp.setActivationPolicy(.accessory)
+            NSApp.setActivationPolicy(.regular)
         }
     }
 }

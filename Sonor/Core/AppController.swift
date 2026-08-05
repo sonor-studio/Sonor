@@ -16,7 +16,16 @@ class AppController: NSObject, ObservableObject {
     
     /// Displays the current status of the app in the HUD (e.g. "Listening...", "Processing")
     @Published var statusText = "Ready"
+    @Published var isTranscribing = false
+    @Published var isHovering = false
+    @Published var failedAudioSamples: [Float]? = nil
+    @Published var failedSelectedMode: VoiceMode? = nil
+    var failedHistoryMessageID: UUID? = nil
+    @Published var canRetryTranscription: Bool = false
+    
     private var currentRecordingSessionID: UUID? = nil
+    private var lastRecordingStopTime: Date = Date.distantPast
+    private var lastRecordingStartTime: Date = Date.distantPast
     var isCurrentlyProcessing: Bool {
         let nonProcessingStatuses: Set<String> = ["Ready", "Cancelled", "No microphone permission", "Microphone error", "No text recognized.", "Error: Missing model", "Done!"]
         return !isRecording && !nonProcessingStatuses.contains(statusText) && !statusText.hasPrefix("Mode:")
@@ -24,59 +33,38 @@ class AppController: NSObject, ObservableObject {
     @Published var audioLevel: Float = 0.0
     @Published var audioLevels: [Float] = Array(repeating: 0.01, count: 40)
     @Published var availableModes: [VoiceMode] = []
-    @Published var currentMode: VoiceMode?
+    @Published var currentMode: VoiceMode? {
+        didSet {
+            guard isRecording, let newMode = currentMode, let oldMode = oldValue else { return }
+            let oldBehavior = oldMode.audioBehavior ?? .keep
+            let newBehavior = newMode.audioBehavior ?? .keep
+            if oldBehavior != newBehavior {
+                MediaControlService.shared.updateMultimedia(from: oldBehavior, to: newBehavior)
+            }
+        }
+    }
     @Published var activeHotkeyMode: HotkeyMode = .click
     @Published var isPaused = false {
         didSet {
             if isPaused {
-                audioManager.pauseRecording()
+                DispatchQueue.global(qos: .userInitiated).async {
+                    self.audioManager.pauseRecording()
+                }
             } else {
-                do {
-                    try audioManager.resumeRecording()
-                } catch {
+                DispatchQueue.global(qos: .userInitiated).async {
+                    do {
+                        try self.audioManager.resumeRecording()
+                    } catch {
+                        print("Failed to resume recording: \(error)")
+                    }
                 }
             }
         }
     }
     
-    private let audioManager = AudioManager()
-    private var sonorContext: SonorContext? // C++ interop for the local Whisper model
+    private let audioManager = AudioManager.shared
     
-    private var whisperOffloadTimer: Timer?
     
-    private func startWhisperIdleTimer() {
-        whisperOffloadTimer?.invalidate()
-        whisperOffloadTimer = nil
-        let actualTimeout = UserDefaults.standard.object(forKey: "whisperOffloadTimeout") as? Int ?? 5
-        guard actualTimeout > 0 else { return }
-        
-        whisperOffloadTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(actualTimeout * 60), repeats: false) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.performWhisperOffload()
-            }
-        }
-    }
-    
-    private func cancelWhisperIdleTimer() {
-        whisperOffloadTimer?.invalidate()
-        whisperOffloadTimer = nil
-    }
-    
-    private func performWhisperOffload() {
-        self.sonorContext = nil
-        ModelManager.shared.isWhisperLoaded = false
-        whisperOffloadTimer?.invalidate()
-        whisperOffloadTimer = nil
-        print("Whisper model offloaded due to idle timeout.")
-    }
-    
-    /// The process ID of the external application the user was focusing before recording started.
-    private var targetAppPID: pid_t = 0  
-    
-    /// Accessibility Element reference to the specific text field the user had focused.
-    private var targetAXElement: AXUIElement? = nil
-    private var targetAppBundleID: String? = nil
-    private var wasTextFieldFocusedAtStart: Bool = false
     
     // Task management for cancelling active recordings or processing
     private var currentTask: Task<Void, Never>?
@@ -88,6 +76,9 @@ class AppController: NSObject, ObservableObject {
         self.availableModes = modes
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
         self.currentMode = modes.first(where: { $0.id.uuidString == activeModeID }) ?? modes.first
+        if let current = self.currentMode {
+            TranscriptionManager.shared.applyModelOverride(current.modelOverride)
+        }
 
         setupHotkey()
         NotificationCenter.default.addObserver(forName: Notification.Name("VoiceModesUpdated"), object: nil, queue: .main) { [weak self] _ in
@@ -95,9 +86,9 @@ class AppController: NSObject, ObservableObject {
                 self?.reloadModes()
             }
         }
-        NotificationCenter.default.addObserver(forName: Notification.Name("ReleaseWhisperContext"), object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.performWhisperOffload()
+        NotificationCenter.default.addObserver(forName: Notification.Name("ReleaseWhisperContext"), object: nil, queue: .main) { _ in
+            Task { @MainActor in
+                TranscriptionManager.shared.resetEngine()
             }
         }
         NotificationCenter.default.addObserver(forName: Notification.Name("PermissionsRevoked"), object: nil, queue: .main) { [weak self] _ in
@@ -108,32 +99,34 @@ class AppController: NSObject, ObservableObject {
                 }
             }
         }
-        NotificationCenter.default.addObserver(forName: Notification.Name("WhisperOffloadTimeoutChanged"), object: nil, queue: .main) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                if ModelManager.shared.isWhisperLoaded {
-                    self.startWhisperIdleTimer()
-                }
-            }
-        }
         NotificationCenter.default.addObserver(forName: NSNotification.Name("AppWillTerminate"), object: nil, queue: .main) { _ in
-            _ = self.audioManager.stopRecording()
+        Task { _ = await self.audioManager.stopRecordingAsync() }
+        }
+        NotificationCenter.default.addObserver(forName: Notification.Name("RetryHistoryTranscription"), object: nil, queue: .main) { [weak self] notification in
+            guard let self = self, let id = notification.object as? UUID else { return }
+            Task { @MainActor in
+                self.retryHistoryTranscription(id: id)
+            }
         }
     }
     private var hotkeyDownTime: Date = Date()
     
     private func setupHotkey() {
-        HotkeyManager.shared.onHotkeyDown = { [weak self] in
-            self?.hotkeyDownTime = Date()
-            self?.toggleRecording()
+        HotkeyManager.shared.onHotkeyDown = { [weak self] eventTime in
+            self?.hotkeyDownTime = eventTime
+            self?.toggleRecording(eventTime: eventTime)
         }
-        HotkeyManager.shared.onHotkeyUp = { [weak self] in
+        
+        HotkeyManager.shared.onHotkeyUp = { [weak self] eventTime in
             guard let self = self else { return }
             if self.isRecording {
+                if eventTime.timeIntervalSince(self.lastRecordingStartTime) < 0.2 {
+                    return
+                }
                 if self.activeHotkeyMode == .hold {
                     self.stopRecordingAndTranscribe()
                 } else if self.activeHotkeyMode == .automatic {
-                    let duration = Date().timeIntervalSince(self.hotkeyDownTime)
+                    let duration = eventTime.timeIntervalSince(self.hotkeyDownTime)
                     if duration > 0.4 {
                         self.stopRecordingAndTranscribe()
                     }
@@ -148,6 +141,20 @@ class AppController: NSObject, ObservableObject {
         }
         HotkeyManager.shared.onAssistantKeyDown = { [weak self] in
             self?.selectNextMode()
+        }
+        HotkeyManager.shared.onPasteKeyDown = { [weak self] in
+            guard let self = self, let text = self.lastTranscription, !text.isEmpty else { return }
+            
+            DispatchQueue.global(qos: .userInitiated).async {
+                DispatchQueue.main.async {
+                    if let frontApp = NSWorkspace.shared.frontmostApplication {
+                        let pid = frontApp.processIdentifier
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            PasteManager.shared.typeTextDirectly(text: text, targetPID: pid, forceFocusElement: nil)
+                        }
+                    }
+                }
+            }
         }
 
         HotkeyManager.shared.startListening()
@@ -200,17 +207,28 @@ class AppController: NSObject, ObservableObject {
         self.availableModes = modes
         let activeModeID = UserDefaults.standard.string(forKey: "activeModeID") ?? ""
         self.currentMode = modes.first(where: { $0.id.uuidString == activeModeID }) ?? modes.first
+        if let current = self.currentMode {
+            TranscriptionManager.shared.applyModelOverride(current.modelOverride)
+        }
     }
 
     /// Toggles the recording state. 
     /// Handles accessibility permissions, microphone permissions, and model checking before proceeding.
-    func toggleRecording() {
+    func toggleRecording(eventTime: Date = Date()) {
         if isCurrentlyProcessing {
             return
         }
         if isRecording {
+            if eventTime.timeIntervalSince(lastRecordingStartTime) < 0.2 {
+                return
+            }
             stopRecordingAndTranscribe()
         } else {
+            if eventTime.timeIntervalSince(lastRecordingStopTime) < 0.5 {
+                return
+            }
+            lastRecordingStartTime = eventTime
+            
             let isTrusted = AXIsProcessTrusted()
             let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
             
@@ -238,7 +256,8 @@ class AppController: NSObject, ObservableObject {
             if modeString == "Hold" { self.activeHotkeyMode = .hold }
             else if modeString == "Automatic" { self.activeHotkeyMode = .automatic }
             else { self.activeHotkeyMode = .click }
-            guard case .downloaded = ModelManager.shared.whisperState else {
+            let selectedModelId = ModelManager.shared.selectedWhisperModelId
+            guard case .downloaded = ModelManager.shared.whisperStates[selectedModelId] else {
                 self.isRecording = false
                 WindowManager.shared.openSettings()
                 DispatchQueue.main.async {
@@ -246,55 +265,35 @@ class AppController: NSObject, ObservableObject {
                 }
                 return
             }
-            wasPopoverOpenBeforeRecording = isPopoverOpen
-            if let frontApp = NSWorkspace.shared.frontmostApplication,
-               frontApp.bundleIdentifier != Bundle.main.bundleIdentifier {
-                targetAppPID = frontApp.processIdentifier
-                targetAppBundleID = frontApp.bundleIdentifier
-                targetAXElement = PasteManager.shared.getFocusedAXElement(pid: targetAppPID)
-                wasTextFieldFocusedAtStart = PasteManager.shared.isElementTextField(targetAXElement)
-            }
-            let selectedMode: VoiceMode
-            selectedMode = currentMode ?? availableModes.first ?? VoiceMode.defaults.first!
+            let selectedMode = currentMode ?? availableModes.first ?? VoiceMode.defaults.first!
             if self.currentMode?.id != selectedMode.id {
                 self.selectMode(selectedMode)
             }
             self.activeCopyNotification = nil
             self.activeDictionaryNotification = nil
+            self.canRetryTranscription = false
+            self.failedAudioSamples = nil
+            self.failedSelectedMode = nil
+            
             self.isRecording = true
             let sessionID = UUID()
             self.currentRecordingSessionID = sessionID
             
-            let behavior = selectedMode.audioBehavior ?? .keep
-            if self.sonorContext == nil {
-                self.statusText = "Initializing Speech Model..."
-            } else {
-                self.statusText = "Listening..."
-            }
+            wasPopoverOpenBeforeRecording = isPopoverOpen
+            
+            self.statusText = "Listening..."
             WindowManager.shared.showHUD(controller: self)
-            if self.sonorContext == nil {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                    Task.detached {
-                        let path = await MainActor.run { return ModelManager.shared.whisperModelURL.path }
-                        if FileManager.default.fileExists(atPath: path) {
-                            let startTime = CFAbsoluteTimeGetCurrent()
-                            let context = SonorContext(modelPath: path)
-                            let timeTaken = CFAbsoluteTimeGetCurrent() - startTime
-                            await MainActor.run {
-                                guard self.currentRecordingSessionID == sessionID else { return }
-                                self.sonorContext = context
-                                ModelManager.shared.isWhisperLoaded = true
-                                ModelManager.shared.whisperInitializeTime = timeTaken
-                                self.startRecordingProcess(selectedMode: selectedMode, sessionID: sessionID)
-                            }
-                        } else {
-                        }
-                    }
-                }
-            } else {
-                Task {
+            
+            self.startRecordingProcess(selectedMode: selectedMode, sessionID: sessionID)
+            
+            // Load transcription engine in background — only needed when
+            // transcription starts (after recording stops), not for capturing audio
+            Task {
+                do {
+                    try await TranscriptionManager.shared.ensureEngineReady()
+                } catch {
                     await MainActor.run {
-                        self.startRecordingProcess(selectedMode: selectedMode, sessionID: sessionID)
+                        print("Engine Error: \(error)")
                     }
                 }
             }
@@ -302,62 +301,39 @@ class AppController: NSObject, ObservableObject {
     }
     private func startRecordingProcess(selectedMode: VoiceMode, sessionID: UUID) {
         startRecordingTask?.cancel()
-        cancelWhisperIdleTimer()
-        ModelManager.shared.lastWhisperUsageTime = Date()
-        startRecordingTask = Task.detached {
-            try? await Task.sleep(nanoseconds: 150_000_000)
-            if Task.isCancelled { return }
-            
-            let isStillRecording = await MainActor.run { 
-                return self.isRecording && self.currentRecordingSessionID == sessionID
-            }
-            guard isStillRecording else { return }
+        startRecordingTask = Task {
+            guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
             let behavior = selectedMode.audioBehavior ?? .keep
             
-            await MainActor.run {
-                if Task.isCancelled { return }
-                guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
-                
-                Task {
-                    if Task.isCancelled { return }
-                    guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
-                    
-                    if behavior == .mute {
-                        MediaControlService.shared.pauseMultimedia(behavior: .mute)
-                    }
-                    
-                    Task {
-                        await SoundPlayer.shared.playSound(named: "Start")
-                    }
-                    
-                    try? await Task.sleep(nanoseconds: 150_000_000)
-                    
-                    await MainActor.run {
-                        if Task.isCancelled { return }
-                        guard self.isRecording && self.currentRecordingSessionID == sessionID else { return }
-                        self.startRecording(sessionID: sessionID)
-                    }
-                }
+            if behavior != .keep {
+                MediaControlService.shared.pauseMultimedia(behavior: behavior)
             }
+            
+            Task {
+                await SoundPlayer.shared.playSound(named: "Start")
+            }
+            
+            self.startRecording(sessionID: sessionID)
         }
     }
     private func startRecording(sessionID: UUID) {
         self.isPaused = false
+        withAnimation {
+            canRetryTranscription = false
+            failedAudioSamples = nil
+            failedSelectedMode = nil
+        }
         performStartRecording(sessionID: sessionID)
     }
     private func performStartRecording(sessionID: UUID) {
         self.isPaused = false
-        let modeString = UserDefaults.standard.string(forKey: "hotkeyMode") ?? "Click"
-        if modeString == "Hold" { self.activeHotkeyMode = .hold }
-        else if modeString == "Automatic" { self.activeHotkeyMode = .automatic }
-        else { self.activeHotkeyMode = .click }
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
             do {
                 try self.audioManager.startRecording()
                 DispatchQueue.main.async {
                     guard self.currentRecordingSessionID == sessionID else {
-                        _ = self.audioManager.stopRecording()
+                        Task { _ = await self.audioManager.stopRecordingAsync() }
                         return
                     }
                     self.isRecording = true
@@ -409,15 +385,19 @@ class AppController: NSObject, ObservableObject {
     func selectMode(_ mode: VoiceMode) {
         self.currentMode = mode
         UserDefaults.standard.set(mode.id.uuidString, forKey: "activeModeID")
+        
+        TranscriptionManager.shared.applyModelOverride(mode.modelOverride)
+        Task {
+            try? await TranscriptionManager.shared.ensureEngineReady()
+        }
     }
     func cancelRecording() {
+        if statusText.hasPrefix("Initializing") { return }
         guard isRecording || isCurrentlyProcessing else { return }
-        if statusText.hasPrefix("Initializing") {
-            return
-        }
         isRecording = false
         self.isPaused = false
         self.currentRecordingSessionID = nil
+        self.lastRecordingStopTime = Date()
         statusText = "Cancelled"
         let taskToCancel = currentTask
         currentTask = nil
@@ -426,21 +406,27 @@ class AppController: NSObject, ObservableObject {
         startRecordingTask?.cancel()
         startRecordingTask = nil
         
-        _ = self.audioManager.stopRecording()
+        Task {
+            _ = await self.audioManager.stopRecordingAsync()
+        }
         
         MediaControlService.shared.resumeMultimedia()
         withAnimation {
             self.audioLevels = Array(repeating: 0.01, count: 40)
         }
+        let modeStr = UserDefaults.standard.string(forKey: "hudPositionMode") ?? "free"
+        let isNotchMode = (modeStr == "notch")
         
-        if ModelManager.shared.isWhisperLoaded {
-            self.startWhisperIdleTimer()
+        if isNotchMode {
+            WindowManager.shared.hideHUD()
         }
         
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + (isNotchMode ? 0.0 : 1.0)) {
             if !self.isRecording && self.statusText == "Cancelled" {
                 self.statusText = "Ready"
-                WindowManager.shared.hideHUD()
+                if !isNotchMode {
+                    WindowManager.shared.hideHUD()
+                }
             }
         }
     }
@@ -457,15 +443,14 @@ class AppController: NSObject, ObservableObject {
             }
         }
     }
-    /// Stops recording, retrieves the audio samples, and feeds them into the local Whisper model.
-    /// Passes the transcribed text to AssistantWorkflowService to handle LLM logic and paste actions.
-    private func stopRecordingAndTranscribe() {
+    func stopRecordingAndTranscribe() {
         guard isRecording else {
             return
         }
         self.isPaused = false
         isRecording = false
         self.currentRecordingSessionID = nil
+        self.lastRecordingStopTime = Date()
         statusText = "Processing"
         if !wasPopoverOpenBeforeRecording {
             isPopoverOpen = false
@@ -474,26 +459,12 @@ class AppController: NSObject, ObservableObject {
         startRecordingTask?.cancel()
         startRecordingTask = nil
 
-        let samples = audioManager.stopRecording()
-        MediaControlService.shared.resumeMultimedia()
         currentTask = Task {
-            defer {
-                Task { @MainActor [weak self] in
-                    guard let self = self else { return }
-                    if ModelManager.shared.isWhisperLoaded {
-                        self.startWhisperIdleTimer()
-                    }
-                }
+            let samples = await audioManager.stopRecordingAsync()
+            await MainActor.run {
+                MediaControlService.shared.resumeMultimedia()
             }
-            guard let context = sonorContext else {
-                await MainActor.run { 
-                    self.statusText = "Error: Missing model" 
-                }
-                await SoundPlayer.shared.playSound(named: "Error")
-                self.hideHUDAfterDelay()
-                return
-            }
-            guard samples.count >= 8000 else {
+            guard samples.count >= 2000 else {
                 await MainActor.run { 
                     self.statusText = "Cancelled" 
                 }
@@ -501,43 +472,38 @@ class AppController: NSObject, ObservableObject {
                 return
             }
             
-            // Check if the audio is completely silent (zeroed out by the trimmer) to prevent Whisper hallucinations like "Thank you."
-            var sumSq: Float = 0.0
-            for sample in samples {
-                sumSq += sample * sample
-            }
-            guard sumSq > 0.001 else {
-                await MainActor.run { 
-                    self.statusText = "Cancelled" 
-                }
-                self.hideHUDAfterDelay()
-                return
-            }
+            // Silence check removed to prevent falsely cancelling quiet microphones
             
             let selectedMode = await MainActor.run { return self.currentMode ?? VoiceMode.defaults.first! }
             _ = selectedMode.language ?? "auto"
-            // Transcribe audio using the local Whisper model.
-            let snippets = UserDefaults.standard.dictionary(forKey: "snippetsEntries") as? [String: String] ?? [:]
-            let snippetKeys = Array(snippets.keys)
-            let initialPrompt = snippetKeys.isEmpty ? nil : snippetKeys.joined(separator: ", ")
             
-            let transcribedText = await context.transcribe(audioSamples: samples, language: "auto", initialPrompt: initialPrompt)
-            await MainActor.run {
-                ModelManager.shared.lastWhisperUsageTime = Date()
-                self.startWhisperIdleTimer()
-            }
+            await self.processAudio(samples: samples, selectedMode: selectedMode)
+        }
+    }
+    
+    func processAudio(samples: [Float], selectedMode: VoiceMode, historyMessageID: UUID? = nil, isInlineRetry: Bool = false) async {
+        let snippets = UserDefaults.standard.dictionary(forKey: "snippetsEntries") as? [String: String] ?? [:]
+        let snippetKeys = Array(snippets.keys)
+        let initialPrompt = snippetKeys.isEmpty ? nil : snippetKeys.joined(separator: ", ")
+        
+        do {
+            let transcribedText = try await TranscriptionManager.shared.transcribe(audioSamples: samples, language: "auto", initialPrompt: initialPrompt)
             
             if Task.isCancelled {
-                self.hideHUDAfterDelay()
+                if !isInlineRetry {
+                    self.hideHUDAfterDelay()
+                }
                 return
             }
             let rawText = transcribedText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !rawText.isEmpty else {
-                await MainActor.run { 
-                    self.statusText = "No text recognized." 
+                if !isInlineRetry {
+                    await MainActor.run { 
+                        self.statusText = "No text recognized." 
+                    }
+                    await SoundPlayer.shared.playSound(named: "Error")
+                    self.hideHUDAfterDelay()
                 }
-                await SoundPlayer.shared.playSound(named: "Error")
-                self.hideHUDAfterDelay()
                 return
             }
             let duration = Double(samples.count) / 16000.0
@@ -549,29 +515,105 @@ class AppController: NSObject, ObservableObject {
             await AssistantWorkflowService.shared.execute(
                 correctedText: correctedText,
                 selectedMode: selectedMode,
-                initialPID: self.targetAppPID,
-                targetAXElement: self.targetAXElement,
-                wasTextFieldFocusedAtStart: self.wasTextFieldFocusedAtStart,
                 audioSamples: samples,
-                onStatusChange: { newStatus in
-                    self.statusText = newStatus
+                historyMessageID: historyMessageID,
+                isBackgroundRetry: isInlineRetry,
+                onStatusChange: { status in
+                    if !isInlineRetry {
+                        self.statusText = status
+                    }
                 },
                 onAutoLearnTrigger: { targetPID, text in
-                    self.startAutoLearnTracking(targetPID: targetPID, originalText: text)
+                    if !isInlineRetry {
+                        self.startAutoLearnTracking(targetPID: targetPID, originalText: text)
+                    }
                 },
                 onCopyNotificationTrigger: { textToCopy in
-                    self.showCopyNotification(text: textToCopy)
+                    if !isInlineRetry {
+                        self.showCopyNotification(text: textToCopy)
+                    }
                 }
             )
-            self.hideHUDAfterDelay()
-
+            if !isInlineRetry {
+                self.hideHUDAfterDelay()
+            }
+        } catch {
+            if isInlineRetry {
+                if let historyMessageID = historyMessageID {
+                    await MainActor.run {
+                        let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Unknown App"
+                        let whisperModel = TranscriptionManager.shared.activeModelName
+                        let gemmaModel = "Gemma 3"
+                        let shouldRunLLM = !selectedMode.prompt.isEmpty
+                        MessageMemoryManager.shared.updateMessage(id: historyMessageID, newText: t("Transcription failed"), isError: true, appName: appName, transcriptionModel: whisperModel, llmModel: shouldRunLLM ? gemmaModel : nil, modeName: selectedMode.name, updateMetadata: true)
+                    }
+                }
+            } else {
+                if let historyMessageID = historyMessageID {
+                    await MainActor.run {
+                        let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Unknown App"
+                        let whisperModel = TranscriptionManager.shared.activeModelName
+                        let gemmaModel = "Gemma 3"
+                        let shouldRunLLM = !selectedMode.prompt.isEmpty
+                        MessageMemoryManager.shared.updateMessage(id: historyMessageID, newText: t("Transcription failed"), isError: true, appName: appName, transcriptionModel: whisperModel, llmModel: shouldRunLLM ? gemmaModel : nil, modeName: selectedMode.name, updateMetadata: true)
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
+                            self.statusText = "Transcription failed"
+                            self.failedAudioSamples = samples
+                            self.failedSelectedMode = selectedMode
+                            self.canRetryTranscription = true
+                        }
+                    }
+                } else {
+                    await MainActor.run {
+                        withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
+                            self.statusText = "Transcription failed"
+                            self.failedAudioSamples = samples
+                            self.failedSelectedMode = selectedMode
+                            self.canRetryTranscription = true
+                        }
+                        let appName = NSWorkspace.shared.frontmostApplication?.localizedName ?? "Unknown App"
+                        let whisperModel = TranscriptionManager.shared.activeModelName
+                        let gemmaModel = "Gemma 3"
+                        let shouldRunLLM = !selectedMode.prompt.isEmpty
+                        
+                        let msgId = MessageMemoryManager.shared.saveMessage(t("Transcription failed"), samples: samples, isError: true, appName: appName, transcriptionModel: whisperModel, llmModel: shouldRunLLM ? gemmaModel : nil, modeName: selectedMode.name)
+                        self.failedHistoryMessageID = msgId
+                    }
+                }
+                await SoundPlayer.shared.playSound(named: "Error")
+                // Do not hide HUD so the user can see the retry button
+            }
         }
     }
 
+    func retryTranscription() {
+        guard let samples = failedAudioSamples, let mode = failedSelectedMode else { return }
+        let histId = self.failedHistoryMessageID
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
+            self.canRetryTranscription = false
+            self.statusText = "Processing"
+        }
+        currentTask = Task {
+            await self.processAudio(samples: samples, selectedMode: mode, historyMessageID: histId)
+        }
+    }
+
+    func retryHistoryTranscription(id: UUID) {
+        guard let data = MessageMemoryManager.shared.getAudioData(for: id),
+              let samples = MessageMemoryManager.shared.convertWAVToSamples(data: data) else { return }
+        
+        let mode = self.currentMode ?? VoiceMode.defaults.first! // Use currently selected mode
+        
+        MessageMemoryManager.shared.updateMessage(id: id, newText: t("Processing"), isError: false)
+        
+        Task {
+            await self.processAudio(samples: samples, selectedMode: mode, historyMessageID: id, isInlineRetry: true)
+        }
+    }
 
     func quitApp() {
         self.cancelRecording()
-        _ = self.audioManager.stopRecording()
+        Task { _ = await self.audioManager.stopRecordingAsync() }
         NotificationCenter.default.post(name: NSNotification.Name("AppWillTerminate"), object: nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             Darwin._exit(0)
@@ -627,8 +669,11 @@ class AppController: NSObject, ObservableObject {
         self.activeCopyNotification = text
         WindowManager.shared.showHUD(controller: self)
         
+        let duration = UserDefaults.standard.double(forKey: "overlayDuration")
+        let finalDuration = duration > 0 ? duration : 15.0
+        
         Task {
-            try? await Task.sleep(nanoseconds: 5_000_000_000)
+            try? await Task.sleep(nanoseconds: UInt64(finalDuration * 1_000_000_000))
             await MainActor.run {
                 if self.activeCopyNotification == text {
                     self.hideCopyNotification()
@@ -656,6 +701,29 @@ class AppController: NSObject, ObservableObject {
             if delayHide {
                 Task {
                     try? await Task.sleep(nanoseconds: 1_200_000_000)
+                    await MainActor.run {
+                        if self.activeCopyNotification == text {
+                            self.hideCopyNotification()
+                        }
+                    }
+                }
+            } else {
+                self.hideCopyNotification()
+            }
+        }
+    }
+    
+    func pasteCopyNotificationText(delayHide: Bool = false) {
+        if let text = activeCopyNotification {
+            if let frontApp = NSWorkspace.shared.frontmostApplication {
+                let pid = frontApp.processIdentifier
+                DispatchQueue.global(qos: .userInitiated).async {
+                    PasteManager.shared.typeTextDirectly(text: text, targetPID: pid, forceFocusElement: nil)
+                }
+            }
+            if delayHide {
+                Task {
+                    try? await Task.sleep(nanoseconds: 600_000_000)
                     await MainActor.run {
                         if self.activeCopyNotification == text {
                             self.hideCopyNotification()

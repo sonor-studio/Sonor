@@ -1,5 +1,5 @@
 {
-  "originHash" : "d3eafc96399f30ac6d1d56ba963cf1eb1202f0be5125e197b3b2a4d5c6cafa2b",
+  "originHash" : "4b76c4a4a458d4fd43ab7a085247bd469588bbba8a604970d8d0ed23b0cf41fa",
   "pins" : [
     {
       "identity" : "eventsource",
@@ -8,6 +8,24 @@
       "state" : {
         "revision" : "a3a85a85214caf642abaa96ae664e4c772a59f6e",
         "version" : "1.4.1"
+      }
+    },
+    {
+      "identity" : "mediaremote-adapter",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/ejbills/mediaremote-adapter",
+      "state" : {
+        "branch" : "master",
+        "revision" : "5b6afde3f501a3da567e23bf7f23d562938a1809"
+      }
+    },
+    {
+      "identity" : "mlx-audio-swift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/Blaizzy/mlx-audio-swift",
+      "state" : {
+        "branch" : "main",
+        "revision" : "4266f988d170a83017d1e82e2e4654602f277f1d"
       }
     },
     {

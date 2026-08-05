@@ -16,7 +16,23 @@ struct ModeEditorView: View {
     @State private var showAssistantTypeInfo = false
     @State private var showRenameSheet = false
     @State private var newAssistantName = ""
-    @State private var showPasteTimingInfo = false
+    @ObservedObject private var modelManager = ModelManager.shared
+    
+    var downloadedModels: [(id: String, name: String)] {
+        var list: [(id: String, name: String)] = []
+        list.append((id: "appleSpeech", name: t("Apple Speech (System)")))
+        for model in modelManager.availableWhisperModels {
+            if modelManager.whisperStates[model.id] == .downloaded {
+                list.append((id: model.id, name: model.name))
+            }
+        }
+        for model in modelManager.availableMLXModels {
+            if modelManager.mlxStates[model.id] == .downloaded {
+                list.append((id: model.id, name: model.name))
+            }
+        }
+        return list
+    }
     
     var body: some View {
         if let index = modes.firstIndex(where: { $0.id.uuidString == selectedModeID }) {
@@ -81,10 +97,6 @@ struct ModeEditorView: View {
                 .transition(.move(edge: .trailing).combined(with: .opacity))
                 .sheet(isPresented: $showAssistantTypeInfo) {
                     AssistantTypeExplanationView()
-                        .preferredColorScheme(colorScheme)
-                }
-                .sheet(isPresented: $showPasteTimingInfo) {
-                    PasteTimingExplanationView()
                         .preferredColorScheme(colorScheme)
                 }
 
@@ -366,9 +378,34 @@ struct ModeEditorView: View {
                                 }
                                 .pickerStyle(.menu)
                                 .frame(width: 150)
-                                .accentColor(.black)
-                                .tint(.black)
                             }
+                        }
+                        
+                        HStack {
+                            Text(t("Model"))
+                                .font(.system(size: 12))
+                            Spacer()
+                            Picker("", selection: Binding(
+                                get: { modeBinding.wrappedValue.modelOverride ?? "default" },
+                                set: { 
+                                    let newVal = $0 == "default" ? nil : $0
+                                    modeBinding.wrappedValue.modelOverride = newVal
+                                    saveModes()
+                                    TranscriptionManager.shared.applyModelOverride(newVal)
+                                    if modeBinding.wrappedValue.id.uuidString == UserDefaults.standard.string(forKey: "activeModeID") {
+                                        Task {
+                                            try? await TranscriptionManager.shared.ensureEngineReady()
+                                        }
+                                    }
+                                }
+                            )) {
+                                Text(t("Default")).tag("default")
+                                ForEach(downloadedModels, id: \.id) { m in
+                                    Text(m.name).tag(m.id)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                            .frame(width: 150)
                         }
                         VStack(alignment: .leading, spacing: 8) {
                             if modeBinding.wrappedValue.isBuiltInMode {
@@ -494,9 +531,51 @@ struct ModeEditorView: View {
                         }
                         HStack {
                             Toggle(t("Mute system during recording"), isOn: Binding(
-                                get: { (modeBinding.wrappedValue.audioBehavior ?? .keep) == .mute },
+                                get: { 
+                                    let b = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                    return b == .mute || b == .muteAndPause 
+                                },
                                 set: { newValue in
-                                    modeBinding.wrappedValue.audioBehavior = newValue ? .mute : .keep
+                                    let current = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                    if newValue {
+                                        modeBinding.wrappedValue.audioBehavior = (current == .pause || current == .muteAndPause) ? .muteAndPause : .mute
+                                    } else {
+                                        modeBinding.wrappedValue.audioBehavior = (current == .muteAndPause) ? .pause : .keep
+                                    }
+                                    saveModes()
+                                }
+                            ))
+                            .toggleStyle(CustomToggleStyle())
+                            .font(.system(size: 12))
+                            Button(action: {
+                                let newVal = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                for i in modes.indices {
+                                    modes[i].audioBehavior = newVal
+                                }
+                                saveModes()
+                            }) {
+                                Image(systemName: "rectangle.stack")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .padding(4)
+                                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.primary.opacity(0.1)))
+                                    .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                            .help(t("Apply to all assistants"))
+                        }
+                        HStack {
+                            Toggle(t("Pause media during recording"), isOn: Binding(
+                                get: { 
+                                    let b = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                    return b == .pause || b == .muteAndPause 
+                                },
+                                set: { newValue in
+                                    let current = modeBinding.wrappedValue.audioBehavior ?? .keep
+                                    if newValue {
+                                        modeBinding.wrappedValue.audioBehavior = (current == .mute || current == .muteAndPause) ? .muteAndPause : .pause
+                                    } else {
+                                        modeBinding.wrappedValue.audioBehavior = (current == .muteAndPause) ? .mute : .keep
+                                    }
                                     saveModes()
                                 }
                             ))
@@ -520,22 +599,26 @@ struct ModeEditorView: View {
                         }
 
                         HStack {
-                            Picker(t("Paste target"), selection: Binding(
-                                get: { modeBinding.wrappedValue.pasteTiming ?? "end" },
+                            Picker(t("Post-paste action"), selection: Binding(
+                                get: { modeBinding.wrappedValue.postPasteAction ?? "none" },
                                 set: { 
-                                    modeBinding.wrappedValue.pasteTiming = $0
+                                    modeBinding.wrappedValue.postPasteAction = $0
                                     saveModes()
                                 }
                             )) {
-                                Text(t("Field focused at end")).tag("end")
-                                Text(t("Field focused at start")).tag("start")
+                                Text(t("None")).tag("none")
+                                Text(t("Return")).tag("return")
+                                Text(t("Shift + Return")).tag("shiftReturn")
+                                Text(t("Command + Return")).tag("commandReturn")
+                                Text(t("Option + Return")).tag("optionReturn")
                             }
                             .pickerStyle(MenuPickerStyle())
                             .font(.system(size: 12))
+                            
                             Button(action: {
-                                let newVal = modeBinding.wrappedValue.pasteTiming ?? "end"
+                                let newVal = modeBinding.wrappedValue.postPasteAction ?? "none"
                                 for i in modes.indices {
-                                    modes[i].pasteTiming = newVal
+                                    modes[i].postPasteAction = newVal
                                 }
                                 saveModes()
                             }) {
@@ -547,31 +630,27 @@ struct ModeEditorView: View {
                             }
                             .buttonStyle(.plain)
                             .help(t("Apply to all assistants"))
-                            Button(action: {
-                                showPasteTimingInfo = true
-                            }) {
-                                Image(systemName: "info.circle")
-                                    .font(.system(size: 16))
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                            .help(t("Learn more about Paste target"))
                         }
+
                         HStack {
-                            Toggle(t("Copy to clipboard if no text field is detected"), isOn: Binding(
-                                get: { modeBinding.wrappedValue.fallbackToClipboard ?? false },
+                            Picker(t("Behavior if no field detected"), selection: Binding(
+                                get: { modeBinding.wrappedValue.fallbackBehavior ?? "overlay" },
                                 set: { 
-                                    modeBinding.wrappedValue.fallbackToClipboard = $0
+                                    modeBinding.wrappedValue.fallbackBehavior = $0
                                     saveModes()
                                 }
-                            ))
-                            .toggleStyle(CustomToggleStyle())
+                            )) {
+                                Text(t("Do nothing")).tag("none")
+                                Text(t("Show overlay")).tag("overlay")
+                                Text(t("Copy to clipboard")).tag("clipboard")
+                            }
+                            .pickerStyle(MenuPickerStyle())
                             .font(.system(size: 12))
-                            Spacer()
+                            
                             Button(action: {
-                                let newVal = modeBinding.wrappedValue.fallbackToClipboard ?? false
+                                let newVal = modeBinding.wrappedValue.fallbackBehavior ?? "overlay"
                                 for i in modes.indices {
-                                    modes[i].fallbackToClipboard = newVal
+                                    modes[i].fallbackBehavior = newVal
                                 }
                                 saveModes()
                             }) {

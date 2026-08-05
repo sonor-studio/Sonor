@@ -281,6 +281,21 @@ struct MessageCardView: View {
             return colorScheme == .dark ? Color.white.opacity(0.08) : Color.black.opacity(0.08)
         }
     }
+    @State private var isRetryHovered = false
+    private var retryBgColor: Color {
+        if isRetryHovered {
+            return colorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.06)
+        } else {
+            return Color.clear
+        }
+    }
+    private var retryFgColor: Color {
+        if isRetryHovered {
+            return colorScheme == .dark ? Color.white : Color.black
+        } else {
+            return Color.secondary
+        }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -293,6 +308,28 @@ struct MessageCardView: View {
                 .foregroundColor(.secondary)
                 Spacer()
                 HStack(spacing: 6) {
+                    if msg.hasAudio == true {
+                        Button(action: {
+                            // Indicate processing inline visually if needed, but AppController handles it silently now
+                            NotificationCenter.default.post(name: Notification.Name("RetryHistoryTranscription"), object: msg.id)
+                        }) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 6)
+                                    .fill(retryBgColor)
+                                    .frame(width: 26, height: 26)
+                                Image(systemName: "arrow.clockwise")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(retryFgColor)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        .help(t("Retry transcription"))
+                        .onHover { hovering in
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                isRetryHovered = hovering
+                            }
+                        }
+                    }
                     Button(action: {
                         let pb = NSPasteboard.general
                         pb.clearContents()
@@ -353,12 +390,91 @@ struct MessageCardView: View {
                     }
                 }
             }
-            Text(msg.text)
-                .font(.system(size: 13, weight: .regular))
-                .foregroundColor(.primary)
-                .lineSpacing(3)
-                .lineLimit(isExpanded ? nil : 3)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if msg.isError == true {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundColor(.red)
+                        .font(.system(size: 13))
+                    Text(t("Transcription failed"))
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.red)
+                }
+            } else if msg.text == "Processing" || msg.text == t("Processing") {
+                HStack(spacing: 6) {
+                    ProgressView()
+                        .scaleEffect(0.5)
+                        .frame(width: 12, height: 12)
+                    Text(t("Processing"))
+                        .font(.system(size: 13, weight: .regular))
+                        .foregroundColor(.secondary)
+                }
+            } else {
+                Text(msg.text)
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundColor(.primary)
+                    .lineSpacing(3)
+                    .lineLimit(isExpanded ? nil : 3)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            
+            if isExpanded {
+                if msg.appName != nil || msg.modeName != nil || msg.transcriptionModel != nil || msg.llmModel != nil {
+                    LazyVGrid(columns: [GridItem(.flexible(), alignment: .leading), GridItem(.flexible(), alignment: .leading)], spacing: 10) {
+                        if let appName = msg.appName {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(t("App"))
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(.secondary.opacity(0.8))
+                                    .textCase(.uppercase)
+                                Text(appName)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.primary.opacity(0.9))
+                            }
+                        }
+                        if let modeName = msg.modeName {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(t("Mode"))
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(.secondary.opacity(0.8))
+                                    .textCase(.uppercase)
+                                Text(t(modeName))
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.primary.opacity(0.9))
+                            }
+                        }
+                        if let transcriptionModel = msg.transcriptionModel {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(t("Transcription"))
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(.secondary.opacity(0.8))
+                                    .textCase(.uppercase)
+                                Text(transcriptionModel)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.primary.opacity(0.9))
+                            }
+                        }
+                        if let llmModel = msg.llmModel {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(t("LLM"))
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .foregroundColor(.secondary.opacity(0.8))
+                                    .textCase(.uppercase)
+                                Text(llmModel)
+                                    .font(.system(size: 11, weight: .medium))
+                                    .foregroundColor(.primary.opacity(0.9))
+                            }
+                        }
+                    }
+                    .padding(.top, 8)
+                    .padding(.bottom, 2)
+                } else {
+                    Text(t("No details available"))
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.secondary.opacity(0.8))
+                        .padding(.top, 8)
+                        .padding(.bottom, 2)
+                }
+            }
                 
             if msg.hasAudio == true {
                 let isActive = audioPlayer.playingID == msg.id

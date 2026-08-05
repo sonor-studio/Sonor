@@ -21,19 +21,23 @@ public class ChangelogLocalization {
     
     public func getSections() -> [ChangelogSection] {
         return [
-            ChangelogSection(title: t_changelog("New Features"), features: [
-                ChangelogFeature(icon: "macwindow.badge.plus", title: t_changelog("Redesigned Sidebar & Navigation"), description: t_changelog("The sidebar has been reorganized for better clarity with updated icons, clearer separators, and a more intuitive layout.")),
-                ChangelogFeature(icon: "ladybug.fill", title: t_changelog("In-App Feedback System"), description: t_changelog("You can now submit ideas, bug reports, and questions directly from the app. Includes custom categories and optional email contact.")),
-                ChangelogFeature(icon: "waveform.path", title: t_changelog("Voice Request History"), description: t_changelog("Added the ability to browse and replay your past voice requests directly from the new statistics dashboard.")),
-                ChangelogFeature(icon: "mic.badge.plus", title: t_changelog("Audio Device Selection"), description: t_changelog("A new General Settings tab allows you to explicitly select your preferred input (microphone) and output (speaker) devices."))
+            ChangelogSection(title: t_changelog("Major Highlights"), features: [
+                ChangelogFeature(icon: "cpu", title: t_changelog("The New Model Manager"), description: t_changelog("Explore a wide range of MLX transcription models in our entirely redesigned hub. Compare models easily using new accuracy and speed progress bars, rich metadata, and a robust new downloading interface.")),
+                ChangelogFeature(icon: "waveform.path", title: t_changelog("Interactive Voice History"), description: t_changelog("The history tab has been completely revamped. You can now expand entries to see the target application, transcription model, and mode. Play back past recordings, and even retry transcriptions directly from your history using a different model."))
             ]),
-            ChangelogSection(title: t_changelog("Improvements & Fixes"), features: [
-                ChangelogFeature(icon: "speaker.wave.2.fill", title: t_changelog("Audio Playback Reliability"), description: t_changelog("Completely refactored the internal audio engine to resolve memory leaks and fix playback clipping issues.")),
-                ChangelogFeature(icon: "menubar.rectangle", title: t_changelog("Menu Bar Stability"), description: t_changelog("Fixed visual flickering and layout issues in the Menu Bar extra, providing a much smoother experience.")),
-                ChangelogFeature(icon: "globe", title: t_changelog("Expanded Localizations"), description: t_changelog("Added missing translations for all new features, ensuring 100% coverage across all 9 supported languages."))
+            ChangelogSection(title: t_changelog("Core Improvements"), features: [
+                ChangelogFeature(icon: "bolt.fill", title: t_changelog("Zero-Latency Audio Engine"), description: t_changelog("We rebuilt the audio engine from the ground up! The microphone now triggers instantly with zero delay, fixing the issue of clipped words at the start of recordings (especially with headphones). We also optimized the overlay animations for a much snappier feel.")),
+                ChangelogFeature(icon: "pause.circle", title: t_changelog("Flawless Media Controls"), description: t_changelog("The media muting system has been heavily improved, and we introduced a highly requested feature to perfectly pause and resume your background music while recording.")),
+                ChangelogFeature(icon: "person.2.badge.gearshape", title: t_changelog("Assistant-Specific Configurations"), description: t_changelog("Take full control of your workflows. You can now assign specific transcription models and post-transcription automated hotkeys individually for each assistant.")),
+                ChangelogFeature(icon: "hand.tap", title: t_changelog("Smart Automatic Hotkeys"), description: t_changelog("Forget manually choosing between 'click-to-talk' and 'push-to-talk'. The new automatic hotkey mode detects your behavior—a short click toggles the assistant on and off, while holding the key down automatically stops recording when released."))
             ]),
-            ChangelogSection(title: t_changelog("Under the Hood"), features: [
-                ChangelogFeature(icon: "wifi.slash", title: t_changelog("100% Offline & Private"), description: t_changelog("Complete removal of user accounts and cloud syncing. Sonor now works entirely on your device."))
+            ChangelogSection(title: t_changelog("Quality of Life & Settings"), features: [
+                ChangelogFeature(icon: "gearshape.2", title: t_changelog("Extended App Configuration"), description: t_changelog("Enjoy a massive set of new settings: freeform overlay positioning, memory management with automatic model unloading, output audio device selection, and a global hotkey to paste your last transcription.")),
+                ChangelogFeature(icon: "text.cursor", title: t_changelog("Empty Field Behavior"), description: t_changelog("You can now configure what happens when there's no text field available for transcription: show the overlay, copy the text to clipboard, or do nothing.")),
+                ChangelogFeature(icon: "arrow.right.doc.on.clipboard", title: t_changelog("Intelligent Paste Target"), description: t_changelog("The paste target can now be set to Intelligent, letting the application intelligently determine the best destination for your transcriptions.")),
+                ChangelogFeature(icon: "envelope.fill", title: t_changelog("In-App Messages"), description: t_changelog("Check out the new Messages tab where you can read important updates and announcements directly from our team.")),
+                ChangelogFeature(icon: "exclamationmark.triangle.fill", title: t_changelog("Graceful Out-Of-Memory Handling"), description: t_changelog("No more crashes when you run out of RAM! The application now gracefully intercepts memory limits and provides a friendly interface in the overlay to let you retry the transcription.")),
+                ChangelogFeature(icon: "ladybug.fill", title: t_changelog("In-App Feedback & UI Organization"), description: t_changelog("Submit ideas, questions, and bug reports directly via the new 'Feedback' tab in the sidebar. We also moved this Changelog out of annoying popups and directly into a dedicated application tab."))
             ])
         ]
     }

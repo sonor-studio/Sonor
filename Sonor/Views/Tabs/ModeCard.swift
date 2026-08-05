@@ -73,7 +73,15 @@ struct ModeCard: View {
                     Text(mode.assistantType == "dictation" ? t("Dictation") : t("Editing"))
                         .font(.system(size: 10, weight: .semibold))
                     Spacer()
-                    if mode.audioBehavior == .mute || mode.audioBehavior == .pause {
+                    if mode.audioBehavior == .mute {
+                        Image(systemName: "speaker.slash.fill")
+                            .font(.system(size: 12))
+                    } else if mode.audioBehavior == .pause {
+                        Image(systemName: "pause.fill")
+                            .font(.system(size: 12))
+                    } else if mode.audioBehavior == .muteAndPause {
+                        Image(systemName: "pause.fill")
+                            .font(.system(size: 12))
                         Image(systemName: "speaker.slash.fill")
                             .font(.system(size: 12))
                     }

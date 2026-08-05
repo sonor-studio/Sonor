@@ -6,6 +6,8 @@ struct CapsuleHUDView: View {
     @ObservedObject var controller: AppController
     @ObservedObject var modelManager = ModelManager.shared
     @AppStorage("appTheme") private var appTheme = "system"
+    @AppStorage("hudPositionMode") private var hudPositionMode: HUDPositionMode = .free
+    @AppStorage("overlayDuration") private var overlayDuration: Double = 15.0
     var effectiveColorScheme: ColorScheme {
         if appTheme == "dark" {
             return .dark
@@ -21,12 +23,12 @@ struct CapsuleHUDView: View {
     }
     private var isFinalState: Bool {
         let text = controller.statusText
-        return text == "Cancelled" || text == "Done!" || text == "No text recognized." || text == "Error: Missing model" || text == "No microphone permission" || text == "Microphone error"
+        return text == "Cancelled" || text == "Done!" || text == "No text recognized." || text == "Error: Missing model" || text == "No microphone permission" || text == "Microphone error" || text == "Ready"
     }
     private var targetWidth: CGFloat {
         if isInitializing || isFinalState {
             return 284.0
-        } else if controller.isRecording {
+        } else if controller.isRecording || controller.canRetryTranscription {
             return 180.0
         } else {
             return 232.0
@@ -36,7 +38,7 @@ struct CapsuleHUDView: View {
     @State private var width: CGFloat = 180
     @State private var height: CGFloat = 40
     @State private var isProcessing = false
-    @State private var opacity: Double = 0
+    @State private var hasAppeared = false
     @State private var showList = false
     @State private var hoveredModeID: UUID? = nil
     @State private var dragTracker = WindowDragTracker()
@@ -44,7 +46,9 @@ struct CapsuleHUDView: View {
     @State private var dictProgress: CGFloat = 1.0
     @State private var copyProgress: CGFloat = 1.0
     @State private var isCopied: Bool = false
+    @State private var isPasted: Bool = false
     @State private var isUndone: Bool = false
+    @State private var hoveredButton: String? = nil
     private let recordingTimer = Timer.publish(every: 1.0, on: .main, in: .common).autoconnect()
     private var assistantSelector: some View {
         Button(action: {
@@ -128,17 +132,20 @@ struct CapsuleHUDView: View {
                     removal: .move(edge: .bottom).combined(with: .opacity)
                 ))
             Spacer()
-            TimelineView(.animation) { timeline in
-                let time = timeline.date.timeIntervalSinceReferenceDate
-                let angle = time.truncatingRemainder(dividingBy: 1.0) * 360.0
-                Circle()
-                    .trim(from: 0, to: 0.6)
-                    .stroke(
-                        textColor,
-                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
-                    )
-                    .frame(width: 16, height: 16)
-                    .rotationEffect(Angle(degrees: angle))
+            if !controller.canRetryTranscription {
+                TimelineView(.animation) { timeline in
+                    let time = timeline.date.timeIntervalSinceReferenceDate
+                    let angle = time.truncatingRemainder(dividingBy: 1.0) * 360.0
+                    Circle()
+                        .trim(from: 0, to: 0.6)
+                        .stroke(
+                            textColor,
+                            style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
+                        )
+                        .frame(width: 16, height: 16)
+                        .rotationEffect(Angle(degrees: angle))
+                }
+                .transition(.asymmetric(insertion: .scale(scale: 0.5).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
             }
         }
         .padding(.horizontal, 14)
@@ -284,25 +291,89 @@ struct CapsuleHUDView: View {
                             controller.copyNotificationTextToClipboard(delayHide: true)
                         }
                     }) {
-                        ZStack {
+                        HStack(spacing: hoveredButton == "copy" && !isCopied ? 4 : 0) {
                             if isCopied {
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 11, weight: .bold))
                                     .transition(.scale.combined(with: .opacity))
                             } else {
-                                Text(t("Copy"))
-                                    .font(.system(size: 11, weight: .bold))
-                                    .fixedSize()
-                                    .transition(.scale.combined(with: .opacity))
+                                Image(systemName: "doc.on.doc")
+                                    .font(.system(size: 11, weight: .semibold))
+                                if hoveredButton == "copy" {
+                                    Text(t("Copy"))
+                                        .font(.system(size: 11, weight: .bold))
+                                        .fixedSize()
+                                        .transition(.scale.combined(with: .opacity))
+                                }
                             }
                         }
                         .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
-                        .padding(.horizontal, isCopied ? 0 : 10)
-                        .frame(width: isCopied ? 24 : nil, height: 24)
+                        .padding(.horizontal, (hoveredButton == "copy" && !isCopied) ? 10 : 0)
+                        .frame(width: (hoveredButton == "copy" && !isCopied) ? nil : 24, height: 24)
                         .background(effectiveColorScheme == .dark ? Color.white : Color.black)
                         .clipShape(Capsule())
                     }
-                                    .buttonStyle(NoAnimButtonStyle())
+                    .buttonStyle(NoAnimButtonStyle())
+                    .focusable(false)
+                    .onHover { isHovered in
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            if isHovered { hoveredButton = "copy" }
+                            else if hoveredButton == "copy" { hoveredButton = nil }
+                        }
+                    }
+                    
+                    Button(action: {
+                        if !dragTracker.isDragging {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                isPasted = true
+                            }
+                            controller.pasteCopyNotificationText(delayHide: true)
+                        }
+                    }) {
+                        HStack(spacing: hoveredButton == "paste" && !isPasted ? 4 : 0) {
+                            if isPasted {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .transition(.scale.combined(with: .opacity))
+                            } else {
+                                Image(systemName: "doc.on.clipboard")
+                                    .font(.system(size: 11, weight: .semibold))
+                                if hoveredButton == "paste" {
+                                    Text(t("Paste"))
+                                        .font(.system(size: 11, weight: .bold))
+                                        .fixedSize()
+                                        .transition(.scale.combined(with: .opacity))
+                                }
+                            }
+                        }
+                        .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
+                        .padding(.horizontal, (hoveredButton == "paste" && !isPasted) ? 10 : 0)
+                        .frame(width: (hoveredButton == "paste" && !isPasted) ? nil : 24, height: 24)
+                        .background(effectiveColorScheme == .dark ? Color.white : Color.black)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(NoAnimButtonStyle())
+                    .focusable(false)
+                    .onHover { isHovered in
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            if isHovered { hoveredButton = "paste" }
+                            else if hoveredButton == "paste" { hoveredButton = nil }
+                        }
+                    }
+                    
+                    Button(action: {
+                        if !dragTracker.isDragging {
+                            controller.hideCopyNotification()
+                        }
+                    }) {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(effectiveColorScheme == .dark ? .black : .white)
+                            .frame(width: 24, height: 24)
+                            .background(effectiveColorScheme == .dark ? Color.white : Color.black)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(NoAnimButtonStyle())
                     .focusable(false)
                     .padding(.trailing, 8)
                 }
@@ -311,7 +382,7 @@ struct CapsuleHUDView: View {
                 Capsule()
                     .fill(effectiveColorScheme == .dark ? Color.white : Color.black)
                     .frame(width: 284 * copyProgress, height: 4)
-                    .opacity(isCopied ? 0 : 1)
+                    .opacity(isCopied || isPasted ? 0 : 1)
             }
             .frame(width: 284, height: 40)
             .contentShape(RoundedRectangle(cornerRadius: 20))
@@ -319,8 +390,10 @@ struct CapsuleHUDView: View {
             .safeGlassEffect(cornerRadius: 20, isInteractive: true)
             .onAppear {
                 isCopied = false
+                isPasted = false
+                hoveredButton = nil
                 copyProgress = 1.0
-                withAnimation(.linear(duration: 5.0)) {
+                withAnimation(.linear(duration: overlayDuration > 0 ? overlayDuration : 15.0)) {
                     copyProgress = 0.0
                 }
             }
@@ -388,6 +461,23 @@ struct CapsuleHUDView: View {
                                 .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
                                 .zIndex(0)
                             }
+                            if controller.canRetryTranscription {
+                                Button(action: {
+                                    if !dragTracker.isDragging { controller.retryTranscription() }
+                                }) {
+                                    Image(systemName: "arrow.clockwise")
+                                        .font(.system(size: 15, weight: .bold))
+                                        .foregroundColor(textColor)
+                                        .frame(width: 40, height: 40)
+                                        .contentShape(Rectangle())
+                                        .glass(cornerRadius: 20, colorScheme: effectiveColorScheme)
+                                }
+                                .buttonStyle(NoAnimButtonStyle())
+                                .focusable(false)
+                                .simultaneousGesture(dragGesture)
+                                .transition(.asymmetric(insertion: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity), removal: .offset(x: -30).combined(with: .scale(scale: 0.1)).combined(with: .opacity)))
+                                .zIndex(0)
+                            }
                             if !isInitializing && !isFinalState {
                                 Button(action: {
                                     if !dragTracker.isDragging { controller.cancelRecording() }
@@ -416,14 +506,18 @@ struct CapsuleHUDView: View {
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: controller.activeCopyNotification != nil)
         }
         .frame(width: 350, height: 600, alignment: .bottom)
-        .opacity(opacity)
+        .opacity((isFinalState || !hasAppeared) && controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil ? 0.0 : 1.0)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: isFinalState)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: hasAppeared)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: controller.activeDictionaryNotification != nil)
+        .animation(.spring(response: 0.5, dampingFraction: 0.7), value: controller.activeCopyNotification != nil)
         .colorScheme(effectiveColorScheme)
         .onAppear {
             controller.reloadModes()
             showPauseButton = controller.isRecording
             width = targetWidth
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                opacity = 1.0
+                hasAppeared = true
             }
         }
         .onChange(of: controller.isRecording) {
@@ -444,35 +538,26 @@ struct CapsuleHUDView: View {
                 }
             }
         }
+        .onChange(of: controller.canRetryTranscription) {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
+                width = targetWidth
+                isProcessing = controller.statusText != "Listening..." && controller.statusText != "Paused"
+            }
+        }
         .onChange(of: controller.statusText) {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.6, blendDuration: 0.3)) {
                 width = targetWidth
                 isProcessing = controller.statusText != "Listening..." && controller.statusText != "Paused"
             }
             if isFinalState {
-                if controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil {
-                    withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                        opacity = 0.0
-                    }
-                }
                 showList = false
             } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 1.0
-                }
                 showList = false
             }
         }
         .onChange(of: controller.activeDictionaryNotification) {
             if controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil && !controller.isRecording {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 0.0
-                }
                 showList = false
-            } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 1.0
-                }
             }
         }
         .onChange(of: controller.activeCopyNotification) {
@@ -480,14 +565,7 @@ struct CapsuleHUDView: View {
                 isCopied = false
             }
             if controller.activeDictionaryNotification == nil && controller.activeCopyNotification == nil && !controller.isRecording {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 0.0
-                }
                 showList = false
-            } else {
-                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
-                    opacity = 1.0
-                }
             }
         }
         .onReceive(recordingTimer) { _ in
@@ -495,10 +573,14 @@ struct CapsuleHUDView: View {
                 recordingDuration += 1
             }
         }
+        .onChange(of: hudPositionMode) { _, newMode in
+            WindowManager.shared.updateHUDPosition(for: newMode)
+        }
     }
     var dragGesture: some Gesture {
         DragGesture(minimumDistance: 3)
             .onChanged { value in
+                guard hudPositionMode == .free else { return }
                 let currentMouse = NSEvent.mouseLocation
                 guard let window = WindowManager.shared.hudWindow else { return }
                 if dragTracker.startMouseLocation == nil {
@@ -519,8 +601,8 @@ struct CapsuleHUDView: View {
                     let minXBound = screenFrame.minX - leftMargin
                     let maxXBound = screenFrame.maxX - rightMargin
                     let visibleHeight = showList ? CGFloat(296) : CGFloat(88)
-                    let minYBound = screenFrame.minY
-                    let maxYBound = screenFrame.maxY - visibleHeight
+                    let minYBound = screenFrame.minY - 8
+                    let maxYBound = screenFrame.maxY - visibleHeight - 8
                     newX = max(minXBound, min(newX, maxXBound))
                     newY = max(minYBound, min(newY, maxYBound))
                 }

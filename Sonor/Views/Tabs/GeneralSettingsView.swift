@@ -1,6 +1,7 @@
 import SwiftUI
 import Carbon
 import AppKit
+import ServiceManagement
 
 struct GeneralSettingsView: View {
     @Environment(\.colorScheme) var appColorScheme
@@ -10,17 +11,18 @@ struct GeneralSettingsView: View {
     @AppStorage("hotkeyString_cancel") private var hotkeyStringCancel = "Ctrl + Opt + Z"
     @AppStorage("hotkeyString_pause") private var hotkeyStringPause = "Ctrl + Opt + X"
     @AppStorage("hotkeyString_assistant") private var hotkeyStringAssistant = "Ctrl + Opt + C"
-    @AppStorage("whisperOffloadTimeout") private var whisperOffloadTimeout: Int = 5
-    @AppStorage("gemmaOffloadTimeout") private var gemmaOffloadTimeout: Int = 5
+    @AppStorage("hotkeyString_paste") private var hotkeyStringPaste = "None"
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
     @AppStorage("appTheme") private var appTheme = "system"
     @AppStorage("hudAppearance") private var hudAppearance = "glass"
+    @AppStorage("hudPositionMode") private var hudPositionMode: HUDPositionMode = .free
     @AppStorage("playAnySound") private var playAnySound = true
     @AppStorage("playSound_Start") private var playSound_Start = true
     @AppStorage("playSound_Error") private var playSound_Error = true
     @AppStorage("playSound_End") private var playSound_End = true
     @ObservedObject private var memoryManager = MessageMemoryManager.shared
-    @ObservedObject private var modelManager = ModelManager.shared
+    @ObservedObject private var transcriptionManager = TranscriptionManager.shared
+    @ObservedObject private var llmManager = LLMManager.shared
     @State private var isShowingSwitchToRamAlert = false
     @State private var isShowingDeleteAudioAlert = false
     @State private var isShowingDuplicateShortcutAlert = false
@@ -34,8 +36,17 @@ struct GeneralSettingsView: View {
     @AppStorage("selectedAudioOutputDeviceUID") private var selectedOutputDeviceUID = ""
     @AppStorage("appVolume") private var appVolume: Double = 1.0
     @AppStorage("historySavesAudio") private var historySavesAudio = true
+    @AppStorage("historySaveLimit") private var historySaveLimit: Int = 0
     @AppStorage("saveStatsEnabled") private var saveStatsEnabled = true
+    @AppStorage("transcriptionUnloadTimeout") private var transcriptionUnloadTimeout: Int = 0
+    @AppStorage("llmUnloadTimeout") private var llmUnloadTimeout: Int = 0
     @State private var isShowingDeleteStatsAlert = false
+    @State private var isShowingTrimHistoryAlert = false
+    @State private var pendingHistoryLimit: Int? = nil
+    @State private var limitSliderIndex: Double = 4.0
+    @State private var launchAtStartup = false
+    @AppStorage("overlayDuration") private var overlayDuration: Double = 15.0
+
     var body: some View {
         VStack(alignment: .leading, spacing: 25) {
             HStack {
@@ -46,27 +57,56 @@ struct GeneralSettingsView: View {
                     .font(.system(size: 28, weight: .bold))
             }
             appThemeSection
+            systemIntegrationSection
             hudAppearanceSection
             appLanguageSection
+            memoryManagementSection
             historyStorageSection
             keyboardShortcutSection
             audioSourceSection
             appSoundsSection
             autoUpdateDictionarySection
-            offloadModelsSection
             appDataDirectorySection
+            dataManagementSection
             footerSection
         }
         .onAppear {
             setupEventMonitor()
             DispatchQueue.global(qos: .userInitiated).async {
-                let devices = AudioManager().getAudioInputDevices()
-                let outDevices = AudioManager().getAudioOutputDevices()
+                let devices = AudioManager.shared.getAudioInputDevices()
+                let outDevices = AudioManager.shared.getAudioOutputDevices()
                 DispatchQueue.main.async {
                     self.audioDevices = devices
                     self.audioOutputDevices = outDevices
                 }
             }
+            let limits = [5, 10, 50, 100, 0]
+            if let idx = limits.firstIndex(of: historySaveLimit) {
+                limitSliderIndex = Double(idx)
+            } else {
+                limitSliderIndex = 4.0
+            }
+            launchAtStartup = SMAppService.mainApp.status == .enabled
+        }
+        .onChange(of: limitSliderIndex) {
+            let newIndex = limitSliderIndex
+            let rounded = round(newIndex)
+            if rounded != newIndex { limitSliderIndex = rounded; return }
+            let limits = [5, 10, 50, 100, 0]
+            let newLimit = limits[Int(rounded)]
+            if newLimit == historySaveLimit { return }
+            
+            let currentCount = MessageMemoryManager.shared.messages.count
+            if newLimit != 0 && currentCount > newLimit {
+                pendingHistoryLimit = newLimit
+                isShowingTrimHistoryAlert = true
+            } else {
+                historySaveLimit = newLimit
+                MessageMemoryManager.shared.trimHistoryIfNeeded()
+            }
+        }
+        .onChange(of: selectedDeviceUID) {
+            AudioManager.shared.restartEngineForDeviceChange()
         }
         .onDisappear {
             removeEventMonitor()
@@ -81,6 +121,24 @@ struct GeneralSettingsView: View {
             }
         } message: {
             Text(t("Switching to RAM-only means your persistent history file will be deleted and your current history will disappear forever once you close the application. Are you sure you want to continue?"))
+        }
+        .alert(t("Trim History"), isPresented: $isShowingTrimHistoryAlert) {
+            Button(t("Proceed"), role: .destructive) {
+                if let limit = pendingHistoryLimit {
+                    historySaveLimit = limit
+                    MessageMemoryManager.shared.trimHistoryIfNeeded()
+                    pendingHistoryLimit = nil
+                }
+            }
+            Button(t("Cancel"), role: .cancel) {
+                let limits = [5, 10, 50, 100, 0]
+                if let idx = limits.firstIndex(of: historySaveLimit) {
+                    limitSliderIndex = Double(idx)
+                }
+                pendingHistoryLimit = nil
+            }
+        } message: {
+            Text(t("Reducing the history limit will permanently delete older records that exceed this new limit. Are you sure you want to continue?"))
         }
         .alert(t("Delete Audio History"), isPresented: $isShowingDeleteAudioAlert) {
             Button(t("Delete Audio"), role: .destructive) {
@@ -177,6 +235,21 @@ struct GeneralSettingsView: View {
                 
             Divider()
                 .padding(.vertical, 5)
+                
+            HStack {
+                Text(t("Number of saved records"))
+                    .font(.system(size: 14, weight: .medium))
+                Spacer()
+                Slider(value: $limitSliderIndex, in: 0...4, step: 1)
+                    .accentColor(appColorScheme == .dark ? .white : .black)
+                    .frame(width: 150)
+                let limits = [5, 10, 50, 100, 0]
+                let currentVal = limits[Int(round(limitSliderIndex))]
+                Text(currentVal == 0 ? t("All") : "\(currentVal)")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(minWidth: 70, alignment: .trailing)
+            }
+            .padding(.vertical, 2)
                 
             Toggle(t("Save Audio with History"), isOn: Binding(
                 get: { historySavesAudio },
@@ -306,6 +379,7 @@ struct GeneralSettingsView: View {
                 hotkeyRow(title: "Cancel Recording", type: .cancel, hotkeyStringVal: hotkeyStringCancel)
                 hotkeyRow(title: "Pause/Resume", type: .pause, hotkeyStringVal: hotkeyStringPause)
                 hotkeyRow(title: "Change Assistant", type: .assistant, hotkeyStringVal: hotkeyStringAssistant)
+                hotkeyRow(title: "Paste Last Transcription", type: .paste, hotkeyStringVal: hotkeyStringPaste)
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.8), value: hotkeyMode)
         }
@@ -348,8 +422,9 @@ struct GeneralSettingsView: View {
                 }) {
                     let isDark = appColorScheme == .dark
                     let isRecording = activeRecordingType == type
+                    let displayStr = hotkeyStringVal == "None" ? t("None") : hotkeyStringVal
                     HStack {
-                        Text(isRecording ? t("Press keys...") : hotkeyStringVal)
+                        Text(isRecording ? t("Press keys...") : displayStr)
                             .font(.system(size: 16, weight: .bold))
                             .foregroundColor(isRecording ? (isDark ? .black : .white) : .primary)
                         Spacer()
@@ -450,9 +525,9 @@ struct GeneralSettingsView: View {
                     Image(systemName: "speaker.fill")
                         .foregroundColor(.secondary)
                         .font(.system(size: 12))
-                    Slider(value: $appVolume, in: 0...1)
-                        .frame(width: 150)
+                    Slider(value: $appVolume, in: 0...1, step: 0.1)
                         .accentColor(appColorScheme == .dark ? .white : .black)
+                        .frame(width: 150)
                     Image(systemName: "speaker.wave.3.fill")
                         .foregroundColor(.secondary)
                         .font(.system(size: 12))
@@ -465,7 +540,6 @@ struct GeneralSettingsView: View {
             Toggle(t("Play sounds"), isOn: $playAnySound)
                 .toggleStyle(CustomToggleStyle())
                 .font(.system(size: 14, weight: .bold))
-                .fixedSize()
             if playAnySound {
                 Divider()
                     .background(Color.white.opacity(0.05))
@@ -473,15 +547,12 @@ struct GeneralSettingsView: View {
                     Toggle(t("Recording start"), isOn: $playSound_Start)
                         .toggleStyle(CustomToggleStyle())
                         .font(.system(size: 12))
-                        .fixedSize()
                     Toggle(t("Error / Not recognized / No text field"), isOn: $playSound_Error)
                         .toggleStyle(CustomToggleStyle())
                         .font(.system(size: 12))
-                        .fixedSize()
                     Toggle(t("End (Success)"), isOn: $playSound_End)
                         .toggleStyle(CustomToggleStyle())
                         .font(.system(size: 12))
-                        .fixedSize()
                 }
                 .padding(.leading, 5)
             }
@@ -525,79 +596,6 @@ struct GeneralSettingsView: View {
                 .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
-    @ViewBuilder
-    private var offloadModelsSection: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            Text(t("Auto-Unload AI Models"))
-                .font(.system(size: 16, weight: .semibold))
-            
-            Text(t("Frees up RAM when Sonor is inactive. Reloading models after an unload may take 1-2 seconds."))
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                
-            HStack(alignment: .top, spacing: 30) {
-                offloadColumn(isWhisper: true, title: "Whisper Model (Transcription)", timeoutBinding: $whisperOffloadTimeout, isLoaded: modelManager.isWhisperLoaded, lastUsed: modelManager.lastWhisperUsageTime, initTime: modelManager.whisperInitializeTime)
-                offloadColumn(isWhisper: false, title: "Gemma Model (Assistant)", timeoutBinding: $gemmaOffloadTimeout, isLoaded: modelManager.isGemmaLoaded, lastUsed: modelManager.lastGemmaUsageTime, initTime: modelManager.gemmaInitializeTime)
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
-        )
-    }
-    
-    @ViewBuilder
-    private func offloadColumn(isWhisper: Bool, title: String, timeoutBinding: Binding<Int>, isLoaded: Bool, lastUsed: Date?, initTime: TimeInterval?) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .font(.system(size: 14, weight: .medium))
-            
-            Picker("", selection: timeoutBinding) {
-                Text(t("Never")).tag(0)
-                Text(t("1 minute")).tag(1)
-                Text(t("5 minutes")).tag(5)
-                Text(t("10 minutes")).tag(10)
-                Text(t("30 minutes")).tag(30)
-            }
-            .labelsHidden()
-            .pickerStyle(MenuPickerStyle())
-            .frame(width: 150)
-            .onChange(of: timeoutBinding.wrappedValue) { _, _ in
-                if isWhisper {
-                    NotificationCenter.default.post(name: NSNotification.Name("WhisperOffloadTimeoutChanged"), object: nil)
-                } else {
-                    NotificationCenter.default.post(name: NSNotification.Name("GemmaOffloadTimeoutChanged"), object: nil)
-                }
-            }
-            
-            VStack(alignment: .leading, spacing: 2) {
-                let statusText = isLoaded ? t("Loaded in RAM") : t("Offloaded")
-                Text("\(t("Status")): \(statusText)")
-                    .font(.system(size: 12))
-                    .foregroundColor(isLoaded ? .green : .secondary)
-                
-                if let lastUsed = lastUsed {
-                    Text("\(t("Last used")): \(lastUsed.formatted(date: .omitted, time: .standard))")
-                        .font(.system(size: 12))
-                        .foregroundColor(isLoaded ? .green : .secondary)
-                }
-                
-                if let initTime = initTime {
-                    Text("\(t("Init time")): \(String(format: "%.2fs", initTime))")
-                        .font(.system(size: 12))
-                        .foregroundColor(isLoaded ? .green : .secondary)
-                }
-            }
-        }
-    }
-
     @ViewBuilder
     private var appDataDirectorySection: some View {
         VStack(alignment: .leading, spacing: 15) {
@@ -760,7 +758,53 @@ struct GeneralSettingsView: View {
             Text(t("Choose whether the assistant overlay should be slightly transparent or have a solid background."))
                 .font(.system(size: 12))
                 .foregroundColor(.secondary)
+            
+            Divider()
+                .padding(.vertical, 5)
+            
+            VStack(alignment: .leading, spacing: 15) {
+                Text(t("Overlay Position"))
+                    .font(.system(size: 16, weight: .semibold))
+                
+                HStack {
+                    Text(t("Overlay Position"))
+                        .font(.system(size: 13))
+                    Spacer()
+                    Picker("", selection: $hudPositionMode) {
+                        ForEach(HUDPositionMode.allCases) { mode in
+                            Text(t(mode.localizedName)).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .labelsHidden()
+                    .font(.system(size: 13))
+                    .id(localizer.appLanguage)
+                }
+                
+                Text(t("Choose where the overlay appears. Top and Bottom lock the position, while Free allows you to drag it."))
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
                 .fixedSize(horizontal: false, vertical: true)
+                
+            Divider()
+                .padding(.vertical, 5)
+            
+            HStack {
+                Text(t("Duration (when no field is detected)"))
+                    .font(.system(size: 13))
+                Spacer()
+                Slider(value: $overlayDuration, in: 2...30, step: 1.0)
+                    .tint(.primary)
+                    .frame(width: 200)
+                Text("\(Int(overlayDuration))s")
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05))
+                    .cornerRadius(6)
+            }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -832,6 +876,82 @@ struct GeneralSettingsView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
+    }
+    
+    @ViewBuilder
+    private var memoryManagementSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("Memory Management"))
+                .font(.system(size: 16, weight: .semibold))
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text(t("Transcription Model Inactivity"))
+                        .font(.system(size: 13))
+                    Spacer()
+                    Picker("", selection: $transcriptionUnloadTimeout) {
+                        Text(t("Never")).tag(0)
+                        Text(t("1 min")).tag(1)
+                        Text(t("2 min")).tag(2)
+                        Text(t("5 min")).tag(5)
+                        Text(t("10 min")).tag(10)
+                        Text(t("30 min")).tag(30)
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 150)
+                }
+                modelStatusColumn(isLoaded: transcriptionManager.isLoaded, lastUsed: transcriptionManager.lastUsedTime, initTime: transcriptionManager.initializeTime)
+                HStack {
+                    Text(t("LLM Model Inactivity"))
+                        .font(.system(size: 13))
+                    Spacer()
+                    Picker("", selection: $llmUnloadTimeout) {
+                        Text(t("Never")).tag(0)
+                        Text(t("1 min")).tag(1)
+                        Text(t("2 min")).tag(2)
+                        Text(t("5 min")).tag(5)
+                        Text(t("10 min")).tag(10)
+                        Text(t("30 min")).tag(30)
+                    }
+                    .pickerStyle(.menu)
+                    .frame(width: 150)
+                }
+                modelStatusColumn(isLoaded: llmManager.isLoaded, lastUsed: llmManager.lastUsedTime, initTime: llmManager.initializeTime)
+                Text(t("Models will be unloaded from memory after the specified time of inactivity to free up RAM/VRAM."))
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private func modelStatusColumn(isLoaded: Bool, lastUsed: Date?, initTime: TimeInterval?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("\(t("Status")): \(isLoaded ? t("Loaded in RAM") : t("Offloaded"))")
+                .font(.system(size: 11))
+                .foregroundColor(isLoaded ? .green : .secondary)
+
+            if let lastUsed = lastUsed {
+                Text("\(t("Last used")): \(lastUsed.formatted(date: .omitted, time: .standard))")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+
+            if let initTime = initTime {
+                Text("\(t("Init time")): \(String(format: "%.2fs", initTime))")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+        }
     }
 
     private func setupEventMonitor() {
@@ -986,7 +1106,7 @@ struct GeneralSettingsView: View {
     }
     
     private func isShortcutInUse(keyCode: Int, modifiers: Int, ignoringType: RecordingHotkeyType?) -> Bool {
-        let types: [RecordingHotkeyType] = [.main, .cancel, .pause, .assistant]
+        let types: [RecordingHotkeyType] = [.main, .cancel, .pause, .assistant, .paste]
         for type in types {
             if type == ignoringType { continue }
             let codeKey = type == .main ? "hotkeyCode" : "hotkeyCode_\(type.rawValue)"
@@ -1007,5 +1127,107 @@ struct GeneralSettingsView: View {
             }
         }
         return false
+    }
+
+    @ViewBuilder
+    private var systemIntegrationSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("System Integration"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            Toggle(isOn: Binding(
+                get: { launchAtStartup },
+                set: { newValue in
+                    launchAtStartup = newValue
+                    do {
+                        if newValue {
+                            try SMAppService.mainApp.register()
+                        } else {
+                            try SMAppService.mainApp.unregister()
+                        }
+                    } catch {
+                        print("Failed to update launch at startup status: \(error)")
+                        // Revert on failure
+                        launchAtStartup = SMAppService.mainApp.status == .enabled
+                    }
+                }
+            )) {
+                Text(t("Launch at system startup"))
+                    .font(.system(size: 14, weight: .medium))
+            }
+            .toggleStyle(CustomToggleStyle())
+            
+            Text(t("Automatically start Sonor when you log in to your Mac."))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var dataManagementSection: some View {
+        VStack(alignment: .leading, spacing: 15) {
+            Text(t("Data Management"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            HStack(spacing: 15) {
+                Button(action: {
+                    DataExportImportService.shared.exportData()
+                }) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.up")
+                            .font(.system(size: 13))
+                        Text(t("Export Data (JSON)"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(0.1))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+
+                Button(action: {
+                    DataExportImportService.shared.importData()
+                }) {
+                    HStack {
+                        Image(systemName: "square.and.arrow.down")
+                            .font(.system(size: 13))
+                        Text(t("Import Data (JSON)"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.primary.opacity(0.1))
+                    .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+            }
+            
+            Text(t("Export or import all your app settings, custom assistants, dictionary, and history. Selected AI models are not exported."))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
     }
 }
