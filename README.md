@@ -2,8 +2,7 @@
 
 > **Privacy-First, On-Device Voice Intelligence for macOS.**
 
-Sonor is a modern, minimalist macOS application designed for high-performance voice-to-text transcription and intelligent text processing—running **100% locally and offline** on your device. Powered by `whisper.cpp` with 
-Apple Silicon Metal acceleration and local LLMs (Gemma), your audio and data never leave your Mac.
+Sonor is a modern, minimalist macOS application designed for high-performance voice-to-text transcription and intelligent text processing—running **100% locally and offline** on your device. Powered by Apple's **MLX framework** for state-of-the-art hardware acceleration, your audio and data never leave your Mac.
 
 <img width="1280" height="720" alt="2" src="https://github.com/user-attachments/assets/98c5b5db-fe1a-44bf-9bf1-b4fb3ffd6e45" />
 
@@ -42,9 +41,10 @@ Then, open `Sonor.xcodeproj` in Xcode and hit Run!
 ## ✨ Key Features
 
 * **Local-First & Privacy-First:** No cloud API endpoints, no data tracking, no external servers. Complete peace of mind.
-* **Hardware Accelerated:** Deep integration with `whisper.cpp` optimized for Apple Silicon (M1/M2/M3/M4 chips and newer) using Metal.
-* **Model Manager:** Built-in dashboard to easily download, manage, and delete Whisper and Gemma models directly inside the app.
-* **Productivity Suite:** Advanced history management (collapsible layouts), custom Snippets, Assistants, and custom Dictionaries.
+* **Hardware Accelerated:** Deep integration with Apple's MLX framework optimized for Apple Silicon (M1/M2/M3/M4 chips and newer).
+* **Model Manager:** Built-in dashboard to easily download, manage, and compare a wide range of MLX transcription models directly inside the app.
+* **Productivity Suite:** Advanced history management (interactive playback), Assistant-specific workflows, custom Snippets, and custom Dictionaries.
+* **Smart Interactions:** Automatic hotkeys, flawless media controls (background music muting), and customizable backup/export systems.
 * **Speech Analytics:** Track your voice metrics with real-time stats and an innovative Speaking Rate (WPM) chart.
 
 <img width="1280" height="720" alt="6" src="https://github.com/user-attachments/assets/1bd1303f-2cdc-449d-b4f5-2da91c1bb1ec" />
@@ -53,7 +53,7 @@ Then, open `Sonor.xcodeproj` in Xcode and hit Run!
 ## 🛠️ Tech Stack
 
 * **Frontend:** Swift, SwiftUI (optimized for macOS)
-* **Core Engine:** C++ (`whisper.cpp`, Gemma runtime)
+* **Core Engine:** Apple MLX Framework (MLX Swift)
 
 ---
 
