@@ -537,8 +537,8 @@ struct GeneralSettingsView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 
             HStack(alignment: .top, spacing: 30) {
-                offloadColumn(title: "Whisper Model (Transcription)", timeoutBinding: $whisperOffloadTimeout, isLoaded: modelManager.isWhisperLoaded, lastUsed: modelManager.lastWhisperUsageTime, initTime: modelManager.whisperInitializeTime)
-                offloadColumn(title: "Gemma Model (Assistant)", timeoutBinding: $gemmaOffloadTimeout, isLoaded: modelManager.isGemmaLoaded, lastUsed: modelManager.lastGemmaUsageTime, initTime: modelManager.gemmaInitializeTime)
+                offloadColumn(isWhisper: true, title: "Whisper Model (Transcription)", timeoutBinding: $whisperOffloadTimeout, isLoaded: modelManager.isWhisperLoaded, lastUsed: modelManager.lastWhisperUsageTime, initTime: modelManager.whisperInitializeTime)
+                offloadColumn(isWhisper: false, title: "Gemma Model (Assistant)", timeoutBinding: $gemmaOffloadTimeout, isLoaded: modelManager.isGemmaLoaded, lastUsed: modelManager.lastGemmaUsageTime, initTime: modelManager.gemmaInitializeTime)
             }
         }
         .padding(20)
@@ -554,7 +554,7 @@ struct GeneralSettingsView: View {
     }
     
     @ViewBuilder
-    private func offloadColumn(title: String, timeoutBinding: Binding<Int>, isLoaded: Bool, lastUsed: Date?, initTime: TimeInterval?) -> some View {
+    private func offloadColumn(isWhisper: Bool, title: String, timeoutBinding: Binding<Int>, isLoaded: Bool, lastUsed: Date?, initTime: TimeInterval?) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.system(size: 14, weight: .medium))
@@ -570,7 +570,7 @@ struct GeneralSettingsView: View {
             .pickerStyle(MenuPickerStyle())
             .frame(width: 150)
             .onChange(of: timeoutBinding.wrappedValue) { _, _ in
-                if title.contains("Whisper") {
+                if isWhisper {
                     NotificationCenter.default.post(name: NSNotification.Name("WhisperOffloadTimeoutChanged"), object: nil)
                 } else {
                     NotificationCenter.default.post(name: NSNotification.Name("GemmaOffloadTimeoutChanged"), object: nil)
