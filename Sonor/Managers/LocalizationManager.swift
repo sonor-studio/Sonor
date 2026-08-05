@@ -3077,6 +3077,28 @@ public class LocalizationManager: ObservableObject {
             "Inicializando", 
             "初始化中", 
         ],
+        "Initializing Speech Model...": [
+            "Initializing Speech Model...", 
+            "Inicjowanie modelu mowy...", 
+            "Sprachmodell initialisieren...", 
+            "Inicializando modelo de voz...", 
+            "Initialisation du modèle vocal...", 
+            "Inizializzazione modello vocale...", 
+            "音声モデルを初期化中...", 
+            "Inicializando modelo de voz...", 
+            "初始化语音模型..."
+        ],
+        "Initializing Assistant Model...": [
+            "Initializing Assistant Model...",
+            "Inicjowanie modelu asystenta...",
+            "Assistenzmodell initialisieren...",
+            "Inicializando modelo de asistente...",
+            "Initialisation du modèle d'assistant...",
+            "Inizializzazione modello assistente...",
+            "アシスタントモデルを初期化中...",
+            "Inicializando modelo de assistente...",
+            "初始化助手模型..."
+        ],
         "Join Sonor": [
             "Join Sonor", 
             "Dołącz do Sonor", 

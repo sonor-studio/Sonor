@@ -17,7 +17,7 @@ struct CapsuleHUDView: View {
         }
     }
     private var isInitializing: Bool {
-        return controller.statusText == "Initializing"
+        return controller.statusText.hasPrefix("Initializing")
     }
     private var isFinalState: Bool {
         let text = controller.statusText
@@ -353,7 +353,7 @@ struct CapsuleHUDView: View {
                             Button(action: {
                             }) {
                                 ZStack {
-                                    if !isProcessing && controller.statusText != "Initializing" {
+                                    if !isProcessing && !controller.statusText.hasPrefix("Initializing") {
                                         audioWavesView
                                             .transition(.asymmetric(insertion: .scale(scale: 0.8).combined(with: .opacity), removal: .scale(scale: 0.5).combined(with: .opacity)))
                                     } else {
@@ -491,7 +491,7 @@ struct CapsuleHUDView: View {
             }
         }
         .onReceive(recordingTimer) { _ in
-            if controller.isRecording && !controller.isPaused && controller.statusText != "Initializing" {
+            if controller.isRecording && !controller.isPaused && !controller.statusText.hasPrefix("Initializing") {
                 recordingDuration += 1
             }
         }
