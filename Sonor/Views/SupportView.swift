@@ -31,15 +31,7 @@ struct SupportView: View {
                             .foregroundColor(.primary)
                     }
                     Spacer()
-                    if let image = NSImage(contentsOfFile: "/Users/macbook/Desktop/Dev/Sonor/Sonor/Resources/qr-code.png") {
-                        Image(nsImage: image)
-                            .resizable()
-                            .interpolation(.high)
-                            .scaledToFit()
-                            .frame(width: 160, height: 160)
-                            .cornerRadius(12)
-                            .shadow(color: Color.primary.opacity(0.15), radius: 8, x: 0, y: 4)
-                    } else if let bundlePath = Bundle.main.path(forResource: "qr-code", ofType: "png"), let image = NSImage(contentsOfFile: bundlePath) {
+                    if let bundlePath = Bundle.main.path(forResource: "qr-code", ofType: "png"), let image = NSImage(contentsOfFile: bundlePath) {
                         Image(nsImage: image)
                             .resizable()
                             .interpolation(.high)
