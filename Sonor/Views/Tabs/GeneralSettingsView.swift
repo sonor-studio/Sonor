@@ -10,6 +10,8 @@ struct GeneralSettingsView: View {
     @AppStorage("hotkeyString_cancel") private var hotkeyStringCancel = "Ctrl + Opt + Z"
     @AppStorage("hotkeyString_pause") private var hotkeyStringPause = "Ctrl + Opt + X"
     @AppStorage("hotkeyString_assistant") private var hotkeyStringAssistant = "Ctrl + Opt + C"
+    @AppStorage("whisperOffloadTimeout") private var whisperOffloadTimeout: Int = 5
+    @AppStorage("gemmaOffloadTimeout") private var gemmaOffloadTimeout: Int = 5
     @AppStorage("hotkeyMode") private var hotkeyMode: HotkeyMode = .click
     @AppStorage("appTheme") private var appTheme = "system"
     @AppStorage("hudAppearance") private var hudAppearance = "glass"
@@ -18,6 +20,7 @@ struct GeneralSettingsView: View {
     @AppStorage("playSound_Error") private var playSound_Error = true
     @AppStorage("playSound_End") private var playSound_End = true
     @ObservedObject private var memoryManager = MessageMemoryManager.shared
+    @ObservedObject private var modelManager = ModelManager.shared
     @State private var isShowingSwitchToRamAlert = false
     @State private var isShowingDeleteAudioAlert = false
     @State private var isShowingDuplicateShortcutAlert = false
@@ -50,6 +53,7 @@ struct GeneralSettingsView: View {
             audioSourceSection
             appSoundsSection
             autoUpdateDictionarySection
+            offloadModelsSection
             appDataDirectorySection
             footerSection
         }
@@ -521,6 +525,79 @@ struct GeneralSettingsView: View {
                 .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
     }
+    @ViewBuilder
+    private var offloadModelsSection: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            Text(t("Auto-Unload AI Models"))
+                .font(.system(size: 16, weight: .semibold))
+            
+            Text(t("Frees up RAM when Sonor is inactive. Reloading models after an unload may take 1-2 seconds."))
+                .font(.system(size: 12))
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                
+            HStack(alignment: .top, spacing: 30) {
+                offloadColumn(title: "Whisper Model (Transcription)", timeoutBinding: $whisperOffloadTimeout, isLoaded: modelManager.isWhisperLoaded, lastUsed: modelManager.lastWhisperUsageTime, initTime: modelManager.whisperInitializeTime)
+                offloadColumn(title: "Gemma Model (Assistant)", timeoutBinding: $gemmaOffloadTimeout, isLoaded: modelManager.isGemmaLoaded, lastUsed: modelManager.lastGemmaUsageTime, initTime: modelManager.gemmaInitializeTime)
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(appColorScheme == .dark ? Color.white.opacity(0.02) : Color.black.opacity(0.01))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
+        )
+    }
+    
+    @ViewBuilder
+    private func offloadColumn(title: String, timeoutBinding: Binding<Int>, isLoaded: Bool, lastUsed: Date?, initTime: TimeInterval?) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+            
+            Picker("", selection: timeoutBinding) {
+                Text(t("Never")).tag(0)
+                Text(t("1 minute")).tag(1)
+                Text(t("5 minutes")).tag(5)
+                Text(t("10 minutes")).tag(10)
+                Text(t("30 minutes")).tag(30)
+            }
+            .labelsHidden()
+            .pickerStyle(MenuPickerStyle())
+            .frame(width: 150)
+            .onChange(of: timeoutBinding.wrappedValue) { _, _ in
+                if title.contains("Whisper") {
+                    NotificationCenter.default.post(name: NSNotification.Name("WhisperOffloadTimeoutChanged"), object: nil)
+                } else {
+                    NotificationCenter.default.post(name: NSNotification.Name("GemmaOffloadTimeoutChanged"), object: nil)
+                }
+            }
+            
+            VStack(alignment: .leading, spacing: 2) {
+                let statusText = isLoaded ? t("Loaded in RAM") : t("Offloaded")
+                Text("\(t("Status")): \(statusText)")
+                    .font(.system(size: 12))
+                    .foregroundColor(isLoaded ? .green : .secondary)
+                
+                if let lastUsed = lastUsed {
+                    Text("\(t("Last used")): \(lastUsed.formatted(date: .omitted, time: .standard))")
+                        .font(.system(size: 12))
+                        .foregroundColor(isLoaded ? .green : .secondary)
+                }
+                
+                if let initTime = initTime {
+                    Text("\(t("Init time")): \(String(format: "%.2fs", initTime))")
+                        .font(.system(size: 12))
+                        .foregroundColor(isLoaded ? .green : .secondary)
+                }
+            }
+        }
+    }
+
     @ViewBuilder
     private var appDataDirectorySection: some View {
         VStack(alignment: .leading, spacing: 15) {

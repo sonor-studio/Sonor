@@ -42,6 +42,34 @@ class AppController: NSObject, ObservableObject {
     private let audioManager = AudioManager()
     private var sonorContext: SonorContext? // C++ interop for the local Whisper model
     
+    private var whisperOffloadTimer: Timer?
+    
+    private func startWhisperIdleTimer() {
+        whisperOffloadTimer?.invalidate()
+        whisperOffloadTimer = nil
+        let actualTimeout = UserDefaults.standard.object(forKey: "whisperOffloadTimeout") as? Int ?? 5
+        guard actualTimeout > 0 else { return }
+        
+        whisperOffloadTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(actualTimeout * 60), repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.performWhisperOffload()
+            }
+        }
+    }
+    
+    private func cancelWhisperIdleTimer() {
+        whisperOffloadTimer?.invalidate()
+        whisperOffloadTimer = nil
+    }
+    
+    private func performWhisperOffload() {
+        self.sonorContext = nil
+        ModelManager.shared.isWhisperLoaded = false
+        whisperOffloadTimer?.invalidate()
+        whisperOffloadTimer = nil
+        print("Whisper model offloaded due to idle timeout.")
+    }
+    
     /// The process ID of the external application the user was focusing before recording started.
     private var targetAppPID: pid_t = 0  
     
@@ -69,7 +97,7 @@ class AppController: NSObject, ObservableObject {
         }
         NotificationCenter.default.addObserver(forName: Notification.Name("ReleaseWhisperContext"), object: nil, queue: .main) { [weak self] _ in
             Task { @MainActor [weak self] in
-                self?.sonorContext = nil
+                self?.performWhisperOffload()
             }
         }
         NotificationCenter.default.addObserver(forName: Notification.Name("PermissionsRevoked"), object: nil, queue: .main) { [weak self] _ in
@@ -77,6 +105,14 @@ class AppController: NSObject, ObservableObject {
                 guard let self = self else { return }
                 if self.isRecording || self.isCurrentlyProcessing {
                     self.cancelRecording()
+                }
+            }
+        }
+        NotificationCenter.default.addObserver(forName: Notification.Name("WhisperOffloadTimeoutChanged"), object: nil, queue: .main) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                if ModelManager.shared.isWhisperLoaded {
+                    self.startWhisperIdleTimer()
                 }
             }
         }
@@ -241,10 +277,14 @@ class AppController: NSObject, ObservableObject {
                     Task.detached {
                         let path = await MainActor.run { return ModelManager.shared.whisperModelURL.path }
                         if FileManager.default.fileExists(atPath: path) {
+                            let startTime = CFAbsoluteTimeGetCurrent()
                             let context = SonorContext(modelPath: path)
+                            let timeTaken = CFAbsoluteTimeGetCurrent() - startTime
                             await MainActor.run {
                                 guard self.currentRecordingSessionID == sessionID else { return }
                                 self.sonorContext = context
+                                ModelManager.shared.isWhisperLoaded = true
+                                ModelManager.shared.whisperInitializeTime = timeTaken
                                 self.startRecordingProcess(selectedMode: selectedMode, sessionID: sessionID)
                             }
                         } else {
@@ -262,6 +302,8 @@ class AppController: NSObject, ObservableObject {
     }
     private func startRecordingProcess(selectedMode: VoiceMode, sessionID: UUID) {
         startRecordingTask?.cancel()
+        cancelWhisperIdleTimer()
+        ModelManager.shared.lastWhisperUsageTime = Date()
         startRecordingTask = Task.detached {
             try? await Task.sleep(nanoseconds: 150_000_000)
             if Task.isCancelled { return }
@@ -467,6 +509,11 @@ class AppController: NSObject, ObservableObject {
             let initialPrompt = snippetKeys.isEmpty ? nil : snippetKeys.joined(separator: ", ")
             
             let transcribedText = await context.transcribe(audioSamples: samples, language: "auto", initialPrompt: initialPrompt)
+            await MainActor.run {
+                ModelManager.shared.lastWhisperUsageTime = Date()
+                self.startWhisperIdleTimer()
+            }
+            
             if Task.isCancelled {
                 self.hideHUDAfterDelay()
                 return

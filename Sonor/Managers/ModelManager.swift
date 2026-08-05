@@ -20,6 +20,14 @@ final class ModelManager: ObservableObject {
     @Published var whisperState: DownloadState = .notDownloaded
     @Published var gemmaState: DownloadState = .notDownloaded
     
+    @Published var isWhisperLoaded: Bool = false
+    @Published var lastWhisperUsageTime: Date? = nil
+    @Published var whisperInitializeTime: TimeInterval? = nil
+    
+    @Published var isGemmaLoaded: Bool = false
+    @Published var lastGemmaUsageTime: Date? = nil
+    @Published var gemmaInitializeTime: TimeInterval? = nil
+    
     @Published var showModelsRequiredModal = false
     @Published var downloadError: String? = nil
     @Published var showDownloadErrorModal = false
