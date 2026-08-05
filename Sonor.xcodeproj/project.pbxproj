@@ -631,11 +631,11 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/include,
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/include,
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/src,
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/src,
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/src/ggml-metal",
+					$(SRCROOT)/sonor.cpp/include,
+					$(SRCROOT)/sonor.cpp/ggml/include,
+					$(SRCROOT)/sonor.cpp/src,
+					$(SRCROOT)/sonor.cpp/ggml/src,
+					"$(SRCROOT)/sonor.cpp/ggml/src/ggml-metal",
 				);
 				INFOPLIST_FILE = Sonor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Sonor;
@@ -648,26 +648,26 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/src",
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src",
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src/ggml-metal",
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src/ggml-blas",
+					"$(SRCROOT)/sonor.cpp/build/src",
+					"$(SRCROOT)/sonor.cpp/build/ggml/src",
+					"$(SRCROOT)/sonor.cpp/build/ggml/src/ggml-metal",
+					"$(SRCROOT)/sonor.cpp/build/ggml/src/ggml-blas",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/src,
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src,
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src/ggml-metal",
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src/ggml-blas",
+					$(SRCROOT)/sonor.cpp/build/src,
+					$(SRCROOT)/sonor.cpp/build/ggml/src,
+					"$(SRCROOT)/sonor.cpp/build/ggml/src/ggml-metal",
+					"$(SRCROOT)/sonor.cpp/build/ggml/src/ggml-blas",
 					"$(PROJECT_DIR)/sonor.cpp/build/ggml/src",
 					"$(PROJECT_DIR)/sonor.cpp/build/src",
-					"\"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/examples\"",
-					"\"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src/ggml-cpu\"",
+					"\"$(SRCROOT)/sonor.cpp/build/examples\"",
+					"\"$(SRCROOT)/sonor.cpp/build/ggml/src/ggml-cpu\"",
 				);
 				MACH_O_TYPE = mh_execute;
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 0.9.2;
-				MTL_HEADER_SEARCH_PATHS = "$(inherited) /Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/include /Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/include /Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/src /Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/src /Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/src/ggml-metal";
+				MTL_HEADER_SEARCH_PATHS = "$(inherited) $(SRCROOT)/sonor.cpp/include $(SRCROOT)/sonor.cpp/ggml/include $(SRCROOT)/sonor.cpp/src $(SRCROOT)/sonor.cpp/ggml/src $(SRCROOT)/sonor.cpp/ggml/src/ggml-metal";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-framework",
@@ -709,11 +709,11 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/include,
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/include,
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/src,
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/src,
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/src/ggml-metal",
+					$(SRCROOT)/sonor.cpp/include,
+					$(SRCROOT)/sonor.cpp/ggml/include,
+					$(SRCROOT)/sonor.cpp/src,
+					$(SRCROOT)/sonor.cpp/ggml/src,
+					"$(SRCROOT)/sonor.cpp/ggml/src/ggml-metal",
 				);
 				INFOPLIST_FILE = Sonor/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = Sonor;
@@ -726,26 +726,26 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/src",
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src",
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src/ggml-metal",
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src/ggml-blas",
+					"$(SRCROOT)/sonor.cpp/build/src",
+					"$(SRCROOT)/sonor.cpp/build/ggml/src",
+					"$(SRCROOT)/sonor.cpp/build/ggml/src/ggml-metal",
+					"$(SRCROOT)/sonor.cpp/build/ggml/src/ggml-blas",
 				);
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/src,
-					/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src,
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src/ggml-metal",
-					"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src/ggml-blas",
+					$(SRCROOT)/sonor.cpp/build/src,
+					$(SRCROOT)/sonor.cpp/build/ggml/src,
+					"$(SRCROOT)/sonor.cpp/build/ggml/src/ggml-metal",
+					"$(SRCROOT)/sonor.cpp/build/ggml/src/ggml-blas",
 					"$(PROJECT_DIR)/sonor.cpp/build/ggml/src",
 					"$(PROJECT_DIR)/sonor.cpp/build/src",
-					"\"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/examples\"",
-					"\"/Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/build/ggml/src/ggml-cpu\"",
+					"\"$(SRCROOT)/sonor.cpp/build/examples\"",
+					"\"$(SRCROOT)/sonor.cpp/build/ggml/src/ggml-cpu\"",
 				);
 				MACH_O_TYPE = mh_execute;
 				MACOSX_DEPLOYMENT_TARGET = 14.6;
 				MARKETING_VERSION = 0.9.2;
-				MTL_HEADER_SEARCH_PATHS = "$(inherited) /Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/include /Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/include /Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/src /Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/src /Users/oncloud/Projects/OnCloud/Contribution/Sonor/sonor.cpp/ggml/src/ggml-metal";
+				MTL_HEADER_SEARCH_PATHS = "$(inherited) $(SRCROOT)/sonor.cpp/include $(SRCROOT)/sonor.cpp/ggml/include $(SRCROOT)/sonor.cpp/src $(SRCROOT)/sonor.cpp/ggml/src $(SRCROOT)/sonor.cpp/ggml/src/ggml-metal";
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-framework",
