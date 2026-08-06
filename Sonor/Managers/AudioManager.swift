@@ -67,6 +67,11 @@ class AudioManager: ObservableObject {
     
     private static let deviceChangeProc: AudioObjectPropertyListenerProc = { _, _, _, clientData in
         guard let clientData = clientData else { return noErr }
+        
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: NSNotification.Name("AudioDevicesDidChange"), object: nil)
+        }
+        
         let manager = Unmanaged<AudioManager>.fromOpaque(clientData).takeUnretainedValue()
         if !manager.isRecording {
             // Device changed while not recording — rebuild engine with new device

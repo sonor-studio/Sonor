@@ -885,9 +885,33 @@ struct GeneralSettingsView: View {
                 
             VStack(alignment: .leading, spacing: 20) {
                 // Transcription Engine Row
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text(t("Transcription Model Inactivity"))
+                        Text(t("Transcription Model"))
+                            .font(.system(size: 14, weight: .semibold))
+                        Spacer()
+                        Button(action: {
+                            TranscriptionManager.shared.resetEngine()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "eject.fill")
+                                    .font(.system(size: 11))
+                                Text(t("Unload from RAM"))
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                        }
+                        .buttonStyle(.plain)
+                        .background(appColorScheme == .dark ? Color.white : Color.black)
+                        .foregroundColor(appColorScheme == .dark ? .black : .white)
+                        .cornerRadius(6)
+                        .disabled(!modelManager.isTranscriptionLoaded)
+                        .opacity(modelManager.isTranscriptionLoaded ? 1.0 : 0.5)
+                    }
+                    
+                    HStack {
+                        Text(t("Auto-unload after inactivity:"))
                             .font(.system(size: 13))
                         Spacer()
                         Picker("", selection: $transcriptionUnloadTimeout) {
@@ -916,9 +940,33 @@ struct GeneralSettingsView: View {
                     .background(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05))
                 
                 // LLM Engine Row
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 10) {
                     HStack {
-                        Text(t("LLM Model Inactivity"))
+                        Text(t("LLM Model"))
+                            .font(.system(size: 14, weight: .semibold))
+                        Spacer()
+                        Button(action: {
+                            LLMManager.shared.releaseModel()
+                        }) {
+                            HStack(spacing: 6) {
+                                Image(systemName: "eject.fill")
+                                    .font(.system(size: 11))
+                                Text(t("Unload from RAM"))
+                                    .font(.system(size: 12, weight: .medium))
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 5)
+                        }
+                        .buttonStyle(.plain)
+                        .background(appColorScheme == .dark ? Color.white : Color.black)
+                        .foregroundColor(appColorScheme == .dark ? .black : .white)
+                        .cornerRadius(6)
+                        .disabled(!modelManager.isAssistantLoaded)
+                        .opacity(modelManager.isAssistantLoaded ? 1.0 : 0.5)
+                    }
+                    
+                    HStack {
+                        Text(t("Auto-unload after inactivity:"))
                             .font(.system(size: 13))
                         Spacer()
                         Picker("", selection: $llmUnloadTimeout) {

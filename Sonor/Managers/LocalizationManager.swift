@@ -25,6 +25,25 @@ public class LocalizationManager: ObservableObject {
         }
     }
     private let translations: [String: [String]] = [
+        "Transcription Model": [
+            "Transcription Model", "Model transkrypcji", "Transkriptionsmodell", "Modelo de transcripción", "Modèle de transcription", "Modello di trascrizione", "転写モデル", "Modelo de transcrição", "转录模型"
+        ],
+        "LLM Model": [
+            "LLM Model", "Model LLM", "LLM-Modell", "Modelo LLM", "Modèle LLM", "Modello LLM", "LLMモデル", "Modelo LLM", "LLM模型"
+        ],
+        "Unload from RAM": [
+            "Unload from RAM", "Rozładuj", "Entladen", "Descargar", "Décharger", "Scarica", "アンロード", "Descarregar", "卸载"
+        ],
+        "Auto-unload after inactivity:": [
+            "Auto-unload after inactivity:", "Automatyczne rozładowanie po:", "Automatisches Entladen nach:", "Descarga automática después de:", "Déchargement automatique après:", "Scarico automatico dopo:", "非アクティブ後の自動アンロード:", "Descarregamento automático após:", "处于非活动状态后自动卸载："
+        ],
+
+        "System Default": [
+            "System Default", "Domyślne systemowe", "Systemstandard", "Predeterminado del sistema", "Par défaut du système", "Predefinito di sistema", "システムデフォルト", "Padrão do Sistema", "系统默认"
+        ],
+        "No downloaded models": [
+            "No downloaded models", "Brak pobranych modeli", "Keine heruntergeladenen Modelle", "No hay modelos descargados", "Aucun modèle téléchargé", "Nessun modello scaricato", "ダウンロードされたモデルはありません", "Nenhum modelo baixado", "没有已下载的模型"
+        ],
         "No details available": [
             "No details available",
             "Brak szczegółowych danych",

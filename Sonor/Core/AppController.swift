@@ -27,7 +27,7 @@ class AppController: NSObject, ObservableObject {
     private var lastRecordingStopTime: Date = Date.distantPast
     private var lastRecordingStartTime: Date = Date.distantPast
     var isCurrentlyProcessing: Bool {
-        let nonProcessingStatuses: Set<String> = ["Ready", "Cancelled", "No microphone permission", "Microphone error", "No text recognized.", "Error: Missing model", "Done!"]
+        let nonProcessingStatuses: Set<String> = ["Ready", "Cancelled", "No microphone permission", "Microphone error", "No text recognized.", "Error: Missing model", "Done!", "Transcription failed"]
         return !isRecording && !nonProcessingStatuses.contains(statusText) && !statusText.hasPrefix("Mode:")
     }
     @Published var audioLevel: Float = 0.0
@@ -538,6 +538,7 @@ class AppController: NSObject, ObservableObject {
                 self.hideHUDAfterDelay()
             }
         } catch {
+            if error is CancellationError || Task.isCancelled { return }
             if isInlineRetry {
                 if let historyMessageID = historyMessageID {
                     await MainActor.run {

@@ -88,20 +88,42 @@ struct SonorApp: App {
 }
 
 struct MenuContentView: View {
-    @ObservedObject var controller: AppController
-    @ObservedObject var transcriptionManager = TranscriptionManager.shared
-    @ObservedObject var llmManager = LLMManager.shared
+    let controller: AppController
+    let transcriptionManager = TranscriptionManager.shared
+    let llmManager = LLMManager.shared
+    
     @State private var isCopyDisabled: Bool
+    @State private var isTranscriptionLoaded: Bool
+    @State private var isLLMLoaded: Bool
+    @State private var isRecordingOrProcessing: Bool
+    @State private var availableMicrophones = AudioManager.shared.getAudioInputDevices()
+    
     @AppStorage("appLanguage") private var appLanguage: String = "en"
+    @AppStorage("selectedAudioDeviceUID") private var selectedAudioDeviceUID: String = ""
     
     init(controller: AppController) {
         self.controller = controller
         self._isCopyDisabled = State(initialValue: controller.lastTranscription == nil)
+        self._isTranscriptionLoaded = State(initialValue: TranscriptionManager.shared.isLoaded)
+        self._isLLMLoaded = State(initialValue: LLMManager.shared.isLoaded)
+        self._isRecordingOrProcessing = State(initialValue: controller.isRecording || controller.isCurrentlyProcessing)
     }
     
     var body: some View {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown"
         Text("Sonor v\(appVersion)")
+            .onReceive(transcriptionManager.$isLoaded) { loaded in
+                isTranscriptionLoaded = loaded
+            }
+            .onReceive(llmManager.$isLoaded) { loaded in
+                isLLMLoaded = loaded
+            }
+            .onReceive(controller.$isRecording) { recording in
+                isRecordingOrProcessing = recording || controller.isCurrentlyProcessing
+            }
+            .onReceive(controller.$statusText) { _ in
+                isRecordingOrProcessing = controller.isRecording || controller.isCurrentlyProcessing
+            }
         
         Divider()
         
@@ -117,6 +139,70 @@ struct MenuContentView: View {
         }
         
         Divider()
+        
+        Menu(t("Model")) {
+            let modelManager = ModelManager.shared
+            
+            Toggle("Apple Speech (System)", isOn: Binding(
+                get: { transcriptionManager.currentEngineType == .appleSpeech },
+                set: { if $0 { transcriptionManager.setEngineType(.appleSpeech) } }
+            ))
+            
+            let mlxModels = modelManager.availableMLXModels.filter { modelManager.mlxStates[$0.id] == .downloaded }
+            let whisperModels = modelManager.availableWhisperModels.filter { modelManager.whisperStates[$0.id] == .downloaded }
+            
+            if !mlxModels.isEmpty || !whisperModels.isEmpty {
+                Divider()
+            }
+            
+            ForEach(mlxModels) { model in
+                Toggle(model.name, isOn: Binding(
+                    get: { modelManager.selectedMLXModelId == model.id && transcriptionManager.currentEngineType == .mlx },
+                    set: { if $0 {
+                        modelManager.selectedMLXModelId = model.id
+                        transcriptionManager.setEngineType(.mlx)
+                    }}
+                ))
+            }
+            
+            ForEach(whisperModels) { model in
+                Toggle(model.name, isOn: Binding(
+                    get: { modelManager.selectedWhisperModelId == model.id && transcriptionManager.currentEngineType == .whisper },
+                    set: { if $0 {
+                        modelManager.selectedWhisperModelId = model.id
+                        transcriptionManager.setEngineType(.whisper)
+                    }}
+                ))
+            }
+            
+            if mlxModels.isEmpty && whisperModels.isEmpty {
+                Text(t("No downloaded models"))
+                    .disabled(true)
+            }
+        }
+        
+        Menu(t("Microphone")) {
+            Toggle(t("System Default"), isOn: Binding(
+                get: { selectedAudioDeviceUID.isEmpty },
+                set: { if $0 {
+                    selectedAudioDeviceUID = ""
+                    AudioManager.shared.restartEngineForDeviceChange()
+                }}
+            ))
+            Divider()
+            ForEach(availableMicrophones) { device in
+                Toggle(device.name, isOn: Binding(
+                    get: { selectedAudioDeviceUID == device.uid },
+                    set: { if $0 {
+                        selectedAudioDeviceUID = device.uid
+                        AudioManager.shared.restartEngineForDeviceChange()
+                    }}
+                ))
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("AudioDevicesDidChange"))) { _ in
+            availableMicrophones = AudioManager.shared.getAudioInputDevices()
+        }
         
         Menu(t("Language")) {
             Toggle("English", isOn: Binding(
@@ -162,19 +248,19 @@ struct MenuContentView: View {
         }
         Divider()
         
-        if transcriptionManager.isLoaded {
+        if isTranscriptionLoaded {
             Button(t("Unload Transcription Model")) {
                 transcriptionManager.resetEngine()
             }
-            .disabled(controller.isRecording || controller.isCurrentlyProcessing)
+            .disabled(isRecordingOrProcessing)
         }
-        if llmManager.isLoaded {
+        if isLLMLoaded {
             Button(t("Unload LLM Model")) {
                 llmManager.releaseModel()
             }
-            .disabled(controller.isRecording || controller.isCurrentlyProcessing)
+            .disabled(isRecordingOrProcessing)
         }
-        if transcriptionManager.isLoaded || llmManager.isLoaded {
+        if isTranscriptionLoaded || isLLMLoaded {
             Divider()
         }
         

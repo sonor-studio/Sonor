@@ -28,7 +28,7 @@ class WindowManager {
             panel.isReleasedWhenClosed = false
             panel.contentView = NSHostingView(rootView: CapsuleHUDView(controller: controller))
             panel.isFloatingPanel = true
-            panel.level = .statusBar
+            panel.level = .floating
             panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
             panel.hidesOnDeactivate = false
             panel.animationBehavior = .none
