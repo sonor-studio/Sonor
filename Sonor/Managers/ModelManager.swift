@@ -37,6 +37,12 @@ final class ModelManager: ObservableObject {
     
     @Published var whisperStates: [String: DownloadState] = [:]
     @Published var gemmaState: DownloadState = .notDownloaded
+    @Published var isTranscriptionLoaded: Bool = false
+    @Published var lastTranscriptionUsageTime: Date? = nil
+    @Published var transcriptionInitializeTime: TimeInterval? = nil
+    @Published var isAssistantLoaded: Bool = false
+    @Published var lastAssistantUsageTime: Date? = nil
+    @Published var assistantInitializeTime: TimeInterval? = nil
     @Published var mlxDownloadStats: [String: DownloadStats] = [:]
     @Published var whisperDownloadStats: [String: DownloadStats] = [:]
     

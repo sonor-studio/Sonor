@@ -104,7 +104,7 @@ class AssistantWorkflowService {
             let detectedLang = recognizer.dominantLanguage?.rawValue
             
             if !LLMManager.shared.isReady {
-                onStatusChange("Initializing")
+                onStatusChange("Initializing LLM Model...")
                 await LLMManager.shared.ensureModelWarmed()
             }
             

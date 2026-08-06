@@ -21,6 +21,7 @@ struct GeneralSettingsView: View {
     @AppStorage("playSound_Error") private var playSound_Error = true
     @AppStorage("playSound_End") private var playSound_End = true
     @ObservedObject private var memoryManager = MessageMemoryManager.shared
+    @ObservedObject private var modelManager = ModelManager.shared
     @State private var isShowingSwitchToRamAlert = false
     @State private var isShowingDeleteAudioAlert = false
     @State private var isShowingDuplicateShortcutAlert = false
@@ -881,40 +882,71 @@ struct GeneralSettingsView: View {
         VStack(alignment: .leading, spacing: 15) {
             Text(t("Memory Management"))
                 .font(.system(size: 16, weight: .semibold))
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text(t("Transcription Model Inactivity"))
-                        .font(.system(size: 13))
-                    Spacer()
-                    Picker("", selection: $transcriptionUnloadTimeout) {
-                        Text(t("Never")).tag(0)
-                        Text(t("1 min")).tag(1)
-                        Text(t("2 min")).tag(2)
-                        Text(t("5 min")).tag(5)
-                        Text(t("10 min")).tag(10)
-                        Text(t("30 min")).tag(30)
+                
+            VStack(alignment: .leading, spacing: 20) {
+                // Transcription Engine Row
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(t("Transcription Model Inactivity"))
+                            .font(.system(size: 13))
+                        Spacer()
+                        Picker("", selection: $transcriptionUnloadTimeout) {
+                            Text(t("Never")).tag(0)
+                            Text(t("1 min")).tag(1)
+                            Text(t("2 min")).tag(2)
+                            Text(t("5 min")).tag(5)
+                            Text(t("10 min")).tag(10)
+                            Text(t("30 min")).tag(30)
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 150)
+                        .onChange(of: transcriptionUnloadTimeout) { _, _ in
+                            TranscriptionManager.shared.resetUnloadTimer()
+                        }
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 150)
+                    
+                    modelStatusView(
+                        isLoaded: modelManager.isTranscriptionLoaded,
+                        lastUsed: modelManager.lastTranscriptionUsageTime,
+                        initTime: modelManager.transcriptionInitializeTime
+                    )
                 }
-                HStack {
-                    Text(t("LLM Model Inactivity"))
-                        .font(.system(size: 13))
-                    Spacer()
-                    Picker("", selection: $llmUnloadTimeout) {
-                        Text(t("Never")).tag(0)
-                        Text(t("1 min")).tag(1)
-                        Text(t("2 min")).tag(2)
-                        Text(t("5 min")).tag(5)
-                        Text(t("10 min")).tag(10)
-                        Text(t("30 min")).tag(30)
+                
+                Divider()
+                    .background(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.05))
+                
+                // LLM Engine Row
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(t("LLM Model Inactivity"))
+                            .font(.system(size: 13))
+                        Spacer()
+                        Picker("", selection: $llmUnloadTimeout) {
+                            Text(t("Never")).tag(0)
+                            Text(t("1 min")).tag(1)
+                            Text(t("2 min")).tag(2)
+                            Text(t("5 min")).tag(5)
+                            Text(t("10 min")).tag(10)
+                            Text(t("30 min")).tag(30)
+                        }
+                        .pickerStyle(.menu)
+                        .frame(width: 150)
+                        .onChange(of: llmUnloadTimeout) { _, _ in
+                            LLMManager.shared.resetUnloadTimer()
+                        }
                     }
-                    .pickerStyle(.menu)
-                    .frame(width: 150)
+                    
+                    modelStatusView(
+                        isLoaded: modelManager.isAssistantLoaded,
+                        lastUsed: modelManager.lastAssistantUsageTime,
+                        initTime: modelManager.assistantInitializeTime
+                    )
                 }
-                Text(t("Models will be unloaded from memory after the specified time of inactivity to free up RAM/VRAM."))
+                
+                Text(t("Models will be unloaded from memory after the specified time of inactivity to free up RAM/VRAM. Reloading models after an unload may take 1-2 seconds."))
                     .font(.system(size: 11))
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
         .padding(20)
@@ -927,6 +959,42 @@ struct GeneralSettingsView: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(appColorScheme == .dark ? Color.white.opacity(0.1) : Color.black.opacity(0.08), lineWidth: 1)
         )
+    }
+    
+    @ViewBuilder
+    private func modelStatusView(isLoaded: Bool, lastUsed: Date?, initTime: TimeInterval?) -> some View {
+        HStack(spacing: 12) {
+            let statusText = isLoaded ? t("Loaded in RAM") : t("Offloaded")
+            let statusColor = isLoaded ? Color.primary : Color.secondary
+            
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(isLoaded ? Color.primary : Color.secondary.opacity(0.5))
+                    .frame(width: 6, height: 6)
+                Text("\(t("Status")): \(statusText)")
+                    .font(.system(size: 11))
+                    .foregroundColor(statusColor)
+            }
+            
+            if let lastUsed = lastUsed {
+                Text("•")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary.opacity(0.5))
+                Text("\(t("Last used")): \(lastUsed.formatted(date: .omitted, time: .standard))")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+            
+            if let initTime = initTime {
+                Text("•")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary.opacity(0.5))
+                Text("\(t("Init time")): \(String(format: "%.2fs", initTime))")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.top, 2)
     }
 
     private func setupEventMonitor() {

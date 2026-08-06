@@ -14,15 +14,7 @@ class SoundPlayer: NSObject {
     private func preloadSounds() {
         let soundsToPreload = ["Start", "End", "Error"]
         for name in soundsToPreload {
-            let url: URL?
-            if let bUrl = Bundle.main.url(forResource: name, withExtension: "wav") {
-                url = bUrl
-            } else {
-                let localURL = URL(fileURLWithPath: "/Users/macbook/Desktop/Dev/Sonor/Sonor/\(name).wav")
-                if FileManager.default.fileExists(atPath: localURL.path) {
-                    url = localURL
-                } else { url = nil }
-            }
+            let url = Bundle.main.url(forResource: name, withExtension: "wav")
             
             if let url = url, let file = try? AVAudioFile(forReading: url),
                let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: AVAudioFrameCount(file.length)) {

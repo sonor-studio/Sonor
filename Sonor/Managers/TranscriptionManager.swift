@@ -67,6 +67,7 @@ public class TranscriptionManager: ObservableObject {
         activeEngine?.unload()
         activeEngine = nil
         isLoaded = false
+        ModelManager.shared.isTranscriptionLoaded = false
         unloadTimer?.invalidate()
         unloadTimer = nil
     }
@@ -92,6 +93,7 @@ public class TranscriptionManager: ObservableObject {
         if activeEngine != nil && activeEngine!.isReady {
             return
         }
+        let startTime = CFAbsoluteTimeGetCurrent()
         
         let targetEngineType: EngineType
         var targetModelId: String? = nil
@@ -142,10 +144,15 @@ public class TranscriptionManager: ObservableObject {
         }
         
         self.isLoaded = true
+        let timeTaken = CFAbsoluteTimeGetCurrent() - startTime
+        ModelManager.shared.transcriptionInitializeTime = timeTaken
+        ModelManager.shared.isTranscriptionLoaded = true
+        ModelManager.shared.lastTranscriptionUsageTime = Date()
     }
     
     public func transcribe(audioSamples: [Float], language: String, initialPrompt: String?) async throws -> String {
         try await ensureEngineReady()
+        ModelManager.shared.lastTranscriptionUsageTime = Date()
         
         guard let engine = activeEngine else {
             throw NSError(domain: "TranscriptionManager", code: 11, userInfo: [NSLocalizedDescriptionKey: "Failed to initialize active engine."])

@@ -2413,6 +2413,72 @@ public class LocalizationManager: ObservableObject {
             "Gerenciamento de Memória", 
             "内存管理"
         ],
+        "Status": [
+            "Status", 
+            "Status", 
+            "Status", 
+            "Estado", 
+            "Statut", 
+            "Stato", 
+            "ステータス", 
+            "Status", 
+            "状态"
+        ],
+        "Loaded in RAM": [
+            "Loaded in RAM", 
+            "Załadowano (w RAM)", 
+            "In RAM geladen", 
+            "Cargado en RAM", 
+            "Chargé en RAM", 
+            "Caricato in RAM", 
+            "RAMにロード済み", 
+            "Carregado na RAM", 
+            "已加载到内存"
+        ],
+        "Offloaded": [
+            "Offloaded", 
+            "Wyładowany", 
+            "Entladen", 
+            "Descargado", 
+            "Déchargé", 
+            "Scaricato", 
+            "オフロード済み", 
+            "Descarregado", 
+            "已卸载"
+        ],
+        "Last used": [
+            "Last used", 
+            "Ostatnio użyto", 
+            "Zuletzt verwendet", 
+            "Último uso", 
+            "Dernière utilisation", 
+            "Ultimo utilizzo", 
+            "最終使用", 
+            "Último uso", 
+            "最后使用"
+        ],
+        "Init time": [
+            "Init time", 
+            "Czas inicjalizacji", 
+            "Init-Zeit", 
+            "Tiempo de inicio", 
+            "Temps d'init", 
+            "Tempo di avvio", 
+            "初期化時間", 
+            "Tempo de início", 
+            "初始化时间"
+        ],
+        "Models will be unloaded from memory after the specified time of inactivity to free up RAM/VRAM. Reloading models after an unload may take 1-2 seconds.": [
+            "Models will be unloaded from memory after the specified time of inactivity to free up RAM/VRAM. Reloading models after an unload may take 1-2 seconds.", 
+            "Modele zostaną wyładowane z pamięci po wyznaczonym czasie, zwalniając pamięć RAM i procesor. Wczytanie ich z powrotem zajmuje 1-2 sekundy.", 
+            "Modelle werden nach der angegebenen Inaktivitätszeit aus dem Speicher entladen, um RAM/VRAM freizugeben. Das Neuladen kann 1-2 Sekunden dauern.", 
+            "Los modelos se descargarán de la memoria después del tiempo especificado de inactividad para liberar RAM/VRAM. Volver a cargarlos puede tardar 1-2 segundos.", 
+            "Les modèles seront déchargés de la mémoire après le temps d'inactivité spécifié pour libérer la RAM/VRAM. Le rechargement peut prendre 1 à 2 secondes.", 
+            "I modelli verranno scaricati dalla memoria dopo il tempo di inattività specificato per liberare RAM/VRAM. Il ricaricamento può richiedere 1-2 secondi.", 
+            "モデルは指定された非アクティブ時間の後にメモリからオフロードされ、RAM/VRAMが解放されます。再ロードには1〜2秒かかる場合があります。", 
+            "Os modelos serão descarregados da memória após o tempo de inatividade especificado para liberar RAM/VRAM. Recarregá-los pode levar de 1 a 2 segundos.", 
+            "模型将在指定的空闲时间后从内存中卸载，以释放RAM/VRAM。卸载后重新加载模型可能需要1-2秒。"
+        ],
         "Transcription Model Inactivity": [
             "Transcription Model Inactivity", 
             "Nieaktywność modelu transkrypcji", 
@@ -3237,6 +3303,17 @@ public class LocalizationManager: ObservableObject {
             "初期化中", 
             "Inicializando", 
             "初始化中", 
+        ],
+        "Initializing LLM Model...": [
+            "Initializing LLM Model...",
+            "Inicjowanie modelu LLM...",
+            "LLM-Modell wird initialisiert...",
+            "Inicializando modelo LLM...",
+            "Initialisation du modèle LLM...",
+            "Inizializzazione del modello LLM...",
+            "LLMモデルを初期化しています...",
+            "Inicializando o modelo LLM...",
+            "正在初始化LLM模型..."
         ],
         "Keep typing...": [
             "Keep typing...", 

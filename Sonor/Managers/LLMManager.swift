@@ -42,6 +42,7 @@ final class LLMManager: ObservableObject {
 
         do {
             let session = try await getSession()
+            ModelManager.shared.lastAssistantUsageTime = Date()
             await session.clear()
             for try await token in session.streamResponse(to: prompt) {
                 if Task.isCancelled {
@@ -65,6 +66,7 @@ final class LLMManager: ObservableObject {
         if isReady { return }
         do {
             let session = try await getSession()
+            ModelManager.shared.lastAssistantUsageTime = Date()
             await session.clear()
             let _ = try await session.respond(to: "Say \"hello\" and return {\"result\": \"ok\"}")
             isReady = true
@@ -76,6 +78,7 @@ final class LLMManager: ObservableObject {
         self.modelContainer = nil
         self.isReady = false
         self.isLoaded = false
+        ModelManager.shared.isAssistantLoaded = false
         self.unloadTimer?.invalidate()
         self.unloadTimer = nil
         MLX.Memory.clearCache()
@@ -105,18 +108,22 @@ final class LLMManager: ObservableObject {
         if let task = containerTask { return try await task.value }
 
         let task = Task {
+            let startTime = CFAbsoluteTimeGetCurrent()
             let config = ModelConfiguration(id: ModelManager.shared.gemmaModelId)
             let container = try await LLMModelFactory.shared.loadContainer(
                 from: NativeHubDownloader(downloadBase: ModelManager.shared.modelsDirectory),
                 using: #huggingFaceTokenizerLoader(),
                 configuration: config
             )
+            let timeTaken = CFAbsoluteTimeGetCurrent() - startTime
+            ModelManager.shared.assistantInitializeTime = timeTaken
             return container
         }
         self.containerTask = task
         let container = try await task.value
         self.modelContainer = container
         self.isLoaded = true
+        ModelManager.shared.isAssistantLoaded = true
         self.containerTask = nil
         return container
     }

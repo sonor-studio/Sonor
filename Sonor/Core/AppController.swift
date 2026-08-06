@@ -392,7 +392,7 @@ class AppController: NSObject, ObservableObject {
         }
     }
     func cancelRecording() {
-        if statusText == "Initializing" { return }
+        if statusText.hasPrefix("Initializing") { return }
         guard isRecording || isCurrentlyProcessing else { return }
         isRecording = false
         self.isPaused = false
